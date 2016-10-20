@@ -1,9 +1,9 @@
 SET(TARGET_SRC
-    do_something.cpp 
+    run_detection.cpp 
     # mainsource.cpp	# only this file contains the main() function!
 )
 SET(TARGET_H
     # header.h
 )
 
-SETUP_APPLICATION(app1)
+SETUP_APPLICATION(detection_test)

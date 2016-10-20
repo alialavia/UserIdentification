@@ -59,7 +59,13 @@ OPTION(BUILD_USER_IDENTIFICATION_EXAMPLES "Enable to build Examples" OFF)
 # 3rd Party Dependency
 #-------------------------------------------------
 
-# example: find_package(OpenCV 2.4 REQUIRED)
+# Kinect for Windows SDK 2
+FIND_PACKAGE(KinectSDK2 REQUIRED)
+# include headers
+INCLUDE_DIRECTORIES(${KINECTSDK2_INCLUDE_DIRS})
+
+FIND_PACKAGE(OpenCV 3.0 REQUIRED)
+#include_directories(${OpenCV_INCLUDE_DIRS}) # Not needed for CMake >= 2.8.11
 
 # Platform specific:
 IF(WIN32)
@@ -74,15 +80,6 @@ INCLUDE(ProjectMacros)
 #-------------------------------------------------
 # Optional build components
 #-------------------------------------------------
-
-# Kinect for Windows SDK 2
-FIND_PACKAGE(KinectSDK2)
-
-IF(KINECTSDK2_FOUND)
-	# include headers
-	INCLUDE_DIRECTORIES(${KINECTSDK2_INCLUDE_DIRS})
-ENDIF()
-
 
 # optional example related dependencies
 IF   (BUILD_USER_IDENTIFICATION_EXAMPLES)
