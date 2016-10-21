@@ -46,16 +46,16 @@ namespace io
 		void GetColorImage(cv::Mat &dst);
 
 	private:
-		HRESULT ProcessColorFrame(IColorFrame *color_frame, RGBQUAD *&buffer, UINT &buffer_len);
-		HRESULT ProcessDepthFrame(IDepthFrame *depth_frame);
+		HRESULT ProcessColorFrame(IColorFrame* color_frame, int &height, int &width, RGBQUAD* &buffer, UINT &buffer_len);
+		HRESULT ProcessDepthFrame(IDepthFrame *depth_frame, int &height, int &width, UINT16* &buffer, UINT &buffer_len);
 		HRESULT ProcessBodyFrame(IBodyFrame *body_frame);
 	
 	public:
 		// output settings
 		const int mColorHeight;
 		const int mColorWidth;
-		const int mDepthHeight;
-		const int mDepthWidth;
+		const int mDepthImageHeight;
+		const int mDepthImageWidth;
 
 	private:
 		std::mutex mSensorMutex;
@@ -71,10 +71,10 @@ namespace io
 		int ColorImageStreamWidth = 0;
 
 		// depth
-		UINT16 *pDepthImageBuffer;
-		UINT mDepthImageBufferLen = 0;
-		int DepthImageStreamHeight = 0;
-		int DepthImageStreamWidth = 0;
+		UINT16 *pDepthBuffer;
+		UINT mDepthBufferLen = 0;
+		int DepthStreamHeight = 0;
+		int DepthStreamWidth = 0;
 
 	};
 

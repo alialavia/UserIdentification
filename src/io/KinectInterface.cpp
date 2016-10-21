@@ -25,10 +25,10 @@ KinectSensorMultiSource::KinectSensorMultiSource() :
 	pSourceReader(NULL), 
 	mColorWidth(1920),
 	mColorHeight(1080),
-	mDepthWidth(480),
-	mDepthHeight(320),
+	mDepthImageWidth(480),
+	mDepthImageHeight(320),
 	pColorImageBuffer(NULL),
-	pDepthImageBuffer(NULL)
+	pDepthBuffer(NULL)
 {
 
 }
@@ -184,9 +184,9 @@ HRESULT KinectSensorMultiSource::AcquireFrame() {
 	if (SUCCEEDED(hr)) {
 		mSensorMutex.lock();	// class internal data manipulations
 		// color
-		ProcessColorFrame(p_color_frame, pColorImageBuffer, mColorImageBufferLen);
+		ProcessColorFrame(p_color_frame, ColorImageStreamHeight, ColorImageStreamWidth, pColorImageBuffer, mColorImageBufferLen);
 		// depth
-		ProcessDepthFrame(p_depth_frame);
+		ProcessDepthFrame(p_depth_frame, DepthStreamHeight, DepthStreamWidth, pDepthBuffer, mDepthBufferLen);
 		mSensorMutex.unlock();
 	}
 
@@ -232,7 +232,7 @@ HRESULT KinectSensorMultiSource::ProcessBodyFrame(IBodyFrame *body_frame) {
 	return hr;
 }
 
-HRESULT KinectSensorMultiSource::ProcessColorFrame(IColorFrame* color_frame, RGBQUAD* &buffer,  UINT &buffer_len) {
+HRESULT KinectSensorMultiSource::ProcessColorFrame(IColorFrame* color_frame, int &height, int &width,  RGBQUAD* &buffer, UINT &buffer_len) {
 
 	IFrameDescription *frameDesc = nullptr;
 	HRESULT hr = E_FAIL;
@@ -253,8 +253,8 @@ HRESULT KinectSensorMultiSource::ProcessColorFrame(IColorFrame* color_frame, RGB
 		
 		// get stream height and width
 		if (
-			SUCCEEDED(frameDesc->get_Height(&ColorImageStreamHeight)) &&
-			SUCCEEDED(frameDesc->get_Width(&ColorImageStreamWidth)) &&
+			SUCCEEDED(frameDesc->get_Height(&height)) &&
+			SUCCEEDED(frameDesc->get_Width(&width)) &&
 			SUCCEEDED(color_frame->get_RawColorImageFormat(&imageFormat))
 			)
 		{
@@ -291,7 +291,7 @@ HRESULT KinectSensorMultiSource::ProcessColorFrame(IColorFrame* color_frame, RGB
 	return hr;
 }
 
-HRESULT KinectSensorMultiSource::ProcessDepthFrame(IDepthFrame *depth_frame) {
+HRESULT KinectSensorMultiSource::ProcessDepthFrame(IDepthFrame *depth_frame, int &height, int &width, UINT16* &buffer, UINT &buffer_len) {
 
 	HRESULT hr;
 
@@ -312,27 +312,27 @@ HRESULT KinectSensorMultiSource::ProcessDepthFrame(IDepthFrame *depth_frame) {
 
 		// get stream height and width
 		if (
-			SUCCEEDED(frameDesc->get_Height(&DepthImageStreamHeight)) &&
-			SUCCEEDED(frameDesc->get_Width(&DepthImageStreamWidth)) &&
+			SUCCEEDED(frameDesc->get_Height(&height)) &&
+			SUCCEEDED(frameDesc->get_Width(&width)) &&
 			SUCCEEDED(depth_frame->get_DepthMinReliableDistance(&nDepthMinReliableDistance)) &&
 			SUCCEEDED(depth_frame->get_DepthMaxReliableDistance(&nDepthMaxDistance))
 			)
 		{
 			// allocate buffer
-			nBufferLen = DepthImageStreamHeight * DepthImageStreamWidth * sizeof(UINT16);
+			nBufferLen = height * width * sizeof(UINT16);
 
 			// allocate more memory if necessary
-			if (nBufferLen > mDepthImageBufferLen) {
-				if (pDepthImageBuffer != NULL) {
-					delete[] pDepthImageBuffer;
+			if (nBufferLen > buffer_len) {
+				if (buffer != NULL) {
+					delete[] buffer;
 				}
-				pDepthImageBuffer = new UINT16[nBufferLen];
-				mDepthImageBufferLen = nBufferLen;
+				buffer = new UINT16[nBufferLen];
+				buffer_len = nBufferLen;
 			}
 
 			// BYTE intensity = static_cast<BYTE>((depth >= nMinDepth) && (depth <= nMaxDepth) ? (depth % 256) : 0);
 			//  reinterpret_cast<BYTE*>(pColorImageBuffer)
-			hr = depth_frame->CopyFrameDataToArray(mDepthImageBufferLen, pDepthImageBuffer);
+			hr = depth_frame->CopyFrameDataToArray(buffer_len, buffer);
 		}
 	}
 
@@ -366,18 +366,24 @@ void KinectSensorMultiSource::GetColorImageCopy(cv::Mat &dst) {
 	mSensorMutex.unlock();
 }
 
-void KinectSensorMultiSource::GetDepthImageCopy(cv::Mat &dst) {
-	mSensorMutex.lock();
-	// convert to mat
-	// 4-byte floating (0-1.0) Depth data NORMALIZED
-	cv::Mat cv_img(DepthImageStreamHeight, DepthImageStreamWidth, CV_8UC4, reinterpret_cast<void*>(pDepthImageBuffer));
-	cv::Mat resized;
-	cv::resize(cv_img, resized, cv::Size(mDepthHeight, mDepthWidth));
-	dst = resized;
-	mSensorMutex.unlock();
-}
 
 void KinectSensorMultiSource::GetColorImage(cv::Mat &dst) {
 	cv::Mat cv_img(ColorImageStreamHeight, ColorImageStreamWidth, CV_8UC4, reinterpret_cast<void*>(pColorImageBuffer));
 	dst = cv_img;
+}
+
+
+void KinectSensorMultiSource::GetDepthImageCopy(cv::Mat &dst) {
+	mSensorMutex.lock();
+	// tmp
+	cv::Mat cv_img(DepthStreamHeight, DepthStreamWidth, CV_16U, pDepthBuffer);
+	cv::Mat resized;
+
+	cv::resize(cv_img, resized, cv::Size(mDepthImageWidth, mDepthImageHeight));
+	//double scale = 255.0 / (nDepthMaxReliableDistance - nDepthMinReliableDistance);
+	//double scale = 255.0 / 5;
+	//resized.convertTo(resized, CV_8UC1, scale);
+
+	dst = resized;
+	mSensorMutex.unlock();
 }
