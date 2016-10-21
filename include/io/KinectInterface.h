@@ -39,13 +39,16 @@ namespace io
 
 		HRESULT AcquireFrame();
 
-		// get deep copy of color frame
+		// get deep copy of data
 		void GetColorImageCopy(cv::Mat &dst);
 		void GetDepthImageCopy(cv::Mat &dst);
+		// link to current data
+		void GetColorImage(cv::Mat &dst);
 
 	private:
-		HRESULT ProcessColorFrame(IColorFrame *color_frame);
+		HRESULT ProcessColorFrame(IColorFrame *color_frame, RGBQUAD *&buffer, UINT &buffer_len);
 		HRESULT ProcessDepthFrame(IDepthFrame *depth_frame);
+		HRESULT ProcessBodyFrame(IBodyFrame *body_frame);
 	
 	public:
 		// output settings

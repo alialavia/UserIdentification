@@ -27,7 +27,8 @@ KinectSensorMultiSource::KinectSensorMultiSource() :
 	mColorHeight(1080),
 	mDepthWidth(480),
 	mDepthHeight(320),
-	pColorImageBuffer(NULL)
+	pColorImageBuffer(NULL),
+	pDepthImageBuffer(NULL)
 {
 
 }
@@ -183,7 +184,7 @@ HRESULT KinectSensorMultiSource::AcquireFrame() {
 	if (SUCCEEDED(hr)) {
 		mSensorMutex.lock();	// class internal data manipulations
 		// color
-		ProcessColorFrame(p_color_frame);
+		ProcessColorFrame(p_color_frame, pColorImageBuffer, mColorImageBufferLen);
 		// depth
 		ProcessDepthFrame(p_depth_frame);
 		mSensorMutex.unlock();
@@ -192,7 +193,7 @@ HRESULT KinectSensorMultiSource::AcquireFrame() {
 	// release multiframe
 	SafeRelease(p_multisource_frame);
 
-	// release extracted frames
+	// release extracted frames - unblocking other readers
 	SafeRelease(p_depth_frame);
 	SafeRelease(p_color_frame);
 	SafeRelease(p_infrared_frame);
@@ -205,12 +206,7 @@ HRESULT KinectSensorMultiSource::AcquireFrame() {
 
 // --------------------- PROCESSING FUNCTIONS
 
-
-
-
-
 HRESULT KinectSensorMultiSource::ProcessBodyFrame(IBodyFrame *body_frame) {
-
 
 	IFrameDescription *frameDesc = nullptr;
 	HRESULT hr = E_FAIL;
@@ -236,9 +232,7 @@ HRESULT KinectSensorMultiSource::ProcessBodyFrame(IBodyFrame *body_frame) {
 	return hr;
 }
 
-
-
-HRESULT KinectSensorMultiSource::ProcessColorFrame(IColorFrame *color_frame) {
+HRESULT KinectSensorMultiSource::ProcessColorFrame(IColorFrame* color_frame, RGBQUAD* &buffer,  UINT &buffer_len) {
 
 	IFrameDescription *frameDesc = nullptr;
 	HRESULT hr = E_FAIL;
@@ -268,23 +262,25 @@ HRESULT KinectSensorMultiSource::ProcessColorFrame(IColorFrame *color_frame) {
 			nBufferLen = ColorImageStreamHeight * ColorImageStreamWidth * sizeof(RGBQUAD);
 
 			// allocate more memory if necessary
-			if (nBufferLen > mColorImageBufferLen) {
-				if (pColorImageBuffer != NULL) {
-					delete[] pColorImageBuffer;
+			if (nBufferLen > buffer_len) {
+				if (buffer != NULL) {
+					delete[] buffer;
 				}
-				pColorImageBuffer = new RGBQUAD[nBufferLen];
-				mColorImageBufferLen = nBufferLen;
+				buffer = new RGBQUAD[nBufferLen];
+				buffer_len = nBufferLen;
 			}
 
 			// no type conversion
 			if (imageFormat == targetFormat)
-			{
-				hr = color_frame->AccessRawUnderlyingBuffer(&nBufferLen, reinterpret_cast<BYTE**>(&pColorImageBuffer));
+			{	
+				// TODO: check if buffer ist still available once frame is released (after polling). SHOULD NOT!
+				// hr = color_frame->AccessRawUnderlyingBuffer(&nBufferLen, reinterpret_cast<BYTE**>(&pColorImageBuffer));
+				hr = color_frame->CopyRawFrameDataToArray(nBufferLen, reinterpret_cast<BYTE*>(buffer));
 			}
 			// do color format conversion
 			else
 			{
-				hr = color_frame->CopyConvertedFrameDataToArray(nBufferLen, reinterpret_cast<BYTE*>(pColorImageBuffer), targetFormat);
+				hr = color_frame->CopyConvertedFrameDataToArray(nBufferLen, reinterpret_cast<BYTE*>(buffer), targetFormat);
 			}
 		}
 	}
@@ -308,7 +304,6 @@ HRESULT KinectSensorMultiSource::ProcessDepthFrame(IDepthFrame *depth_frame) {
 	UINT nBufferLen;
 
 	UINT nBufferSize = 0;
-	UINT16 *pBuffer = NULL;
 
 	hr = depth_frame->get_FrameDescription(&frameDesc);
 
@@ -324,7 +319,7 @@ HRESULT KinectSensorMultiSource::ProcessDepthFrame(IDepthFrame *depth_frame) {
 			)
 		{
 			// allocate buffer
-			nBufferLen = DepthImageStreamHeight * DepthImageStreamWidth * sizeof(UINT);
+			nBufferLen = DepthImageStreamHeight * DepthImageStreamWidth * sizeof(UINT16);
 
 			// allocate more memory if necessary
 			if (nBufferLen > mDepthImageBufferLen) {
@@ -346,7 +341,6 @@ HRESULT KinectSensorMultiSource::ProcessDepthFrame(IDepthFrame *depth_frame) {
 
 	return hr;
 }
-
 
 void KinectSensorMultiSource::GetColorImageCopy(cv::Mat &dst) {
 	mSensorMutex.lock();
@@ -383,9 +377,7 @@ void KinectSensorMultiSource::GetDepthImageCopy(cv::Mat &dst) {
 	mSensorMutex.unlock();
 }
 
-
-
-
-
-
-
+void KinectSensorMultiSource::GetColorImage(cv::Mat &dst) {
+	cv::Mat cv_img(ColorImageStreamHeight, ColorImageStreamWidth, CV_8UC4, reinterpret_cast<void*>(pColorImageBuffer));
+	dst = cv_img;
+}

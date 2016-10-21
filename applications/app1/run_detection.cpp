@@ -3,23 +3,11 @@
 #include <strsafe.h>
 #include <opencv2\opencv.hpp>
 
-
-void testChange(cv::Mat &dst) {
-
-	cv::Mat test = cv::Mat::zeros(600, 800, CV_8UC4);
-	dst = test;
-}
-
-	//testChange(color_image);
-	//cv::imshow("Color image", color_image);
-	//cv::waitKey(3000);
-
 int main(int argc, char** argv)
 {
 	io::KinectSensorMultiSource k;
 	HRESULT hr;
 	cvNamedWindow("Color image", CV_WINDOW_AUTOSIZE);
-
 
 	cv::Mat color_image;
 
@@ -29,17 +17,17 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
-
 	while (true) {
 
+		// polling
 		hr = k.AcquireFrame();
 
 		// check if there is a new frame available
 		if (SUCCEEDED(hr)) {
 
-			k.GetColorImageCopy(color_image);
+			//k.GetColorImageCopy(color_image);
+			k.GetColorImage(color_image);
 
-			// crash much?
 			cv::imshow("Color image", color_image);
 			cv::waitKey(3);
 
