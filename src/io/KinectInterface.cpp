@@ -177,7 +177,6 @@ HRESULT KinectSensorMultiSource::AcquireFrame() {
 			}
 			SafeRelease(bifr);
 		}
-
 	}
 
 	// process frames if everything went smoothly
@@ -186,6 +185,7 @@ HRESULT KinectSensorMultiSource::AcquireFrame() {
 		// color
 		ProcessColorFrame(p_color_frame);
 		// depth
+		ProcessDepthFrame(p_depth_frame);
 		mSensorMutex.unlock();
 	}
 
@@ -204,6 +204,38 @@ HRESULT KinectSensorMultiSource::AcquireFrame() {
 }
 
 // --------------------- PROCESSING FUNCTIONS
+
+
+
+
+
+HRESULT KinectSensorMultiSource::ProcessBodyFrame(IBodyFrame *body_frame) {
+
+
+	IFrameDescription *frameDesc = nullptr;
+	HRESULT hr = E_FAIL;
+
+	// BODY_COUNT = 6
+	IBody* ppBodies[BODY_COUNT] = { 0 };
+
+	hr = body_frame->GetAndRefreshBodyData(_countof(ppBodies), ppBodies);
+
+	// readin body buffer
+	if (SUCCEEDED(hr)) {
+
+
+	}
+
+
+	// free memory
+	for (int i = 0; i < _countof(ppBodies); ++i)
+	{
+		SafeRelease(ppBodies[i]);
+	}
+
+	return hr;
+}
+
 
 
 HRESULT KinectSensorMultiSource::ProcessColorFrame(IColorFrame *color_frame) {
@@ -303,25 +335,17 @@ HRESULT KinectSensorMultiSource::ProcessDepthFrame(IDepthFrame *depth_frame) {
 				mDepthImageBufferLen = nBufferLen;
 			}
 
-			//depth_frame->AccessUnderlyingBuffer()
-
-
 			// BYTE intensity = static_cast<BYTE>((depth >= nMinDepth) && (depth <= nMaxDepth) ? (depth % 256) : 0);
 			//  reinterpret_cast<BYTE*>(pColorImageBuffer)
-
-
 			hr = depth_frame->CopyFrameDataToArray(mDepthImageBufferLen, pDepthImageBuffer);
 		}
 	}
-
 
 	SafeRelease(frameDesc);
 	// DO NOT RELEASE FRAME HERE! THIS IS A PURE PROCESSING FUNCTION
 
 	return hr;
 }
-
-
 
 
 void KinectSensorMultiSource::GetColorImageCopy(cv::Mat &dst) {
