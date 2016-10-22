@@ -186,7 +186,7 @@ HRESULT KinectSensorMultiSource::AcquireFrame() {
 		// color
 		ProcessColorFrame(p_color_frame, ColorImageStreamHeight, ColorImageStreamWidth, pColorImageBuffer, mColorImageBufferLen);
 		// depth
-		ProcessDepthFrame(p_depth_frame, DepthStreamHeight, DepthStreamWidth, pDepthBuffer, mDepthBufferLen);
+		//ProcessDepthFrame(p_depth_frame, DepthStreamHeight, DepthStreamWidth, pDepthBuffer, mDepthBufferLen);
 		mSensorMutex.unlock();
 	}
 
