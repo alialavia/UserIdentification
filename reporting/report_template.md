@@ -6,4 +6,4 @@
 
 ## Challenges/Problems
 
-## Literature
+## Literature/Personal Notes
