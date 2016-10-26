@@ -21,11 +21,11 @@ ADD . /root/user_identification
 EXPOSE 80:8080
 
 # Set the default directory where CMD will execute
-WORKDIR /root/user_identification
+WORKDIR /root/user_identification/src
 
 # Execute script
 # CMD python ./start_detector.py
 # with port listening
-# CMD ["python", "/src/start_detector.py", "-p 8000"]
+# CMD ["python", "start_detector.py", "-p 8000"]
 
-CMD /bin/bash -l -c "ls"
+# CMD /bin/bash -l -c 'start_detector.sh'
