@@ -10,8 +10,8 @@ MAINTAINER Matthias Bloch
 
 
 # Install app dependencies
-RUN pip install numpy &&\
-pip install opencv
+RUN pip install --no-cache-dir numpy && \
+	apt-get install -y python-opencv
 
 # Copy the application folder inside the container
 ADD . /root/user_identification
