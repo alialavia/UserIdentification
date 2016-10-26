@@ -1,5 +1,5 @@
-# base image: python2 lightweight
-FROM python:2-alpine
+# base image: python2:slim
+FROM python:2:slim
 
 # File Author / Maintainer
 MAINTAINER Matthias Bloch

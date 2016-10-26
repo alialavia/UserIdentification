@@ -1,9 +1,25 @@
 # User Identification
-User Identification in an interactive room using Kinect.
+
+- Automated Build of the identification node on DockerHub: https://hub.docker.com/r/matbloch/user_identification_node/
+
+
 
 ## Installation
 
-Please visit the WIKI.
+
+**Setup Identification Node in Docker:**
+```bash
+# download image
+docker pull matbloch/user_identification_node
+# list images
+docker images
+# start container with bash
+winpty docker run -ti matbloch/user_identification_node //bin/bash
+```
+
+
+
+Please visit the WIKI for the detailed instructions.
 
 ## Work Packages
 
