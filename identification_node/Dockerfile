@@ -10,11 +10,11 @@ MAINTAINER Matthias Bloch
 
 
 # Install app dependencies
-RUN pip install Flask
+RUN pip install numpy &&\
+pip install opencv
 
 # Copy the application folder inside the container
 ADD . /root/user_identification
-
 
 # inform about port listening (use -p when you start the container)
 EXPOSE 80:8080
@@ -30,10 +30,6 @@ WORKDIR /root/user_identification/src
 
 RUN echo 'We are ready to go! Lets start the server...'
 
-CMD python ./core.py
-
-
-
-
+# CMD python ./core.py
 
 # CMD /bin/bash -l -c 'start_detector.sh'
