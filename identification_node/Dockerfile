@@ -1,5 +1,5 @@
 # base image: python2:slim
-FROM python:2:slim
+FROM python2:slim
 
 # File Author / Maintainer
 MAINTAINER Matthias Bloch
