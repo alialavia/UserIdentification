@@ -16,16 +16,24 @@ RUN pip install Flask
 ADD . /root/user_identification
 
 
-# Port mapping
-# private and public mapping
+# inform about port listening (use -p when you start the container)
 EXPOSE 80:8080
 
 # Set the default directory where CMD will execute
 WORKDIR /root/user_identification/src
 
-# Execute script
-# CMD python ./start_detector.py
-# with port listening
+# Start server
+
+# with custom port listening
 # CMD ["python", "start_detector.py", "-p 8000"]
+
+
+RUN echo 'We are ready to go! Lets start the server...'
+
+CMD python ./core.py
+
+
+
+
 
 # CMD /bin/bash -l -c 'start_detector.sh'

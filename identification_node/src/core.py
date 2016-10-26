@@ -1,22 +1,36 @@
-from flask import Flask
-import sys
-import optparse
-import time
+'''A sample of Python TCP server'''
 
-app = Flask(__name__)
+import socket
 
-start = int(round(time.time()))
+# HOST = '127.0.0.1'     # Local host
+HOST = 'localhost'
+PORT = 80              # expose when starting the container!
 
-@app.route("/")
-def hello_world():
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind((HOST, PORT))
 
-    return "Hello world!"
+# maximum number of connectsion
+s.listen(1)
 
-if __name__ == '__main__':
-    parser = optparse.OptionParser(usage="python core.py -p ")
-    parser.add_option('-p', '--port', action='store', dest='port', help='The port to listen on.')
-    (args, _) = parser.parse_args()
-    if args.port == None:
-        print "Missing required argument: -p/--port"
-        sys.exit(1)
-    app.run(host='0.0.0.0', port=int(args.port), debug=False)
+print 'Waiting for connection...'
+conn, addr = s.accept()
+
+print 'Connected by client', addr
+while True:
+
+    # Wait for a connection
+    connect, address = s.accept()
+
+    # Typically fork at this point
+
+    # Receive up to 1024 bytes
+    resp = (connect.recv(1024)).strip()
+    # And if the user has sent a "SHUTDOWN"
+    # instruction, do so (ouch! just a demo)
+    if resp == "SHUTDOWN": break
+
+    # Send an answer
+    connect.send("You said '" + resp + "' to me\n")
+
+conn.close()
+print 'Server closed.'
