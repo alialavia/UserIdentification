@@ -8,8 +8,10 @@ MAINTAINER Matthias Bloch
 # Dockerfile to build Identification Node Container
 ############################################################
 
+# sudo add-apt-repository python-opencv
+
 # Install app dependencies
-RUN apt-get update && apt-get install -y \
+RUN add-apt-repository python-opencv && apt-get update && apt-get install -y \
     git \
     python-dev \
     python-pip \
@@ -21,11 +23,12 @@ RUN apt-get update && apt-get install -y \
     zip \
 	&& apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 	
-# python packages
-RUN pip2 install -r requirements.txt
-
 # Copy the application folder inside the container
 ADD . /root/user_identification
+
+# install requirements
+RUN cd /root/user_identification && \
+	pip2 install -r requirements.txt
 
 # inform about port listening (use -p when you start the container)
 EXPOSE 8080
