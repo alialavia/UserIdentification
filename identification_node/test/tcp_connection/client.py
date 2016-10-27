@@ -26,4 +26,4 @@ print 'Message send successfully'
 # Now receive data
 reply = clientsocket.recv(4096)
 
-print reply
+print 'Received from server: ' + reply

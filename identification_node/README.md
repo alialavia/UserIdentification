@@ -1,8 +1,36 @@
+## Identification Server
 
+### Installation (Windows)
 
-**Run Server**
+1. Download and install Docker Toolbox (Win/OSX need Boot2Docker VM to run docker): [**Download Link**](https://www.docker.com/products/docker-toolbox)
+2. **Enable Portmapping from Host system to Boot2Docker VM:**
+	- Open VirtualBox Manager, Go to Boot2Docker VM Settings > Networking
+	- For Adapter 1 (NAT) set port forwarding under advanced settings
+	- Protocoll: TCP, Host IP: -, Client IP: -, Port: 80 (Server Port)
+	![Virtual Box Settings](doc/img/vm_settings.png)
+3. Start Boot2Docker: Head to Docker Toolbox installation directory and run `start.sh` with Git shell
+4. Pull server image:
+```bash
+$ docker pull matbloch/user_identification_node
+```
+5. Start server with forwarded port 80: 
+```bash
+$ winpty docker run -p 80:80 -ti matbloch/user_identification_node //bin/bash
+```
 
-- Port 80 exposed to host
+## Demos/Tests
+
+### `test/tcp_connection` Test TCP Connection: Host > boot2docker > Container
+
+1. Start docker container and expose port 80
 ```bash
 winpty docker run -p 80:80 -ti matbloch/user_identification_node //bin/bash
+```
+2. Start server on container (running on port 80)
+```bash
+python ../test/tcp_connection/server.py
+```
+3. Start Python client on host machine
+```bash
+python ../test/tcp_connection/client.py
 ```
