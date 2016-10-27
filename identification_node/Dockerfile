@@ -11,7 +11,7 @@ MAINTAINER Matthias Bloch
 # sudo add-apt-repository python-opencv
 
 # Install app dependencies
-RUN add-apt-repository python-opencv && apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y \
     git \
     python-dev \
     python-pip \
