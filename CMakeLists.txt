@@ -55,6 +55,9 @@ OPTION(BUILD_USER_IDENTIFICATION_APPLICATIONS "Enable to build Applications" ON)
 # Examples
 OPTION(BUILD_USER_IDENTIFICATION_EXAMPLES "Enable to build Examples" OFF)
 
+# Tests
+OPTION(BUILD_USER_IDENTIFICATION_TESTS "Enable to build Tests" ON)
+
 #-------------------------------------------------
 # 3rd Party Dependency
 #-------------------------------------------------
@@ -165,5 +168,10 @@ ENDIF()
 # Examples
 IF   (BUILD_USER_IDENTIFICATION_EXAMPLES)
     ADD_SUBDIRECTORY(examples)
+ENDIF()
+
+# Tests
+IF   (BUILD_USER_IDENTIFICATION_TESTS)
+    ADD_SUBDIRECTORY(test)
 ENDIF()
 
