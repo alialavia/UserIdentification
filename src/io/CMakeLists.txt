@@ -2,10 +2,12 @@ SET(LIB_NAME io)
 SET(HEADER_PATH ${user_identification_SOURCE_DIR}/include/${LIB_NAME})
 SET(TARGET_H
     ${HEADER_PATH}/KinectInterface.h
+    ${HEADER_PATH}/Networking.h
 )
 
 SET(TARGET_SRC
 	KinectInterface.cpp
+	Networking.cpp
 )
 
 # --------------------------------------------
@@ -20,6 +22,7 @@ SET(TARGET_SRC
 SET(TARGET_EXTERNAL_LIBRARIES
 	${KINECTSDK2_LIBRARIES}	# Kinect SDK 2.0
 	${OpenCV_LIBS}			# OpenCV 3
+	ws2_32					# Windows TCP Sockets
 )
 
 SETUP_LIBRARY(${LIB_NAME})

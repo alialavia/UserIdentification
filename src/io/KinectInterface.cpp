@@ -295,7 +295,6 @@ HRESULT KinectSensorMultiSource::ProcessDepthFrame(IDepthFrame *depth_frame, int
 
 	HRESULT hr;
 
-
 	IFrameDescription* frameDesc = nullptr;
 	USHORT nDepthMinReliableDistance = 0;
 	USHORT nDepthMaxDistance = 0;
@@ -342,7 +341,7 @@ HRESULT KinectSensorMultiSource::ProcessDepthFrame(IDepthFrame *depth_frame, int
 	return hr;
 }
 
-void KinectSensorMultiSource::GetColorImageCopy(cv::Mat &dst) {
+void KinectSensorMultiSource::GetImageCopyRGBA(cv::Mat &dst) {
 	mSensorMutex.lock();
 
 	// convert to mat
@@ -366,14 +365,24 @@ void KinectSensorMultiSource::GetColorImageCopy(cv::Mat &dst) {
 	mSensorMutex.unlock();
 }
 
+void KinectSensorMultiSource::GetImageCopyRGB(cv::Mat &dst) {
+	mSensorMutex.lock();
+	cv::Mat cv_img(ColorImageStreamHeight, ColorImageStreamWidth, CV_8UC4, reinterpret_cast<void*>(pColorImageBuffer));
+	cv::Mat resized;
+	cv::resize(cv_img, resized, cv::Size(mColorWidth, mColorHeight));
+	// rgba to rgb
+	cv::cvtColor(resized, resized, CV_RGBA2RGB);
+	dst = resized;
+	mSensorMutex.unlock();
+}
 
-void KinectSensorMultiSource::GetColorImage(cv::Mat &dst) {
+void KinectSensorMultiSource::GetImageRGBA(cv::Mat &dst) {
 	cv::Mat cv_img(ColorImageStreamHeight, ColorImageStreamWidth, CV_8UC4, reinterpret_cast<void*>(pColorImageBuffer));
 	dst = cv_img;
 }
 
 
-void KinectSensorMultiSource::GetDepthImageCopy(cv::Mat &dst) {
+void KinectSensorMultiSource::GetImageCopyDepth(cv::Mat &dst) {
 	mSensorMutex.lock();
 	// tmp
 	cv::Mat cv_img(DepthStreamHeight, DepthStreamWidth, CV_16U, pDepthBuffer);

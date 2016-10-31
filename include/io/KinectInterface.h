@@ -40,10 +40,11 @@ namespace io
 		HRESULT AcquireFrame();
 
 		// get deep copy of data
-		void GetColorImageCopy(cv::Mat &dst);
-		void GetDepthImageCopy(cv::Mat &dst);
+		void GetImageCopyRGBA(cv::Mat &dst);
+		void GetImageCopyRGB(cv::Mat &dst);
+		void GetImageCopyDepth(cv::Mat &dst);
 		// link to current data
-		void GetColorImage(cv::Mat &dst);
+		void GetImageRGBA(cv::Mat &dst);
 
 	private:
 		HRESULT ProcessColorFrame(IColorFrame* color_frame, int &height, int &width, RGBQUAD* &buffer, UINT &buffer_len);

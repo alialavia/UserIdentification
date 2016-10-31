@@ -13,10 +13,12 @@
 ```bash
 $ docker pull matbloch/user_identification_node
 ```
-5. Start server with forwarded port 80: 
+	- Verify image: `$ docker list images`
+5. Start server with forwarded port 80:
 ```bash
 $ winpty docker run -p 80:80 -ti matbloch/user_identification_node //bin/bash
 ```
+	- Verify container (list active containers): `$ docker ps`
 
 ## Demos/Tests
 

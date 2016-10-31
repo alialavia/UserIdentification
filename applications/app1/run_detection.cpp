@@ -25,8 +25,7 @@ int main(int argc, char** argv)
 		// check if there is a new frame available
 		if (SUCCEEDED(hr)) {
 
-			//k.GetColorImageCopy(color_image);
-			k.GetColorImage(color_image);
+			k.GetImageCopyRGBA(color_image);
 
 			cv::imshow("Color image", color_image);
 			cv::waitKey(3);
