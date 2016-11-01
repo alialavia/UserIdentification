@@ -14,6 +14,9 @@
 
 // Kinect SDK 2
 #include <Kinect.h>
+#include <Kinect.Face.h>
+
+#include <windows.h>
 
 //MultiSourceFrameReader will align to the slowest framerate of any subscribed source. In lowlight scenarios,
 //the color stream may drop to 15 FPS.If this happens, and MultiSourceFrameReader is subscribed 
@@ -21,7 +24,8 @@
 
 using namespace io;
 
-KinectSensorMultiSource::KinectSensorMultiSource() : 
+
+KinectSensorMultiSource::KinectSensorMultiSource(): 
 	pSourceReader(NULL), 
 	mColorWidth(1920),
 	mColorHeight(1080),
@@ -30,6 +34,12 @@ KinectSensorMultiSource::KinectSensorMultiSource() :
 	pColorImageBuffer(NULL),
 	pDepthBuffer(NULL)
 {
+	// init face frame source and readers
+	for (int i = 0; i < NR_USERS; i++)
+	{
+		m_pFaceFrameSources[i] = nullptr;
+		m_pFaceFrameReaders[i] = nullptr;
+	}
 
 }
 
@@ -37,15 +47,38 @@ KinectSensorMultiSource::KinectSensorMultiSource() :
 KinectSensorMultiSource::~KinectSensorMultiSource() {
 	Close();
 
-	// cleanup
-	if (pColorImageBuffer != NULL) {
+	// cleanup buffers
+
+	// color
+	if (pColorImageBuffer != nullptr) {
 		delete[] pColorImageBuffer;
-		pColorImageBuffer = NULL;
+		pColorImageBuffer = nullptr;
 	}
+	// depth
+	if (pDepthBuffer != nullptr) {
+		delete[] pDepthBuffer;
+		pDepthBuffer = nullptr;
+	}
+	// body data
+	for (int i = 0; i < _countof(ppBodies); ++i)
+	{
+		SafeRelease(ppBodies[i]);
+	}
+
 }
 
 void KinectSensorMultiSource::Close() {
-	// shut down streams
+
+	// release reader
+	SafeRelease(pSourceReader);
+
+	// face
+	for (int i = 0; i < NR_USERS; i++)
+	{
+		SafeRelease(m_pFaceFrameSources[i]);
+		SafeRelease(m_pFaceFrameReaders[i]);
+	}
+
 	// close the Kinect Sensor
 	if (pSensor)
 	{
@@ -53,9 +86,6 @@ void KinectSensorMultiSource::Close() {
 	}
 
 	SafeRelease(pSensor);
-
-	// release reader
-	SafeRelease(pSourceReader);
 }
 
 HRESULT KinectSensorMultiSource::Open() {
@@ -65,33 +95,90 @@ HRESULT KinectSensorMultiSource::Open() {
 	// connect to sensor
 	hr = GetDefaultKinectSensor(&pSensor);
 
-	if (FAILED(hr)) {
-		std::cout << "Error : GetDefaultKinectSensor" << std::endl;
-		return hr;
-	}
-
 	// open sensor
-	hr = pSensor->Open();
-	if (FAILED(hr)) {
-		std::cout << "Error : IKinectSensor::Open()" << std::endl;
-		return hr;
+	if (SUCCEEDED(hr))
+	{
+		hr = pSensor->Open();
 	}
 
 	// open reader
-	hr = pSensor->OpenMultiSourceFrameReader(
-		FrameSourceTypes::FrameSourceTypes_Depth |
-		FrameSourceTypes::FrameSourceTypes_Color |
-		FrameSourceTypes::FrameSourceTypes_Infrared |
-		FrameSourceTypes::FrameSourceTypes_Body |
-		FrameSourceTypes::FrameSourceTypes_BodyIndex,
-		&pSourceReader);
-
-	if (FAILED(hr)) {
-		std::cout << "Error : OpenMultiSourceFrameReader()" << std::endl;
-		return hr;
+	if (SUCCEEDED(hr))
+	{
+		hr = pSensor->OpenMultiSourceFrameReader(
+			FrameSourceTypes::FrameSourceTypes_Depth |
+			FrameSourceTypes::FrameSourceTypes_Color |
+			FrameSourceTypes::FrameSourceTypes_Infrared |
+			FrameSourceTypes::FrameSourceTypes_Body |
+			FrameSourceTypes::FrameSourceTypes_BodyIndex,
+			&pSourceReader);
 	}
 
-	return S_OK;
+	// define the face frame features
+	static const DWORD c_FaceFrameFeatures =
+		FaceFrameFeatures::FaceFrameFeatures_BoundingBoxInColorSpace
+		| FaceFrameFeatures::FaceFrameFeatures_PointsInColorSpace
+		| FaceFrameFeatures::FaceFrameFeatures_RotationOrientation
+		| FaceFrameFeatures::FaceFrameFeatures_Happy
+		| FaceFrameFeatures::FaceFrameFeatures_RightEyeClosed
+		| FaceFrameFeatures::FaceFrameFeatures_LeftEyeClosed
+		| FaceFrameFeatures::FaceFrameFeatures_MouthOpen
+		| FaceFrameFeatures::FaceFrameFeatures_MouthMoved
+		| FaceFrameFeatures::FaceFrameFeatures_LookingAway
+		| FaceFrameFeatures::FaceFrameFeatures_Glasses
+		| FaceFrameFeatures::FaceFrameFeatures_FaceEngagement;
+
+	if (SUCCEEDED(hr))
+	{
+		// create a face frame source + reader to track each body in the fov
+		for (int i = 0; i < NR_USERS; i++)
+		{
+			if (SUCCEEDED(hr))
+			{
+				// create the face frame source by specifying the required face frame features
+				hr = CreateFaceFrameSource(pSensor, 0, c_FaceFrameFeatures, &m_pFaceFrameSources[i]);
+			}
+			if (SUCCEEDED(hr))
+			{
+				// open the corresponding reader
+				hr = m_pFaceFrameSources[i]->OpenReader(&m_pFaceFrameReaders[i]);
+			}
+		}
+	}
+
+	long start = time(0) * 1000;
+	long timeout = 2000;	// in seconds
+	long timeLeft = timeout;
+
+	if (SUCCEEDED(hr))
+	{
+		IMultiSourceFrame* p_multisource_frame = NULL;
+		std::cout << "Looking for sensor";
+		// try to connect to camera
+		do {
+			timeLeft = timeout - (time(0) * 1000 - start);
+			hr = pSourceReader->AcquireLatestFrame(&p_multisource_frame);
+			SafeRelease(p_multisource_frame);
+			if (SUCCEEDED(hr))
+			{
+				break;
+			}
+			// wait
+			Sleep(200);
+			std::cout << ".";
+		} while (!SUCCEEDED(hr) && (timeLeft > 0));
+
+		std::cout << "\n";
+		if (!SUCCEEDED(hr))
+		{
+			std::cout << "Camera is NOT connected...\n";
+		}
+		else
+		{
+			std::cout << "Camera found...\n";
+		}
+	}
+
+	return hr;
 }
 
 HRESULT KinectSensorMultiSource::AcquireFrame() {
@@ -109,11 +196,18 @@ HRESULT KinectSensorMultiSource::AcquireFrame() {
 	IInfraredFrame* p_infrared_frame = NULL;
 	IBodyFrame* p_body_frame = NULL;
 	IBodyIndexFrame* p_bodyindex_frame = NULL;
+	IFaceFrame* pFaceFrame[NR_USERS] = {NULL};
 
 	// get multiframe
 	hr = pSourceReader->AcquireLatestFrame(&p_multisource_frame);
 
-	// TODO: DOES AcquireLatestFrame ONLY GIVE NEW FRAMES OR DO WE NEED TO CHECK
+#ifdef _DEBUG
+	if (hr == E_PENDING)
+	{
+		std::cout << "Frame pending...\n";
+	}
+#endif
+
 	// IF FPS > FPS_kINECT:=30
 	if (SUCCEEDED(hr))
 	{
@@ -178,7 +272,20 @@ HRESULT KinectSensorMultiSource::AcquireFrame() {
 			}
 			SafeRelease(bifr);
 		}
-	}
+
+		// face - separate reader
+		if (SUCCEEDED(hr))
+		{
+			// iterate through each face reader
+			for (int iFace = 0; iFace < NR_USERS; ++iFace)
+			{
+				// retrieve the latest face frame from this reader
+				hr = m_pFaceFrameReaders[iFace]->AcquireLatestFrame(&pFaceFrame[iFace]);
+			}
+		}
+
+	}	// acquire multisource frame
+
 
 	// process frames if everything went smoothly
 	if (SUCCEEDED(hr)) {
@@ -186,7 +293,16 @@ HRESULT KinectSensorMultiSource::AcquireFrame() {
 		// color
 		ProcessColorFrame(p_color_frame, ColorImageStreamHeight, ColorImageStreamWidth, pColorImageBuffer, mColorImageBufferLen);
 		// depth
-		//ProcessDepthFrame(p_depth_frame, DepthStreamHeight, DepthStreamWidth, pDepthBuffer, mDepthBufferLen);
+		ProcessDepthFrame(p_depth_frame, DepthStreamHeight, DepthStreamWidth, pDepthBuffer, mDepthBufferLen);
+		
+		// body - get and refresh pp bodies
+		hr = ProcessBodyFrame(p_body_frame);
+
+		// face frame - process after body
+		if (SUCCEEDED(hr)) {
+			ProcessFaces(pFaceFrame);
+		}
+		
 		mSensorMutex.unlock();
 	}
 
@@ -200,37 +316,123 @@ HRESULT KinectSensorMultiSource::AcquireFrame() {
 	SafeRelease(p_body_frame);
 	SafeRelease(p_bodyindex_frame);
 
+	// release faces
+	for (int iFace = 0; iFace < NR_USERS; ++iFace)
+	{
+		SafeRelease(pFaceFrame[iFace]);
+	}
+
 	// return status
 	return hr;
 }
 
 // --------------------- PROCESSING FUNCTIONS
 
-HRESULT KinectSensorMultiSource::ProcessBodyFrame(IBodyFrame *body_frame) {
 
-	IFrameDescription *frameDesc = nullptr;
+HRESULT KinectSensorMultiSource::ProcessFaces(IFaceFrame* face_frames[NR_USERS])
+{
+	
 	HRESULT hr = E_FAIL;
+	IFaceFrame* pFaceFrame = NULL;
 
-	// BODY_COUNT = 6
-	IBody* ppBodies[BODY_COUNT] = { 0 };
+	// iterate through each face reader
+	for (int iFace = 0; iFace < NR_USERS; ++iFace)
+	{
+		pFaceFrame = face_frames[iFace];
 
-	hr = body_frame->GetAndRefreshBodyData(_countof(ppBodies), ppBodies);
+		BOOLEAN bFaceTracked = false;
+		if (SUCCEEDED(hr) && nullptr != pFaceFrame)
+		{
+			// check if a valid face is tracked in this face frame
+			hr = pFaceFrame->get_IsTrackingIdValid(&bFaceTracked);
+		}
 
-	// readin body buffer
-	if (SUCCEEDED(hr)) {
+		if (SUCCEEDED(hr))
+		{
 
+			if (bFaceTracked)
+			{
+				// valid face
+				IFaceFrameResult* pFaceFrameResult = nullptr;
+				RectI faceBox = { 0 };
+				PointF facePoints[FacePointType::FacePointType_Count];
+				Vector4 faceRotation;
+				DetectionResult faceProperties[FaceProperty::FaceProperty_Count];
 
+				hr = pFaceFrame->get_FaceFrameResult(&pFaceFrameResult);
+
+				// need to verify if pFaceFrameResult contains data before trying to access it
+				if (SUCCEEDED(hr) && pFaceFrameResult != nullptr)
+				{
+					hr = pFaceFrameResult->get_FaceBoundingBoxInColorSpace(&faceBox);
+
+					if (SUCCEEDED(hr))
+					{
+						hr = pFaceFrameResult->GetFacePointsInColorSpace(FacePointType::FacePointType_Count, facePoints);
+					}
+
+					if (SUCCEEDED(hr))
+					{
+						hr = pFaceFrameResult->get_FaceRotationQuaternion(&faceRotation);
+					}
+
+					if (SUCCEEDED(hr))
+					{
+						hr = pFaceFrameResult->GetFaceProperties(FaceProperty::FaceProperty_Count, faceProperties);
+					}
+
+				}
+				else
+				{
+					// face tracking is not valid - attempt to fix the issue
+					// a valid body is required to perform this step
+						// check if the corresponding body is tracked 
+						// if this is true then update the face frame source to track this body
+						IBody* pBody = ppBodies[iFace];
+						if (pBody != nullptr)
+						{
+							BOOLEAN bTracked = false;
+							hr = pBody->get_IsTracked(&bTracked);
+
+							UINT64 bodyTId;
+							if (SUCCEEDED(hr) && bTracked)
+							{
+								// get the tracking ID of this body
+								hr = pBody->get_TrackingId(&bodyTId);
+								if (SUCCEEDED(hr))
+								{
+									// update the face frame source with the tracking ID
+									m_pFaceFrameSources[iFace]->put_TrackingId(bodyTId);
+								}
+							}
+						}
+				}
+
+				// release face info
+				SafeRelease(pFaceFrameResult);
+			}	// /bFaceTracked valid face
+		}
 	}
 
+	return hr;
 
-	// free memory
-	for (int i = 0; i < _countof(ppBodies); ++i)
-	{
-		SafeRelease(ppBodies[i]);
+}
+
+
+HRESULT KinectSensorMultiSource::ProcessBodyFrame(IBodyFrame *body_frame) {
+
+	HRESULT hr = E_FAIL;
+
+	// readin body buffer
+	hr = body_frame->GetAndRefreshBodyData(_countof(ppBodies), ppBodies);
+
+	if (SUCCEEDED(hr)) {
+		// do something
 	}
 
 	return hr;
 }
+
 
 HRESULT KinectSensorMultiSource::ProcessColorFrame(IColorFrame* color_frame, int &height, int &width,  RGBQUAD* &buffer, UINT &buffer_len) {
 

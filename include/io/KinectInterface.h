@@ -20,6 +20,13 @@ struct IBodyFrame;;
 struct IBodyIndexFrame;
 struct IMultiSourceFrameReader;
 struct IKinectSensor;
+struct IBody;
+struct IFaceFrameSource;
+struct IFaceFrameReader;
+struct IFaceFrame;
+
+
+#define NR_USERS 6
 
 namespace cv{
 	class Mat;
@@ -27,7 +34,6 @@ namespace cv{
 
 namespace io
 {
-
 	class KinectSensorMultiSource {
 
 	public:
@@ -50,6 +56,7 @@ namespace io
 		HRESULT ProcessColorFrame(IColorFrame* color_frame, int &height, int &width, RGBQUAD* &buffer, UINT &buffer_len);
 		HRESULT ProcessDepthFrame(IDepthFrame *depth_frame, int &height, int &width, UINT16* &buffer, UINT &buffer_len);
 		HRESULT ProcessBodyFrame(IBodyFrame *body_frame);
+		HRESULT ProcessFaces(IFaceFrame* pFaceFrame[NR_USERS]);
 	
 	public:
 		// output settings
@@ -63,7 +70,11 @@ namespace io
 		IKinectSensor* pSensor;
 		IMultiSourceFrameReader* pSourceReader;
 
-		// buffers containing latest data (refreshed with AcquireFrame)
+		// face source/reader
+		IFaceFrameSource* m_pFaceFrameSources[NR_USERS];
+		IFaceFrameReader* m_pFaceFrameReaders[NR_USERS];
+
+		// -------- buffers containing latest data (refreshed with AcquireFrame)
 
 		// color
 		RGBQUAD *pColorImageBuffer;
@@ -76,6 +87,10 @@ namespace io
 		UINT mDepthBufferLen = 0;
 		int DepthStreamHeight = 0;
 		int DepthStreamWidth = 0;
+
+		// bodies
+		IBody* ppBodies[NR_USERS] = { 0 };
+
 
 	};
 
