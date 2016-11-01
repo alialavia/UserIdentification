@@ -62,9 +62,9 @@ if(WIN32)
 			else()	
 				set(KINECTSDK2_LIBRARIES 
 					${KINECTSDK2_LIBRARY_DIRS}/Kinect20.lib;
-					# ${KinectSDK2_LIBRARY_DIRS}/Kinect20.Face.lib;
-					# ${KinectSDK2_LIBRARY_DIRS}/Kinect20.Fusion.lib;
-					# ${KinectSDK2_LIBRARY_DIRS}/Kinect20.VisualGestureBuilder.lib
+					${KINECTSDK2_LIBRARY_DIRS}/Kinect20.Face.lib;
+					# ${KINECTSDK2_LIBRARY_DIRS}/Kinect20.Fusion.lib;
+					# ${KINECTSDK2_LIBRARY_DIRS}/Kinect20.VisualGestureBuilder.lib
 				)
 				
 				# check if libraries exist
