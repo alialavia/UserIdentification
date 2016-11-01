@@ -3,10 +3,14 @@
 #include <strsafe.h>
 #include <opencv2\opencv.hpp>
 
+
+#include <user/User.h>
+
 int main(int argc, char** argv)
 {
 	io::KinectSensorMultiSource k;
 	HRESULT hr;
+	cvNamedWindow("Color image", CV_WINDOW_AUTOSIZE);
 
 	cv::Mat color_image;
 
@@ -15,8 +19,6 @@ int main(int argc, char** argv)
 		std::cout << "Initialization failed" << std::endl;
 		return -1;
 	}
-
-	cvNamedWindow("Color image", CV_WINDOW_AUTOSIZE);
 
 	while (true) {
 

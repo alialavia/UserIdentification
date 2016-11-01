@@ -1,3 +1,6 @@
+#ifndef BASE__useridentification
+#define BASE__useridentification
+
 #include <typeinfo>
 #ifndef _MSC_VER
 #   include <cxxabi.h>
@@ -5,6 +8,7 @@
 #include <memory>
 #include <string>
 #include <cstdlib>
+
 
 // ---------------------------------------------------------------
 // Reference: http://stackoverflow.com/questions/81870/is-it-possible-to-print-a-variables-type-in-standard-c
@@ -40,25 +44,23 @@ type_name()
     return r;
 }
 
+// ---------------------------------------------------------------
+//		debugging
+// ---------------------------------------------------------------
+
+
+
+// ---------------------------------------------------------------
+//		pointer handling
+// ---------------------------------------------------------------
+
 template<class Interface>
 inline void SafeRelease(Interface *& pInterfaceToRelease)
 {
-	if (pInterfaceToRelease != NULL) {
+	if (pInterfaceToRelease != nullptr) {
 		pInterfaceToRelease->Release();
-		pInterfaceToRelease = NULL;
+		pInterfaceToRelease = nullptr;
 	}
 }
 
-// This function releases the pointer ppT and sets it equal to NULL.
-// Another option is to use a smart pointer class, such as CComPtr, which is defined in the Active Template Library (ATL).
-/*
-template <class T> void SafeRelease(T **ppT)
-{
-    if (*ppT)
-    {
-        (*ppT)->Release();
-        *ppT = NULL;
-    }
-}
-*/
-
+#endif

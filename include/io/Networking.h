@@ -1,3 +1,6 @@
+#ifndef IO__networking
+#define IO__networking
+
 namespace io
 {
 	class TCPClient
@@ -16,3 +19,5 @@ namespace io
 		int mSocketID;
 	};
 }
+
+#endif

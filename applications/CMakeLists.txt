@@ -11,6 +11,8 @@ SET(TARGET_DEFAULT_FOLDER "Applications")
 SET(TARGET_COMMON_LIBRARIES 
     # yourAdditionalLib
 	io
+	user
 )
 
 ADD_SUBDIRECTORY(app1)
+ADD_SUBDIRECTORY(offline_training)
