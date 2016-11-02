@@ -25,14 +25,16 @@
 using namespace io;
 
 
-KinectSensorMultiSource::KinectSensorMultiSource(): 
-	pSourceReader(NULL), 
+KinectSensorMultiSource::KinectSensorMultiSource():
+	pSourceReader(nullptr),
 	mColorWidth(1920),
 	mColorHeight(1080),
 	mDepthImageWidth(480),
 	mDepthImageHeight(320),
-	pColorImageBuffer(NULL),
-	pDepthBuffer(NULL)
+	pColorImageBuffer(nullptr),
+	pDepthBuffer(nullptr),
+	pBodyIndexBuffer(nullptr),
+	pSensor(nullptr)
 {
 	// init face frame source and readers
 	for (int i = 0; i < NR_USERS; i++)
@@ -40,22 +42,24 @@ KinectSensorMultiSource::KinectSensorMultiSource():
 		m_pFaceFrameSources[i] = nullptr;
 		m_pFaceFrameReaders[i] = nullptr;
 	}
-
 }
 
 // Careful! Extracted images will be deleted if the sensor streamer runs out of scope
-KinectSensorMultiSource::~KinectSensorMultiSource() {
+KinectSensorMultiSource::~KinectSensorMultiSource()
+{
 	Close();
 
 	// cleanup buffers
 
 	// color
-	if (pColorImageBuffer != nullptr) {
+	if (pColorImageBuffer != nullptr)
+	{
 		delete[] pColorImageBuffer;
 		pColorImageBuffer = nullptr;
 	}
 	// depth
-	if (pDepthBuffer != nullptr) {
+	if (pDepthBuffer != nullptr)
+	{
 		delete[] pDepthBuffer;
 		pDepthBuffer = nullptr;
 	}
@@ -64,15 +68,20 @@ KinectSensorMultiSource::~KinectSensorMultiSource() {
 	{
 		SafeRelease(ppBodies[i]);
 	}
-
+	// body index
+	if (pBodyIndexBuffer != nullptr)
+	{
+		delete[] pBodyIndexBuffer;
+		pBodyIndexBuffer = nullptr;
+	}
 }
 
-void KinectSensorMultiSource::Close() {
-
+void KinectSensorMultiSource::Close()
+{
 	// release reader
 	SafeRelease(pSourceReader);
 
-	// face
+	// face readers
 	for (int i = 0; i < NR_USERS; i++)
 	{
 		SafeRelease(m_pFaceFrameSources[i]);
@@ -88,8 +97,8 @@ void KinectSensorMultiSource::Close() {
 	SafeRelease(pSensor);
 }
 
-HRESULT KinectSensorMultiSource::Open() {
-
+HRESULT KinectSensorMultiSource::Open(int timeout)
+{
 	HRESULT hr;
 
 	// connect to sensor
@@ -146,15 +155,15 @@ HRESULT KinectSensorMultiSource::Open() {
 	}
 
 	long start = time(0) * 1000;
-	long timeout = 2000;	// in seconds
 	long timeLeft = timeout;
 
 	if (SUCCEEDED(hr))
 	{
-		IMultiSourceFrame* p_multisource_frame = NULL;
+		IMultiSourceFrame* p_multisource_frame = nullptr;
 		std::cout << "Looking for sensor";
 		// try to connect to camera
-		do {
+		do
+		{
 			timeLeft = timeout - (time(0) * 1000 - start);
 			hr = pSourceReader->AcquireLatestFrame(&p_multisource_frame);
 			SafeRelease(p_multisource_frame);
@@ -165,7 +174,8 @@ HRESULT KinectSensorMultiSource::Open() {
 			// wait
 			Sleep(200);
 			std::cout << ".";
-		} while (!SUCCEEDED(hr) && (timeLeft > 0));
+		}
+		while (!SUCCEEDED(hr) && (timeLeft > 0));
 
 		std::cout << "\n";
 		if (!SUCCEEDED(hr))
@@ -181,22 +191,23 @@ HRESULT KinectSensorMultiSource::Open() {
 	return hr;
 }
 
-HRESULT KinectSensorMultiSource::AcquireFrame() {
-
-	if (!pSensor) {
+HRESULT KinectSensorMultiSource::AcquireFrame()
+{
+	if (!pSensor)
+	{
 		return E_FAIL;
 	}
 
 	HRESULT hr = E_PENDING;
 
 	// allocate frames
-	IMultiSourceFrame* p_multisource_frame = NULL;
-	IDepthFrame* p_depth_frame = NULL;
-	IColorFrame* p_color_frame = NULL;
-	IInfraredFrame* p_infrared_frame = NULL;
-	IBodyFrame* p_body_frame = NULL;
-	IBodyIndexFrame* p_bodyindex_frame = NULL;
-	IFaceFrame* pFaceFrame[NR_USERS] = {NULL};
+	IMultiSourceFrame* p_multisource_frame = nullptr;
+	IDepthFrame* p_depth_frame = nullptr;
+	IColorFrame* p_color_frame = nullptr;
+	IInfraredFrame* p_infrared_frame = nullptr;
+	IBodyFrame* p_body_frame = nullptr;
+	IBodyIndexFrame* p_bodyindex_frame = nullptr;
+	IFaceFrame* pFaceFrame[NR_USERS] = {nullptr};
 
 	// get multiframe
 	hr = pSourceReader->AcquireLatestFrame(&p_multisource_frame);
@@ -204,7 +215,7 @@ HRESULT KinectSensorMultiSource::AcquireFrame() {
 #ifdef _DEBUG
 	if (hr == E_PENDING)
 	{
-		std::cout << "Frame pending...\n";
+		//std::cout << "Frame pending...\n";
 	}
 #endif
 
@@ -214,7 +225,7 @@ HRESULT KinectSensorMultiSource::AcquireFrame() {
 		// color
 		if (SUCCEEDED(hr))
 		{
-			IColorFrameReference* cfr = NULL;
+			IColorFrameReference* cfr = nullptr;
 
 			hr = p_multisource_frame->get_ColorFrameReference(&cfr);
 			if (SUCCEEDED(hr))
@@ -226,7 +237,7 @@ HRESULT KinectSensorMultiSource::AcquireFrame() {
 		// depth
 		if (SUCCEEDED(hr))
 		{
-			IDepthFrameReference* dfr = NULL;
+			IDepthFrameReference* dfr = nullptr;
 
 			hr = p_multisource_frame->get_DepthFrameReference(&dfr);
 			if (SUCCEEDED(hr))
@@ -238,7 +249,7 @@ HRESULT KinectSensorMultiSource::AcquireFrame() {
 		// infrared
 		if (SUCCEEDED(hr))
 		{
-			IInfraredFrameReference* ifr = NULL;
+			IInfraredFrameReference* ifr = nullptr;
 
 			hr = p_multisource_frame->get_InfraredFrameReference(&ifr);
 			if (SUCCEEDED(hr))
@@ -250,7 +261,7 @@ HRESULT KinectSensorMultiSource::AcquireFrame() {
 		// body
 		if (SUCCEEDED(hr))
 		{
-			IBodyFrameReference* bfr = NULL;
+			IBodyFrameReference* bfr = nullptr;
 
 			hr = p_multisource_frame->get_BodyFrameReference(&bfr);
 			if (SUCCEEDED(hr))
@@ -263,7 +274,7 @@ HRESULT KinectSensorMultiSource::AcquireFrame() {
 		// body index
 		if (SUCCEEDED(hr))
 		{
-			IBodyIndexFrameReference* bifr = NULL;
+			IBodyIndexFrameReference* bifr = nullptr;
 
 			hr = p_multisource_frame->get_BodyIndexFrameReference(&bifr);
 			if (SUCCEEDED(hr))
@@ -283,26 +294,28 @@ HRESULT KinectSensorMultiSource::AcquireFrame() {
 				hr = m_pFaceFrameReaders[iFace]->AcquireLatestFrame(&pFaceFrame[iFace]);
 			}
 		}
-
-	}	// acquire multisource frame
+	} // acquire multisource frame
 
 
 	// process frames if everything went smoothly
-	if (SUCCEEDED(hr)) {
-		mSensorMutex.lock();	// class internal data manipulations
+	if (SUCCEEDED(hr))
+	{
+		mSensorMutex.lock(); // class internal data manipulations
 		// color
 		ProcessColorFrame(p_color_frame, ColorImageStreamHeight, ColorImageStreamWidth, pColorImageBuffer, mColorImageBufferLen);
 		// depth
 		ProcessDepthFrame(p_depth_frame, DepthStreamHeight, DepthStreamWidth, pDepthBuffer, mDepthBufferLen);
-		
+		// body index
+		ProcessBodyIndexFrame(p_bodyindex_frame, BodyIndexStreamHeight, BodyIndexStreamWidth, pBodyIndexBuffer, mBodyIndexBufferLen);
 		// body - get and refresh pp bodies
 		hr = ProcessBodyFrame(p_body_frame);
 
 		// face frame - process after body
-		if (SUCCEEDED(hr)) {
+		if (SUCCEEDED(hr))
+		{
 			ProcessFaces(pFaceFrame);
 		}
-		
+
 		mSensorMutex.unlock();
 	}
 
@@ -329,16 +342,62 @@ HRESULT KinectSensorMultiSource::AcquireFrame() {
 // --------------------- PROCESSING FUNCTIONS
 
 
+HRESULT KinectSensorMultiSource::ProcessBodyIndexFrame(IBodyIndexFrame* index_frame, int& height, int& width, BYTE* & buffer, UINT& buffer_len)
+{
+	IFrameDescription* frameDesc = nullptr;
+	HRESULT hr = E_FAIL;
+
+	// current image buffer length
+	UINT nBufferLen;
+
+	hr = index_frame->get_FrameDescription(&frameDesc);
+
+	// readin image buffer
+	if (SUCCEEDED(hr))
+	{
+		// get stream height and width
+		if (
+			SUCCEEDED(frameDesc->get_Height(&height)) &&
+			SUCCEEDED(frameDesc->get_Width(&width))
+		)
+		{
+			// allocate buffer
+			nBufferLen = height * width * sizeof(BYTE);
+
+			// allocate more memory if necessary
+			if (nBufferLen > buffer_len)
+			{
+				if (buffer != nullptr)
+				{
+					delete[] buffer;
+				}
+				buffer = new BYTE[nBufferLen];
+				buffer_len = nBufferLen;
+			}
+
+			hr = index_frame->CopyFrameDataToArray(nBufferLen, reinterpret_cast<BYTE*>(buffer));
+		}
+	}
+
+	SafeRelease(frameDesc);
+	// DO NOT RELEASE FRAME HERE! THIS IS A PURE PROCESSING FUNCTION
+
+	return hr;
+}
+
+
 HRESULT KinectSensorMultiSource::ProcessFaces(IFaceFrame* face_frames[NR_USERS])
 {
-	
 	HRESULT hr = E_FAIL;
-	IFaceFrame* pFaceFrame = NULL;
+	IFaceFrame* pFaceFrame = nullptr;
 
 	// iterate through each face reader
 	for (int iFace = 0; iFace < NR_USERS; ++iFace)
 	{
 		pFaceFrame = face_frames[iFace];
+
+		Face newFace;
+		Faces[iFace] = newFace;
 
 		BOOLEAN bFaceTracked = false;
 		if (SUCCEEDED(hr) && nullptr != pFaceFrame)
@@ -349,84 +408,78 @@ HRESULT KinectSensorMultiSource::ProcessFaces(IFaceFrame* face_frames[NR_USERS])
 
 		if (SUCCEEDED(hr))
 		{
-
+			// valid face
 			if (bFaceTracked)
 			{
-				// valid face
+				// TODO: check why face tracking is not working
 				IFaceFrameResult* pFaceFrameResult = nullptr;
-				RectI faceBox = { 0 };
-				PointF facePoints[FacePointType::FacePointType_Count];
-				Vector4 faceRotation;
-				DetectionResult faceProperties[FaceProperty::FaceProperty_Count];
-
 				hr = pFaceFrame->get_FaceFrameResult(&pFaceFrameResult);
 
 				// need to verify if pFaceFrameResult contains data before trying to access it
 				if (SUCCEEDED(hr) && pFaceFrameResult != nullptr)
 				{
-					hr = pFaceFrameResult->get_FaceBoundingBoxInColorSpace(&faceBox);
+					hr = pFaceFrameResult->get_FaceBoundingBoxInColorSpace(&Faces[iFace].faceBox);
 
 					if (SUCCEEDED(hr))
 					{
-						hr = pFaceFrameResult->GetFacePointsInColorSpace(FacePointType::FacePointType_Count, facePoints);
+						hr = pFaceFrameResult->GetFacePointsInColorSpace(FacePointType::FacePointType_Count, Faces[iFace].facePoints);
 					}
 
 					if (SUCCEEDED(hr))
 					{
-						hr = pFaceFrameResult->get_FaceRotationQuaternion(&faceRotation);
+						hr = pFaceFrameResult->get_FaceRotationQuaternion(&Faces[iFace].faceRotation);
 					}
 
 					if (SUCCEEDED(hr))
 					{
-						hr = pFaceFrameResult->GetFaceProperties(FaceProperty::FaceProperty_Count, faceProperties);
+						hr = pFaceFrameResult->GetFaceProperties(FaceProperty::FaceProperty_Count, Faces[iFace].faceProperties);
 					}
-
 				}
 				else
 				{
 					// face tracking is not valid - attempt to fix the issue
 					// a valid body is required to perform this step
-						// check if the corresponding body is tracked 
-						// if this is true then update the face frame source to track this body
-						IBody* pBody = ppBodies[iFace];
-						if (pBody != nullptr)
-						{
-							BOOLEAN bTracked = false;
-							hr = pBody->get_IsTracked(&bTracked);
+					// check if the corresponding body is tracked 
+					// if this is true then update the face frame source to track this body
+					IBody* pBody = ppBodies[iFace];
+					if (pBody != nullptr)
+					{
+						BOOLEAN bTracked = false;
+						hr = pBody->get_IsTracked(&bTracked);
 
-							UINT64 bodyTId;
-							if (SUCCEEDED(hr) && bTracked)
+						UINT64 bodyTId;
+						if (SUCCEEDED(hr) && bTracked)
+						{
+							// get the tracking ID of this body
+							hr = pBody->get_TrackingId(&bodyTId);
+							if (SUCCEEDED(hr))
 							{
-								// get the tracking ID of this body
-								hr = pBody->get_TrackingId(&bodyTId);
-								if (SUCCEEDED(hr))
-								{
-									// update the face frame source with the tracking ID
-									m_pFaceFrameSources[iFace]->put_TrackingId(bodyTId);
-								}
+								// update the face frame source with the tracking ID
+								m_pFaceFrameSources[iFace]->put_TrackingId(bodyTId);
 							}
 						}
+					}
 				}
 
 				// release face info
 				SafeRelease(pFaceFrameResult);
-			}	// /bFaceTracked valid face
+			} // /bFaceTracked valid face
 		}
 	}
 
 	return hr;
-
 }
 
 
-HRESULT KinectSensorMultiSource::ProcessBodyFrame(IBodyFrame *body_frame) {
-
+HRESULT KinectSensorMultiSource::ProcessBodyFrame(IBodyFrame* body_frame)
+{
 	HRESULT hr = E_FAIL;
 
 	// readin body buffer
 	hr = body_frame->GetAndRefreshBodyData(_countof(ppBodies), ppBodies);
 
-	if (SUCCEEDED(hr)) {
+	if (SUCCEEDED(hr))
+	{
 		// do something
 	}
 
@@ -434,9 +487,9 @@ HRESULT KinectSensorMultiSource::ProcessBodyFrame(IBodyFrame *body_frame) {
 }
 
 
-HRESULT KinectSensorMultiSource::ProcessColorFrame(IColorFrame* color_frame, int &height, int &width,  RGBQUAD* &buffer, UINT &buffer_len) {
-
-	IFrameDescription *frameDesc = nullptr;
+HRESULT KinectSensorMultiSource::ProcessColorFrame(IColorFrame* color_frame, int& height, int& width, RGBQUAD* & buffer, UINT& buffer_len) const
+{
+	IFrameDescription* frameDesc = nullptr;
 	HRESULT hr = E_FAIL;
 
 	// output parameters
@@ -451,21 +504,23 @@ HRESULT KinectSensorMultiSource::ProcessColorFrame(IColorFrame* color_frame, int
 	hr = color_frame->get_FrameDescription(&frameDesc);
 
 	// readin image buffer
-	if (SUCCEEDED(hr)) {
-		
+	if (SUCCEEDED(hr))
+	{
 		// get stream height and width
 		if (
 			SUCCEEDED(frameDesc->get_Height(&height)) &&
 			SUCCEEDED(frameDesc->get_Width(&width)) &&
 			SUCCEEDED(color_frame->get_RawColorImageFormat(&imageFormat))
-			)
+		)
 		{
 			// allocate buffer
 			nBufferLen = ColorImageStreamHeight * ColorImageStreamWidth * sizeof(RGBQUAD);
 
 			// allocate more memory if necessary
-			if (nBufferLen > buffer_len) {
-				if (buffer != NULL) {
+			if (nBufferLen > buffer_len)
+			{
+				if (buffer != nullptr)
+				{
 					delete[] buffer;
 				}
 				buffer = new RGBQUAD[nBufferLen];
@@ -474,7 +529,7 @@ HRESULT KinectSensorMultiSource::ProcessColorFrame(IColorFrame* color_frame, int
 
 			// no type conversion
 			if (imageFormat == targetFormat)
-			{	
+			{
 				// TODO: check if buffer ist still available once frame is released (after polling). SHOULD NOT!
 				// hr = color_frame->AccessRawUnderlyingBuffer(&nBufferLen, reinterpret_cast<BYTE**>(&pColorImageBuffer));
 				hr = color_frame->CopyRawFrameDataToArray(nBufferLen, reinterpret_cast<BYTE*>(buffer));
@@ -493,8 +548,10 @@ HRESULT KinectSensorMultiSource::ProcessColorFrame(IColorFrame* color_frame, int
 	return hr;
 }
 
-HRESULT KinectSensorMultiSource::ProcessDepthFrame(IDepthFrame *depth_frame, int &height, int &width, UINT16* &buffer, UINT &buffer_len) {
-
+// The pixel values in this frame are 8 - bit unsigned integers, where 0 - 5 map directly to the BodyData index in the BodyFrame.
+// Values greater than the value obtained from BodyCount indicate the pixel is part of the background, not associated with a tracked body.
+HRESULT KinectSensorMultiSource::ProcessDepthFrame(IDepthFrame* depth_frame, int& height, int& width, UINT16* & buffer, UINT& buffer_len) const
+{
 	HRESULT hr;
 
 	IFrameDescription* frameDesc = nullptr;
@@ -509,22 +566,24 @@ HRESULT KinectSensorMultiSource::ProcessDepthFrame(IDepthFrame *depth_frame, int
 	hr = depth_frame->get_FrameDescription(&frameDesc);
 
 	// readin image buffer
-	if (SUCCEEDED(hr)) {
-
+	if (SUCCEEDED(hr))
+	{
 		// get stream height and width
 		if (
 			SUCCEEDED(frameDesc->get_Height(&height)) &&
 			SUCCEEDED(frameDesc->get_Width(&width)) &&
 			SUCCEEDED(depth_frame->get_DepthMinReliableDistance(&nDepthMinReliableDistance)) &&
 			SUCCEEDED(depth_frame->get_DepthMaxReliableDistance(&nDepthMaxDistance))
-			)
+		)
 		{
 			// allocate buffer
 			nBufferLen = height * width * sizeof(UINT16);
 
 			// allocate more memory if necessary
-			if (nBufferLen > buffer_len) {
-				if (buffer != NULL) {
+			if (nBufferLen > buffer_len)
+			{
+				if (buffer != nullptr)
+				{
 					delete[] buffer;
 				}
 				buffer = new UINT16[nBufferLen];
@@ -543,7 +602,50 @@ HRESULT KinectSensorMultiSource::ProcessDepthFrame(IDepthFrame *depth_frame, int
 	return hr;
 }
 
-void KinectSensorMultiSource::GetImageCopyRGBA(cv::Mat &dst) {
+void KinectSensorMultiSource::GetImageCopyBodyIndexColored(cv::Mat& dst) const
+{
+	mSensorMutex.lock();
+
+	// convert to mat
+	// uint 8bit (0-256), players: 0-5
+	cv::Mat cv_img(BodyIndexStreamHeight, BodyIndexStreamWidth, CV_8UC1, reinterpret_cast<void*>(pBodyIndexBuffer));
+
+	cv::Mat resized;
+	cv::resize(cv_img, resized, cv::Size(BodyIndexStreamWidth, BodyIndexStreamHeight));
+	// alternatively, if dimension stays the same: dst = cv_img.copyTo(dst) - copies everything, not only header (in contrast to .clone())
+
+	cv::Vec3b user_colors[6];
+	user_colors[0] = cv::Vec3b(255, 0, 0);
+	user_colors[1] = cv::Vec3b(0, 255, 0);
+	user_colors[2] = cv::Vec3b(0, 0, 255);
+	user_colors[3] = cv::Vec3b(255, 0, 255);
+	user_colors[4] = cv::Vec3b(255, 255, 0);
+	user_colors[5] = cv::Vec3b(0, 255, 255);
+
+	// convert color
+	cv::Mat colored;
+	cv::cvtColor(resized, colored, cv::COLOR_GRAY2BGR);
+
+	int user_id;
+	for (int i = 0; i < resized.cols; i++)
+	{
+		for (int j = 0; j < resized.rows; j++)
+		{
+			user_id = resized.at<uchar>(j, i);
+			if (user_id < NR_USERS)
+			{
+				colored.at<cv::Vec3b>(j, i) = user_colors[user_id];
+			}
+		}
+	}
+
+	// set pointer of dst to resized, colored image
+	dst = colored;
+	mSensorMutex.unlock();
+}
+
+void KinectSensorMultiSource::GetImageCopyRGBA(cv::Mat& dst) const
+{
 	mSensorMutex.lock();
 
 	// convert to mat
@@ -567,7 +669,8 @@ void KinectSensorMultiSource::GetImageCopyRGBA(cv::Mat &dst) {
 	mSensorMutex.unlock();
 }
 
-void KinectSensorMultiSource::GetImageCopyRGB(cv::Mat &dst) {
+void KinectSensorMultiSource::GetImageCopyRGB(cv::Mat& dst) const
+{
 	mSensorMutex.lock();
 	cv::Mat cv_img(ColorImageStreamHeight, ColorImageStreamWidth, CV_8UC4, reinterpret_cast<void*>(pColorImageBuffer));
 	cv::Mat resized;
@@ -578,13 +681,15 @@ void KinectSensorMultiSource::GetImageCopyRGB(cv::Mat &dst) {
 	mSensorMutex.unlock();
 }
 
-void KinectSensorMultiSource::GetImageRGBA(cv::Mat &dst) {
+void KinectSensorMultiSource::GetImageRGBA(cv::Mat& dst)
+{
 	cv::Mat cv_img(ColorImageStreamHeight, ColorImageStreamWidth, CV_8UC4, reinterpret_cast<void*>(pColorImageBuffer));
 	dst = cv_img;
 }
 
 
-void KinectSensorMultiSource::GetImageCopyDepth(cv::Mat &dst) {
+void KinectSensorMultiSource::GetImageCopyDepth(cv::Mat& dst) const
+{
 	mSensorMutex.lock();
 	// tmp
 	cv::Mat cv_img(DepthStreamHeight, DepthStreamWidth, CV_16U, pDepthBuffer);
