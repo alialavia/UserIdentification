@@ -9,6 +9,13 @@
 #include <string>
 #include <cstdlib>
 
+// ---------------------------------------------------------------
+//		definitions
+// ---------------------------------------------------------------
+
+
+#define NR_USERS 6
+
 
 // ---------------------------------------------------------------
 // Reference: http://stackoverflow.com/questions/81870/is-it-possible-to-print-a-variables-type-in-standard-c
