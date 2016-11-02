@@ -38,11 +38,9 @@ HRESULT SkeletonTracker::ExtractJoints(IBody* ppBodies[NR_USERS])
 			BOOLEAN bTracked = false;
 			hr = pBody->get_IsTracked(&bTracked);
 
-
 			if (SUCCEEDED(hr) && bTracked)
 			{
 				Joint joints[JointType_Count]; // joints in body space
-
 
 				// get joints
 				hr = pBody->GetJoints(_countof(joints), joints);
@@ -59,7 +57,7 @@ HRESULT SkeletonTracker::ExtractJoints(IBody* ppBodies[NR_USERS])
 					mUserIDs.push_back(iUser);
 
 					// save skeleton
-					std::memcpy(mUserJoints[iUser], joints, sizeof mUserJoints[iUser]);
+					std::memcpy(mUserJoints[iUser], joints, JointType_Count * sizeof (Joint));
 				}
 			}
 		}
@@ -73,47 +71,9 @@ int SkeletonTracker::GetActiveBoundingBoxes(std::vector<cv::Rect2d>& boxes, std:
 {
 	HRESULT hr = E_FAIL;
 
-	//for (int i = 0; i < NR_USERS; ++i)
-	//{
-	//	IBody* pBody = ppBodies[i];
-	//	if (pBody)
-	//	{
-	//		BOOLEAN bTracked = false;
-	//		hr = pBody->get_IsTracked(&bTracked);
-
-	//		if (SUCCEEDED(hr) && bTracked)
-	//		{
-	//			Joint joints[JointType_Count]; // joints in body space
-	//			ColorSpacePoint color_coordinates[JointType_Count];
-
-	//			// get joints
-	//			hr = pBody->GetJoints(_countof(joints), joints);
-
-	//			if (SUCCEEDED(hr))
-	//			{
-	//				for (int j = 0; j < _countof(joints); ++j)
-	//				{
-	//					//jointPoints[j] = BodyToScreen(joints[j].Position, width, height);
-	//					m_pCoordinateMapper->MapCameraPointToColorSpace(joints[j].Position, &color_coordinates[j]);
-
-	//				}
-
-	//				// save
-
-	//			}
-	//		}
-	//	}
-	//}
-
 	return hr;
 }
 
-//int SkeletonTracker::GetActiveBoundingBoxes(std::vector<cv::Rect2d>& boxes, std::vector<int>& user_ids) const
-//{
-//	boxes = mBoundingBoxes;
-//	user_ids = mUserIDs;
-//	return mUserIDs.size();
-//}
 
 void SkeletonTracker::reset()
 {
@@ -121,54 +81,42 @@ void SkeletonTracker::reset()
 	mUserIDs.clear();
 }
 
-
-int SkeletonTracker::GetJointsColorSpace(std::vector<cv::Point2i*>& joints_colorspace, int* nr_users = nullptr)
+/*
+ * Joint indices:
+ * - JointType_Head
+ * - ...
+ */
+// TODO: fix position scaling
+int SkeletonTracker::GetJointsColorSpace(std::vector<std::vector<cv::Point2f>>& joints_colorspace, int srcWidth, int srcHeight, int outputWidth, int outputHeight) const
 {
-	for (size_t iUser = 0; iUser < mUserIDs.size(); iUser++)
+	for (size_t j = 0; j < mUserIDs.size(); j++)
 	{
-		ColorSpacePoint color_coordinates[JointType_Count];
-		cv::Point2i color_coordinates_cv[JointType_Count];
+
+		size_t iUser = mUserIDs[j];
+		ColorSpacePoint colorspace_pt = {0};
+		CameraSpacePoint cameraspace_pt;
+		std::vector <cv::Point2f> color_coordinates_cv;
 
 		// map body space to color space
 		for (int j = 0; j < JointType_Count; ++j)
 		{
-			m_pCoordinateMapper->MapCameraPointToColorSpace(mUserJoints[iUser][j].Position, &color_coordinates[j]);
-			color_coordinates_cv[j] = cv::Point2i(color_coordinates[j].X, color_coordinates[j].Y);
+			cameraspace_pt = mUserJoints[iUser][j].Position;
+			m_pCoordinateMapper->MapCameraPointToColorSpace(cameraspace_pt, &colorspace_pt);
+
+			//std::cout << "GetJointsColorSpace P1(" << colorspace_pt.X << ", " << colorspace_pt.Y << ")\n";
+			//std::cout << "GetJointsColorSpace P2(" << cameraspace_pt.X << ", " << cameraspace_pt.Y << ")\n";
+			// scale to output size
+			float screenPointX = static_cast<float>(colorspace_pt.X * outputWidth) / outputHeight;
+			float screenPointY = static_cast<float>(colorspace_pt.Y * outputHeight) / srcHeight;
+
+			color_coordinates_cv.push_back(cv::Point2f(screenPointX, screenPointY));
 		}
 
 		// store
 		joints_colorspace.push_back(color_coordinates_cv);
 	}
 
-	if (nr_users != nullptr)
-	{
-		*nr_users = mUserIDs.size();
-	}
 
-
-	return mUserIDs.size();
-}
-
-int SkeletonTracker::GetJointsColorSpace(std::vector<ColorSpacePoint*>& joints_colorspace, int* nr_users = nullptr)
-{
-	for (size_t iUser = 0; iUser < mUserIDs.size(); iUser++)
-	{
-		ColorSpacePoint color_coordinates[JointType_Count];
-
-		// map body space to color space
-		for (int j = 0; j < JointType_Count; ++j)
-		{
-			m_pCoordinateMapper->MapCameraPointToColorSpace(mUserJoints[iUser][j].Position, &color_coordinates[j]);
-		}
-
-		// store
-		joints_colorspace.push_back(color_coordinates);
-	}
-
-	if (nr_users != nullptr)
-	{
-		*nr_users = mUserIDs.size();
-	}
 
 	return mUserIDs.size();
 }
