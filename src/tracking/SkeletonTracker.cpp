@@ -90,7 +90,6 @@ int SkeletonTracker::GetJointsColorSpace(std::vector<std::vector<cv::Point2f>>& 
 {
 	for (size_t j = 0; j < mUserIDs.size(); j++)
 	{
-
 		size_t iUser = mUserIDs[j];
 		ColorSpacePoint colorspace_pt = {0};
 		CameraSpacePoint cameraspace_pt;
@@ -120,23 +119,55 @@ int SkeletonTracker::GetJointsColorSpace(std::vector<std::vector<cv::Point2f>>& 
 }
 
 
-int SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, int srcWidth, int srcHeight, int outputWidth, int outputHeight) const
+int SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, int srcWidth, int srcHeight, int outputWidth, int outputHeight, float box_size) const
 {
-	std::vector<std::vector<cv::Point2f>> face_joints;
-	static const DWORD joint_indices = base::JointType_Head | base::JointType_Neck;
+	
+	ColorSpacePoint colorspace_pt, p1c, p2c, p3c, p4c;
+	CameraSpacePoint head_center, neck, p1, p2, p3, p4;
+	std::vector <cv::Point2f> color_coordinates_cv;
+	cv::Rect2f bounding_box;
+	
+	for (size_t j = 0; j < mUserIDs.size(); j++)
+	{
+		size_t iUser = mUserIDs[j];
 
-	float avg_head_size = 30;
+		// head
+		head_center = mUserJoints[iUser][3].Position;
 
-	// get joints
-	GetJointsColorSpace(face_joints, joint_indices, srcWidth, srcHeight, outputWidth, outputHeight);
+		// center between head and neck
+		// neck = mUserJoints[iUser][2].Position;
+		//head_center.X = (head_center.X + neck.X) / 2.;
+		//head_center.Y = (head_center.Y + neck.Y) / 2.;
 
-	// calc bounding boxes
+		p1 = head_center;
+		p2 = head_center;
+		p3 = head_center;
+		p4 = head_center;
+		p1.X += box_size / 2.;
+		p1.Y += box_size / 2.;
+		p2.X += box_size / 2.;
+		p2.Y -= box_size / 2.;
+		p3.X -= box_size / 2.;
+		p3.Y -= box_size / 2.;
+		p4.X -= box_size / 2.;
+		p4.Y += box_size / 2.;
 
-	return 0;
+		//m_pCoordinateMapper->MapCameraPointToColorSpace(cameraspace_pt, &colorspace_pt);
+		m_pCoordinateMapper->MapCameraPointToColorSpace(p1, &p1c);
+		m_pCoordinateMapper->MapCameraPointToColorSpace(p2, &p2c);
+		m_pCoordinateMapper->MapCameraPointToColorSpace(p3, &p3c);
+		m_pCoordinateMapper->MapCameraPointToColorSpace(p4, &p4c);
+
+		float head_size_colorspace = abs(p4c.X - p1c.X);
+		bounding_box = cv::Rect2f(p4c.X, p4c.Y, head_size_colorspace, head_size_colorspace);
+
+		// store
+		bounding_boxes.push_back(bounding_box);
+	}
+
+	return mUserIDs.size();
 
 }
-
-
 
 // -------------------- User Tracker
 
