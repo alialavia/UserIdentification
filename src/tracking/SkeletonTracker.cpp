@@ -81,13 +81,12 @@ void SkeletonTracker::reset()
 	mUserIDs.clear();
 }
 
-/*
- * Joint indices:
- * - JointType_Head
- * - ...
- */
-// TODO: fix position scaling
-int SkeletonTracker::GetJointsColorSpace(std::vector<std::vector<cv::Point2f>>& joints_colorspace, int srcWidth, int srcHeight, int outputWidth, int outputHeight) const
+
+//joint selection:
+//static const DWORD joints =
+//base::JointType_Head
+//| base::JointType_Neck;
+int SkeletonTracker::GetJointsColorSpace(std::vector<std::vector<cv::Point2f>>& joints_colorspace, const DWORD joints, int srcWidth, int srcHeight, int outputWidth, int outputHeight) const
 {
 	for (size_t j = 0; j < mUserIDs.size(); j++)
 	{
@@ -97,29 +96,46 @@ int SkeletonTracker::GetJointsColorSpace(std::vector<std::vector<cv::Point2f>>& 
 		CameraSpacePoint cameraspace_pt;
 		std::vector <cv::Point2f> color_coordinates_cv;
 
+		int byte = 1;
 		// map body space to color space
-		for (int j = 0; j < JointType_Count; ++j)
+		for (int j = 0; j < base::JointType_Count; ++j)
 		{
-			cameraspace_pt = mUserJoints[iUser][j].Position;
-			m_pCoordinateMapper->MapCameraPointToColorSpace(cameraspace_pt, &colorspace_pt);
-
-			//std::cout << "GetJointsColorSpace P1(" << colorspace_pt.X << ", " << colorspace_pt.Y << ")\n";
-			//std::cout << "GetJointsColorSpace P2(" << cameraspace_pt.X << ", " << cameraspace_pt.Y << ")\n";
-			// scale to output size
-			float screenPointX = static_cast<float>(colorspace_pt.X * outputWidth) / outputHeight;
-			float screenPointY = static_cast<float>(colorspace_pt.Y * outputHeight) / srcHeight;
-
-			color_coordinates_cv.push_back(cv::Point2f(screenPointX, screenPointY));
+			// if extracted
+			if ((byte & joints) == byte) {
+				cameraspace_pt = mUserJoints[iUser][j].Position;
+				m_pCoordinateMapper->MapCameraPointToColorSpace(cameraspace_pt, &colorspace_pt);
+				// scale to output size
+				float screenPointX = static_cast<float>(colorspace_pt.X * outputWidth) / srcWidth;
+				float screenPointY = static_cast<float>(colorspace_pt.Y * outputHeight) / srcHeight;
+				color_coordinates_cv.push_back(cv::Point2f(screenPointX, screenPointY));
+			}
+			byte *= 2;
 		}
 
 		// store
 		joints_colorspace.push_back(color_coordinates_cv);
 	}
 
-
-
 	return mUserIDs.size();
 }
+
+
+int SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, int srcWidth, int srcHeight, int outputWidth, int outputHeight) const
+{
+	std::vector<std::vector<cv::Point2f>> face_joints;
+	static const DWORD joint_indices = base::JointType_Head | base::JointType_Neck;
+
+	float avg_head_size = 30;
+
+	// get joints
+	GetJointsColorSpace(face_joints, joint_indices, srcWidth, srcHeight, outputWidth, outputHeight);
+
+	// calc bounding boxes
+
+	return 0;
+
+}
+
 
 
 // -------------------- User Tracker

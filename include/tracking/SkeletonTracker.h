@@ -20,7 +20,8 @@ namespace tracking
 
 		// data access
 		int GetActiveBoundingBoxes(std::vector<cv::Rect2d>& boxes, std::vector<int>& user_ids) const;
-		int GetJointsColorSpace(std::vector<std::vector<cv::Point2f>>& joints_colorspace, int srcWidth, int srcHeight, int outputWidth, int outputHeight) const;
+		int GetJointsColorSpace(std::vector<std::vector<cv::Point2f>>& joints_colorspace, const DWORD joints, int srcWidth, int srcHeight, int outputWidth, int outputHeight) const;
+		int GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, int srcWidth, int srcHeight, int outputWidth, int outputHeight) const;
 
 	private:
 		void reset();
