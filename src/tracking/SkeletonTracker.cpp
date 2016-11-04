@@ -14,7 +14,6 @@ SkeletonTracker::~SkeletonTracker()
 	SafeRelease(m_pCoordinateMapper);
 }
 
-
 HRESULT SkeletonTracker::Init()
 {
 	HRESULT hr = E_FAIL;
@@ -66,67 +65,99 @@ HRESULT SkeletonTracker::ExtractJoints(IBody* ppBodies[NR_USERS])
 	return hr;
 }
 
-
-int SkeletonTracker::GetActiveBoundingBoxes(std::vector<cv::Rect2d>& boxes, std::vector<int>& user_ids) const
-{
-	HRESULT hr = E_FAIL;
-
-	return hr;
-}
-
-
 void SkeletonTracker::reset()
 {
 	mBoundingBoxes.clear();
 	mUserIDs.clear();
 }
 
+// --------------- data access
 
-//joint selection:
-//static const DWORD joints =
-//base::JointType_Head
-//| base::JointType_Neck;
-int SkeletonTracker::GetJointsColorSpace(std::vector<std::vector<cv::Point2f>>& joints_colorspace, const DWORD joints, int srcWidth, int srcHeight, int outputWidth, int outputHeight) const
+int SkeletonTracker::GetJoints(std::vector<std::vector<cv::Point2f>>& joint_coords, DWORD joints, base::ImageSpace space,
+	int outputWidth, int outputHeight) const
 {
-	for (size_t j = 0; j < mUserIDs.size(); j++)
+	ColorSpacePoint colorspace_pt = { 0 };
+	DepthSpacePoint depthspace_pt = { 0 };
+	CameraSpacePoint cameraspace_pt = { 0 };
+	bool map_to_colorspace = (base::ImageSpace_Color & space) == base::ImageSpace_Color;
+	float screenPointX, screenPointY;
+	int srcWidth, srcHeight;
+
+	// original stream size
+	if (map_to_colorspace)
 	{
-		size_t iUser = mUserIDs[j];
-		ColorSpacePoint colorspace_pt = {0};
-		CameraSpacePoint cameraspace_pt;
+		srcWidth = base::StreamSize_WidthColor;
+		srcHeight = base::StreamSize_HeightColor;
+	}
+	else
+	{
+		srcWidth = base::StreamSize_WidthDepth;
+		srcHeight = base::StreamSize_HeightDepth;
+	}
+
+	for (size_t i = 0; i < mUserIDs.size(); i++)
+	{
+		size_t iUser = mUserIDs[i];
+
 		std::vector <cv::Point2f> color_coordinates_cv;
 
 		int byte = 1;
-		// map body space to color space
+
+
 		for (int j = 0; j < base::JointType_Count; ++j)
 		{
-			// if extracted
+			// joint selection
 			if ((byte & joints) == byte) {
 				cameraspace_pt = mUserJoints[iUser][j].Position;
-				m_pCoordinateMapper->MapCameraPointToColorSpace(cameraspace_pt, &colorspace_pt);
-				// scale to output size
-				float screenPointX = static_cast<float>(colorspace_pt.X * outputWidth) / srcWidth;
-				float screenPointY = static_cast<float>(colorspace_pt.Y * outputHeight) / srcHeight;
+
+				if (map_to_colorspace)
+				{
+					m_pCoordinateMapper->MapCameraPointToColorSpace(cameraspace_pt, &colorspace_pt);
+					screenPointX = colorspace_pt.X;
+					screenPointY = colorspace_pt.Y;
+				}
+				else
+				{
+					m_pCoordinateMapper->MapCameraPointToDepthSpace(cameraspace_pt, &depthspace_pt);
+					screenPointX = depthspace_pt.X;
+					screenPointY = depthspace_pt.Y;
+				}
+
+				// scaling and conversion
+				screenPointX = static_cast<float>(screenPointX * outputWidth) / srcWidth;
+				screenPointY = static_cast<float>(screenPointY * outputHeight) / srcHeight;
 				color_coordinates_cv.push_back(cv::Point2f(screenPointX, screenPointY));
 			}
 			byte *= 2;
 		}
 
 		// store
-		joints_colorspace.push_back(color_coordinates_cv);
+		joint_coords.push_back(color_coordinates_cv);
 	}
 
 	return mUserIDs.size();
 }
 
-
-int SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, int srcWidth, int srcHeight, int outputWidth, int outputHeight, float box_size) const
+int SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space,
+	int outputWidth, int outputHeight, float box_size) const
 {
-	
-	ColorSpacePoint colorspace_pt, p1c, p2c, p3c, p4c;
-	CameraSpacePoint head_center, neck, p1, p2, p3, p4;
+	int srcWidth, srcHeight;
+	if ((base::ImageSpace_Color & space) == base::ImageSpace_Color)
+	{
+		srcWidth = base::StreamSize_WidthColor;
+		srcHeight = base::StreamSize_HeightColor;
+	}
+	else
+	{
+		srcWidth = base::StreamSize_WidthDepth;
+		srcHeight = base::StreamSize_HeightDepth;
+	}
+
+	ColorSpacePoint p1c, p2c, p3c, p4c;
+	CameraSpacePoint head_center, p1, p2, p3, p4;
 	std::vector <cv::Point2f> color_coordinates_cv;
 	cv::Rect2f bounding_box;
-	
+
 	for (size_t j = 0; j < mUserIDs.size(); j++)
 	{
 		size_t iUser = mUserIDs[j];
@@ -135,6 +166,7 @@ int SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxe
 		head_center = mUserJoints[iUser][3].Position;
 
 		// center between head and neck
+		// CameraSpacePoint neck;
 		// neck = mUserJoints[iUser][2].Position;
 		//head_center.X = (head_center.X + neck.X) / 2.;
 		//head_center.Y = (head_center.Y + neck.Y) / 2.;
@@ -165,11 +197,60 @@ int SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxe
 		bounding_boxes.push_back(bounding_box);
 	}
 
-	return mUserIDs.size();
+	return bounding_boxes.size();
 
 }
 
-// -------------------- User Tracker
+// --------------- drawing methods
+
+HRESULT SkeletonTracker::RenderFaceBoundingBoxes(cv::Mat &target, base::ImageSpace space) const
+{
+	int srcWidth, srcHeight;
+	if ((base::ImageSpace_Color & space) == base::ImageSpace_Color)
+	{
+		srcWidth = base::StreamSize_WidthColor;
+		srcHeight = base::StreamSize_HeightColor;
+	}
+	else
+	{
+		srcWidth = base::StreamSize_WidthDepth;
+		srcHeight = base::StreamSize_HeightDepth;
+	}
+
+	int output_width, output_height;
+	output_width = target.cols;
+	output_height = target.rows;
+
+	// get joints
+	std::vector<std::vector<cv::Point2f>> user_joints;
+	int nr_users = 0;
+	static const DWORD joints =
+		base::JointType_Head
+		| base::JointType_Neck;
+
+	nr_users = GetJoints(user_joints, joints, space, output_width, output_height);
+	// draw joints
+	for (size_t i = 0; i < user_joints.size(); i++)
+	{
+		for (size_t j = 0; j<user_joints[i].size(); j++)
+		{
+			cv::circle(target, user_joints[i][j], 4, cv::Scalar(0, 255, 0), cv::LINE_4);
+		}
+	}
+
+	// get face bounding boxes
+	std::vector<cv::Rect2f> bounding_boxes;
+	GetFaceBoundingBoxes(bounding_boxes, space, output_width, output_height);
+	// draw bounding boxes
+	for (size_t i = 0; i < bounding_boxes.size(); i++)
+	{
+		cv::rectangle(target, bounding_boxes[i], cv::Scalar(0, 0, 255), 2, cv::LINE_4);
+	}
+
+	return S_OK;
+}
+
+// --------------- User Tracker
 
 UserTracker::UserTracker(IKinectSensor* sensor):
 	pKinectSensor(sensor),
