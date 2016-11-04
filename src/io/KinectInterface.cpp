@@ -715,9 +715,16 @@ void KinectSensorMultiSource::GetImageRGBA(cv::Mat& dst)
 	dst = cv_img;
 }
 
-IKinectSensor* KinectSensorMultiSource::GetSensorReference()
+ HRESULT KinectSensorMultiSource::GetSensorReference(IKinectSensor* &s)
 {
-	return pSensor;
+
+	 std::cout << pSensor << std::endl;
+	if(pSensor == nullptr)
+	{
+		return E_FAIL;
+	}
+	s = pSensor;
+	return S_OK;
 }
 
 IBody** KinectSensorMultiSource::GetBodyDataReference()

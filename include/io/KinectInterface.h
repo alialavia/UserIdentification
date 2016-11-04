@@ -70,7 +70,7 @@ namespace io
 		// link to current data
 		void GetImageRGBA(cv::Mat& dst);
 
-		IKinectSensor* GetSensorReference();
+		HRESULT GetSensorReference(IKinectSensor* &s);
 		IBody** GetBodyDataReference();
 
 
