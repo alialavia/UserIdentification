@@ -10,8 +10,8 @@ SET(TARGET_DEFAULT_FOLDER "Applications")
 # project libraries for all applications
 SET(TARGET_COMMON_LIBRARIES 
     # yourAdditionalLib
-	io
-	user
+	IO
+	User
 )
 
 ADD_SUBDIRECTORY(app1)

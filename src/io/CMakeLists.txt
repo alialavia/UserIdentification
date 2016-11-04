@@ -1,4 +1,4 @@
-SET(LIB_NAME io)
+SET(LIB_NAME IO)
 SET(HEADER_PATH ${user_identification_SOURCE_DIR}/include/${LIB_NAME})
 SET(TARGET_H
     ${HEADER_PATH}/KinectInterface.h

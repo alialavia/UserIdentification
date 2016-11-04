@@ -71,20 +71,18 @@ ENDMACRO(SETUP_LIBRARY LIB_NAME)
 
 #######################################################################################################
 #	Link libraries to applications/examples
-#	TARGET_NAME 				name of the executable (.exe)
 #	TARGET_TARGETNAME  			final executable name (overwrites TARGET_NAME with default prefix)
-#	TARGET_SRC  				target source
-#	TARGET_H 					target headers
 #	TARGET_LIBRARIES 		 	internal library dependencies
 #	TARGET_EXTERNAL_LIBRARIES 	external library dependencies
-#	TARGET_LABEL 				IDE target label
 ##########################################################################################################
 
 MACRO(SETUP_LINK_LIBRARIES)
 
+    SET(TARGET_ADDED_LIBRARIES ${TARGET_LIBRARIES})
+
 	# use common libraries
     SET(TARGET_LIBRARIES ${TARGET_COMMON_LIBRARIES})
-	
+
     FOREACH(LINKLIB ${TARGET_ADDED_LIBRARIES})
 		SET(IN_COMMON TRUE)
 		

@@ -717,8 +717,6 @@ void KinectSensorMultiSource::GetImageRGBA(cv::Mat& dst)
 
  HRESULT KinectSensorMultiSource::GetSensorReference(IKinectSensor* &s)
 {
-
-	 std::cout << pSensor << std::endl;
 	if(pSensor == nullptr)
 	{
 		return E_FAIL;

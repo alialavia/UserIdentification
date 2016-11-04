@@ -10,7 +10,8 @@ SET(TARGET_DEFAULT_FOLDER "Unit Tests")
 # project libraries for all applications
 SET(TARGET_COMMON_LIBRARIES 
     # yourAdditionalLib
-	io
+	IO
 )
 
 ADD_SUBDIRECTORY(networking)
+ADD_SUBDIRECTORY(tracking)
