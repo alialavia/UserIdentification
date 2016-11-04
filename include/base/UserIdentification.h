@@ -10,12 +10,12 @@
 #include <cstdlib>
 
 // ---------------------------------------------------------------
-//		definitions
+//		definitions - fixed
 // ---------------------------------------------------------------
-
 
 #define NR_USERS 6
 
+// joint indices
 namespace base
 {
 	enum JointType {
@@ -46,7 +46,35 @@ namespace base
 		JointType_ThumbRight = 1 << 24,
 		JointType_Count = 25
 	};
+
+	enum StreamType
+	{
+		StreamType_Depth = 1 << 0,
+		StreamType_Color = 1 << 1,
+		StreamType_Infrared = 1 << 2,
+		StreamType_Body = 1 << 3,
+		StreamType_BodyIndex = 1 << 4
+	};
+
+	enum ImageSpace
+	{
+		ImageSpace_Depth = 1 << 0,
+		ImageSpace_Color = 1 << 1,
+		ImageSpace_Infrared = 1 << 2,
+		ImageSpace_BodyIndex = 1 << 3
+	};
+
+	enum StreamSize
+	{
+		StreamSize_WidthColor = 1920,
+		StreamSize_HeightColor = 1080,
+		StreamSize_WidthDepth = 512,
+		StreamSize_HeightDepth = 424,
+		StreamSize_WidthBodyIndex = StreamSize_WidthDepth,
+		StreamSize_HeightBodyIndex = StreamSize_HeightDepth
+	};
 }
+
 
 // ---------------------------------------------------------------
 // Reference: http://stackoverflow.com/questions/81870/is-it-possible-to-print-a-variables-type-in-standard-c
