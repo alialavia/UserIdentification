@@ -13,7 +13,6 @@ int main(int argc, char** argv)
 
 	HRESULT hr;
 	cvNamedWindow("Color image", CV_WINDOW_AUTOSIZE);
-	cvNamedWindow("Face", CV_WINDOW_AUTOSIZE);
 
 	cv::Mat color_image;
 
@@ -37,7 +36,7 @@ int main(int argc, char** argv)
 
 	while (true) {
 
-		// polling
+		// polling - buffers refreshed
 		hr = k.AcquireFrame();
 
 		// check if there is a new frame available
@@ -50,24 +49,22 @@ int main(int argc, char** argv)
 			IBody** bodies = k.GetBodyDataReference();
 			st.ExtractJoints(bodies);
 
+			// draw bounding boxes
+			//st.RenderFaceBoundingBoxes(color_image, base::ImageSpace_Color);
+
+
+
 			// get face bounding boxes
 			std::vector<cv::Rect2f> bounding_boxes;
 			st.GetFaceBoundingBoxesRobust(bounding_boxes, base::ImageSpace_Color, color_image.cols, color_image.rows);
 
-			if (bounding_boxes.size() > 0)
+			if(bounding_boxes.size() > 0)
 			{
 				cv::Mat face = color_image(bounding_boxes[0]);
 				// show image
-				cv::imshow("Face", face);
+				cv::imshow("Color image", face);
 				cv::waitKey(3);
 			}
-
-			// draw bounding boxes
-			st.RenderFaceBoundingBoxes(color_image, base::ImageSpace_Color);
-
-			// show image
-			cv::imshow("Color image", color_image);
-			cv::waitKey(3);
 
 
 

@@ -201,6 +201,29 @@ int SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxe
 
 }
 
+// TODO: fix boundaries
+int SkeletonTracker::GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space,
+	int outputWidth, int outputHeight, float box_size) const
+{
+	GetFaceBoundingBoxes(bounding_boxes, space, outputWidth, outputHeight, box_size);
+
+	float xmin, xmax, ymin, ymax, width, height;
+
+	// check for boundary overlapping values
+	for(size_t i=0; i<bounding_boxes.size();i++)
+	{
+		xmin = (bounding_boxes[i].x > 0 ? bounding_boxes[i].x : 0);
+		ymin = (bounding_boxes[i].y > 0 ? bounding_boxes[i].y : 0);
+		width = (bounding_boxes[i].x + bounding_boxes[i].width > (outputWidth -1) ? outputWidth - bounding_boxes[i].x -1: bounding_boxes[i].width);
+		height = (bounding_boxes[i].y + bounding_boxes[i].height > (outputHeight - 1) ? outputHeight - bounding_boxes[i].y -1: bounding_boxes[i].height);
+		bounding_boxes[i].x = xmin;
+		bounding_boxes[i].y = ymin;
+		bounding_boxes[i].width = width;
+		bounding_boxes[i].height = height;
+	}
+	return bounding_boxes.size();
+}
+
 // --------------- drawing methods
 
 HRESULT SkeletonTracker::RenderFaceBoundingBoxes(cv::Mat &target, base::ImageSpace space) const

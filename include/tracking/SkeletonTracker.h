@@ -51,6 +51,9 @@ namespace tracking
 		int GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space,
 								 int outputWidth, int outputHeight, float box_size = 0.4) const;
 
+		int GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space,
+			int outputWidth, int outputHeight, float box_size = 0.4) const;
+
 		// --------------- drawing methods
 		
 		/// <summary>
