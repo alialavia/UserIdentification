@@ -5,10 +5,8 @@
 
 // pointer safe release
 #include <strsafe.h>
-
 // OpenCV
 #include <opencv2/highgui/highgui.hpp>
-
 // image processing
 #include "opencv2/imgproc.hpp"
 
@@ -18,12 +16,13 @@
 
 #include <windows.h>
 
+
+
 //MultiSourceFrameReader will align to the slowest framerate of any subscribed source. In lowlight scenarios,
 //the color stream may drop to 15 FPS.If this happens, and MultiSourceFrameReader is subscribed 
 //to color as one of its subscribed sources, the rate of delivered frames will drop to 15 FPS for the entire instance of this MultiSourceFrameReader
 
 using namespace io;
-
 
 KinectSensorMultiSource::KinectSensorMultiSource():
 	pSourceReader(nullptr),
@@ -78,7 +77,7 @@ KinectSensorMultiSource::~KinectSensorMultiSource()
 
 void KinectSensorMultiSource::Close()
 {
-	// release reader
+	// release multisource reader
 	SafeRelease(pSourceReader);
 
 	// face readers
@@ -313,7 +312,7 @@ HRESULT KinectSensorMultiSource::AcquireFrame()
 		// face frame - process after body
 		if (SUCCEEDED(hr))
 		{
-			ProcessFaces(pFaceFrame);
+			ProcessFaceFrames(pFaceFrame);
 		}
 
 		mSensorMutex.unlock();
@@ -340,7 +339,6 @@ HRESULT KinectSensorMultiSource::AcquireFrame()
 }
 
 // --------------------- PROCESSING FUNCTIONS
-
 
 HRESULT KinectSensorMultiSource::ProcessBodyIndexFrame(IBodyIndexFrame* index_frame, int& height, int& width, BYTE* & buffer, UINT& buffer_len)
 {
@@ -385,8 +383,7 @@ HRESULT KinectSensorMultiSource::ProcessBodyIndexFrame(IBodyIndexFrame* index_fr
 	return hr;
 }
 
-
-HRESULT KinectSensorMultiSource::ProcessFaces(IFaceFrame* face_frames[NR_USERS])
+HRESULT KinectSensorMultiSource::ProcessFaceFrames(IFaceFrame* face_frames[NR_USERS])
 {
 	HRESULT hr = E_FAIL;
 	IFaceFrame* pFaceFrame = nullptr;
@@ -469,7 +466,6 @@ HRESULT KinectSensorMultiSource::ProcessFaces(IFaceFrame* face_frames[NR_USERS])
 
 	return hr;
 }
-
 
 HRESULT KinectSensorMultiSource::ProcessBodyFrame(IBodyFrame* body_frame)
 {
@@ -602,6 +598,8 @@ HRESULT KinectSensorMultiSource::ProcessDepthFrame(IDepthFrame* depth_frame, int
 	return hr;
 }
 
+// --------------------- DEEP COPY DATA ACCESS
+
 void KinectSensorMultiSource::GetImageCopyBodyIndexColored(cv::Mat& dst) const
 {
 	mSensorMutex.lock();
@@ -681,12 +679,17 @@ void KinectSensorMultiSource::GetImageCopyRGB(cv::Mat& dst) const
 	mSensorMutex.unlock();
 }
 
-void KinectSensorMultiSource::GetImageRGBA(cv::Mat& dst)
+void KinectSensorMultiSource::GetImageCopyRGBSkeleton(cv::Mat& dst) const
 {
+	mSensorMutex.lock();
 	cv::Mat cv_img(ColorImageStreamHeight, ColorImageStreamWidth, CV_8UC4, reinterpret_cast<void*>(pColorImageBuffer));
-	dst = cv_img;
+	cv::Mat resized;
+	cv::resize(cv_img, resized, cv::Size(mColorWidth, mColorHeight));
+	// rgba to rgb
+	cv::cvtColor(resized, resized, CV_RGBA2RGB);
+	dst = resized;
+	mSensorMutex.unlock();
 }
-
 
 void KinectSensorMultiSource::GetImageCopyDepth(cv::Mat& dst) const
 {
@@ -702,4 +705,22 @@ void KinectSensorMultiSource::GetImageCopyDepth(cv::Mat& dst) const
 
 	dst = resized;
 	mSensorMutex.unlock();
+}
+
+// --------------------- DIRECT DATA ACCESS
+
+void KinectSensorMultiSource::GetImageRGBA(cv::Mat& dst)
+{
+	cv::Mat cv_img(ColorImageStreamHeight, ColorImageStreamWidth, CV_8UC4, reinterpret_cast<void*>(pColorImageBuffer));
+	dst = cv_img;
+}
+
+IKinectSensor* KinectSensorMultiSource::GetSensorReference()
+{
+	return pSensor;
+}
+
+IBody** KinectSensorMultiSource::GetBodyDataReference()
+{
+	return ppBodies;
 }

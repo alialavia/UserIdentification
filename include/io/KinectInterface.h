@@ -6,16 +6,18 @@
 
 // mutex
 #include <mutex>
-
 #include <Windows.h>
 
-// OpenCV
-#include <opencv2/core/core.hpp>
-#include <opencv2/video/tracking.hpp>
-#include <opencv2/highgui.hpp>
-
-
 #include <iostream>
+
+#include <base/UserIdentification.h>
+
+// OpenCV
+#include <opencv2/video/tracking.hpp>
+
+
+#include <Kinect.Face.h>
+#include <opencv2/highgui.hpp>
 
 
 // forward declarations
@@ -30,12 +32,7 @@ struct IBody;
 struct IFaceFrameSource;
 struct IFaceFrameReader;
 struct IFaceFrame;
-
-
-#include <Kinect.Face.h>
-
-
-#define NR_USERS 6
+struct ICoordinateMapper;
 
 namespace cv
 {
@@ -68,10 +65,16 @@ namespace io
 		void GetImageCopyRGB(cv::Mat& dst) const;
 		void GetImageCopyDepth(cv::Mat& dst) const;
 		void GetImageCopyBodyIndexColored(cv::Mat& dst) const;
+		void GetImageCopyRGBSkeleton(cv::Mat& dst) const;
 
 		// link to current data
 		void GetImageRGBA(cv::Mat& dst);
 
+		IKinectSensor* GetSensorReference();
+		IBody** GetBodyDataReference();
+
+
+		/*
 		void drawFaces(cv::Mat& dst)
 		{
 			for (int iFace = 0; iFace < NR_USERS; ++iFace)
@@ -99,12 +102,13 @@ namespace io
 				}
 			}
 		}
+		*/
 
 	private:
 		HRESULT ProcessColorFrame(IColorFrame* color_frame, int& height, int& width, RGBQUAD* & buffer, UINT& buffer_len) const;
 		HRESULT ProcessDepthFrame(IDepthFrame* depth_frame, int& height, int& width, UINT16* & buffer, UINT& buffer_len) const;
 		HRESULT ProcessBodyFrame(IBodyFrame* body_frame);
-		HRESULT ProcessFaces(IFaceFrame* pFaceFrame[NR_USERS]);
+		HRESULT ProcessFaceFrames(IFaceFrame* pFaceFrame[NR_USERS]);
 		HRESULT ProcessBodyIndexFrame(IBodyIndexFrame* index_frame, int& height, int& width, BYTE* & buffer, UINT& buffer_len);
 
 	public:
@@ -118,6 +122,7 @@ namespace io
 		// sensor handles
 		mutable std::mutex mSensorMutex;
 		IKinectSensor* pSensor;
+
 		// multisource reader
 		IMultiSourceFrameReader* pSourceReader;
 		// face source/reader
