@@ -1,5 +1,5 @@
-#ifndef IO__networking
-#define IO__networking
+#ifndef IO_NETWORKING_H_
+#define IO_NETWORKING_H_
 
 namespace io
 {

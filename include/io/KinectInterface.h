@@ -1,5 +1,5 @@
-#ifndef IO__kinectinterface
-#define IO__kinectinterface
+#ifndef IO_KINECTINTERFACE_H_
+#define IO_KINECTINTERFACE_H_
 
 // MS Error codes
 #include <strsafe.h>

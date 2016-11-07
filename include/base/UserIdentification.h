@@ -1,5 +1,5 @@
-#ifndef BASE__useridentification
-#define BASE__useridentification
+#ifndef BASE_USER_IDENTIFICATION_H_
+#define BASE_USER_IDENTIFICATION_H_
 
 #include <typeinfo>
 #ifndef _MSC_VER

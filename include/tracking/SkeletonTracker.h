@@ -1,5 +1,5 @@
-#ifndef TRACKING__skeletontracker
-#define TRACKING__skeletontracker
+#ifndef TRACKING_SKELETONTRACKER_H_
+#define TRACKING_SKELETONTRACKER_H_
 
 #include <base/UserIdentification.h>
 #include <vector>
@@ -54,6 +54,7 @@ namespace tracking
 		int GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space,
 			int outputWidth, int outputHeight, float box_size = 0.4) const;
 
+		int GetUserIDs(std::vector<int> &ids) const;
 		// --------------- drawing methods
 		
 		/// <summary>
@@ -63,6 +64,9 @@ namespace tracking
 		/// <param name="space">The image space.</param>
 		/// <returns>HRESULT.</returns>
 		HRESULT RenderFaceBoundingBoxes(cv::Mat &target, base::ImageSpace space) const;
+
+		void ExtractFaces(cv::Mat img, int patch_size) const;
+
 
 	private:
 		void reset();
@@ -77,15 +81,7 @@ namespace tracking
 		Joint mUserJoints[NR_USERS][JointType_Count]; // joints in body space
 	};
 
-	class UserTracker
-	{
-		UserTracker(IKinectSensor* sensor);
-		~UserTracker();
-		HRESULT Init();
-	private:
-		IKinectSensor* pKinectSensor;
-		SkeletonTracker* pSkeletonTracker;
-	};
+
 } // namespace
 
 #endif

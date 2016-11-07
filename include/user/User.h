@@ -1,5 +1,5 @@
-#ifndef IO__user
-#define IO__user
+#ifndef IO_USER_H_
+#define IO_USER_H_
 
 namespace io
 {
