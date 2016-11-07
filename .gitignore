@@ -1,4 +1,4 @@
-/build
+
 
 # Windows image file caches
 Thumbs.db
@@ -12,3 +12,59 @@ $RECYCLE.BIN/
 
 # APIs
 .idea
+
+
+include/Config.h
+
+build/
+lib/
+bin/
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Platform Specifics - auto generated files
+PlatformSpecifics/Windows/*.rc
+
+# Visual studio - project files
+*.sln
+*.suo
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# Visual Studio - Build Results
+[Dd]ebug/
+[Rr]elease/
+[Mm]in[Ss]ize[Rr]el/
+[Rr]el[Ww]ith[Dd]eb[Ii]nfo/
+
+# Visual Studio - Browsing Database File
+*.sdf
+*.opensdf
