@@ -7,5 +7,7 @@
 #ifndef CONFIG_H_
 #define CONFIG_H_
 
+#define PATH_RESOURCES "${PROJECT_RESOURCES_PATH}"
+#define PATH_OUTPUT "${PROJECT_OUTPUT_PATH}"
 
 #endif

@@ -37,7 +37,7 @@ SET(DYNAMIC_OR_STATIC_LIBS STATIC)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON) 
 
 #-------------------------------------------------
-# Include headers
+# Include Headers
 #-------------------------------------------------
 
 INCLUDE_DIRECTORIES(
@@ -57,6 +57,10 @@ OPTION(BUILD_USER_IDENTIFICATION_EXAMPLES "Enable to build Examples" OFF)
 
 # Tests
 OPTION(BUILD_USER_IDENTIFICATION_TESTS "Enable to build Tests" ON)
+
+# Folder structure
+set(PROJECT_RESOURCES_PATH "resources" CACHE STRING "Resources path")
+set(PROJECT_OUTPUT_PATH "output" CACHE STRING "Ouptut path")
 
 #-------------------------------------------------
 # 3rd Party Dependency
@@ -81,7 +85,7 @@ ENDIF()
 # Include macro utilities
 INCLUDE(ProjectMacros)
 #-------------------------------------------------
-# Optional build components
+# Optional Build Components
 #-------------------------------------------------
 
 # optional example related dependencies
@@ -90,7 +94,7 @@ IF   (BUILD_USER_IDENTIFICATION_EXAMPLES)
 ENDIF()
 
 #-------------------------------------------------
-# Setup output folders
+# Setup Output Folders
 #-------------------------------------------------
 
 SET(OUTPUT_BINDIR ${PROJECT_BINARY_DIR}/bin)		# builddir/bin
@@ -146,15 +150,7 @@ ENDFOREACH()
 # may set these values without needing to manipulate the environment.
 SET(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} CACHE STRING "You may add additional search paths here. Use ; to separate multiple paths.")
 SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} CACHE STRING "You may add additional search paths here. Use ; to separate multiple paths.")
-
-#-------------------------------------------------
-# Config header
-#-------------------------------------------------
-
-SET(CONFIG_HEADER "${PROJECT_BINARY_DIR}/include/Config.h")
-CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/src/Config.cmake.in"
-               "${CONFIG_HEADER}")
-
+			   
 #-------------------------------------------------
 # Preprocessor Directives
 #-------------------------------------------------
@@ -164,27 +160,29 @@ SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
 
 SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-# resource path
-SET(RESOURCES_PATH ${OUTPUT_BINDIR}/resources)
-MAKE_DIRECTORY(${RESOURCES_PATH})
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_PATH_RESOURCES=${RESOURCES_PATH}") 
-
-
-
-SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_PATH_RESOURCES=${RESOURCES_PATH}") 
-
-# output path
-SET(OUTPUT_PATH ${OUTPUT_BINDIR}/output)
-MAKE_DIRECTORY(${OUTPUT_PATH})
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_PATH_OUTPUT=${OUTPUT_PATH}") 
-
-
 # all errors
 #SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
 #SET(CMAKE_VERBOSE_MAKEFILE ON)
 
 #-------------------------------------------------
-# Add sources
+# Config Header
+#-------------------------------------------------
+
+# generate config file
+SET(CONFIG_HEADER "${PROJECT_BINARY_DIR}/include/Config.h")
+CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/src/Config.cmake.in"
+               "${CONFIG_HEADER}")
+
+#-------------------------------------------------
+# Make Path Structure
+#-------------------------------------------------   
+
+# create directories
+MAKE_DIRECTORY("${OUTPUT_BINDIR}/${PROJECT_RESOURCES_PATH}")
+MAKE_DIRECTORY("${OUTPUT_BINDIR}/${PROJECT_OUTPUT_PATH}")
+
+#-------------------------------------------------
+# Add Sources
 #-------------------------------------------------
 
 # Core
