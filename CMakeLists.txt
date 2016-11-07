@@ -148,6 +148,14 @@ SET(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} CACHE STRING "You may add additiona
 SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} CACHE STRING "You may add additional search paths here. Use ; to separate multiple paths.")
 
 #-------------------------------------------------
+# Config header
+#-------------------------------------------------
+
+SET(CONFIG_HEADER "${PROJECT_BINARY_DIR}/include/Config.h")
+CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/src/Config.cmake.in"
+               "${CONFIG_HEADER}")
+
+#-------------------------------------------------
 # Preprocessor Directives
 #-------------------------------------------------
 
@@ -155,6 +163,21 @@ SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} CACHE STRING "You may add additiona
 SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG") 
 
 SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
+# resource path
+SET(RESOURCES_PATH ${OUTPUT_BINDIR}/resources)
+MAKE_DIRECTORY(${RESOURCES_PATH})
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_PATH_RESOURCES=${RESOURCES_PATH}") 
+
+
+
+SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_PATH_RESOURCES=${RESOURCES_PATH}") 
+
+# output path
+SET(OUTPUT_PATH ${OUTPUT_BINDIR}/output)
+MAKE_DIRECTORY(${OUTPUT_PATH})
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_PATH_OUTPUT=${OUTPUT_PATH}") 
+
 
 # all errors
 #SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
