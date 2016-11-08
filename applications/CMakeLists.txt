@@ -12,7 +12,7 @@ SET(TARGET_COMMON_LIBRARIES
     # yourAdditionalLib
 	IO
 	User
+	gflags
 )
 
 ADD_SUBDIRECTORY(app1)
-ADD_SUBDIRECTORY(offline_training)

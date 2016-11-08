@@ -60,7 +60,6 @@ OPTION(BUILD_USER_IDENTIFICATION_TESTS "Enable to build Tests" ON)
 
 # Folder structure
 set(PROJECT_RESOURCES_PATH "resources" CACHE STRING "Resources path")
-set(PROJECT_OUTPUT_PATH "output" CACHE STRING "Ouptut path")
 
 #-------------------------------------------------
 # 3rd Party Dependency
@@ -73,6 +72,9 @@ INCLUDE_DIRECTORIES(${KINECTSDK2_INCLUDE_DIRS})
 
 FIND_PACKAGE(OpenCV 3.0 REQUIRED)
 #include_directories(${OpenCV_INCLUDE_DIRS}) # Not needed for CMake >= 2.8.11
+
+FIND_PACKAGE(gflags 2.2 REQUIRED)
+include_directories(${GFLAGS_INCLUDE_DIR})
 
 # Platform specific:
 IF(WIN32)
@@ -169,7 +171,7 @@ SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 #-------------------------------------------------
 
 # generate config file
-SET(CONFIG_HEADER "${PROJECT_BINARY_DIR}/include/Config.h")
+SET(CONFIG_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/include/Config.h")
 CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/src/Config.cmake.in"
                "${CONFIG_HEADER}")
 

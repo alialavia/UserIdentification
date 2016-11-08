@@ -11,6 +11,7 @@ SET(TARGET_DEFAULT_FOLDER "Unit Tests")
 SET(TARGET_COMMON_LIBRARIES 
     # yourAdditionalLib
 	IO
+	gflags
 )
 
 ADD_SUBDIRECTORY(networking)
