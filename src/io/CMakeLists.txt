@@ -3,11 +3,14 @@ SET(HEADER_PATH ${user_identification_SOURCE_DIR}/include/${LIB_NAME})
 SET(TARGET_H
     ${HEADER_PATH}/KinectInterface.h
     ${HEADER_PATH}/Networking.h
+    ${HEADER_PATH}/ImageHandler.h
 )
 
 SET(TARGET_SRC
 	KinectInterface.cpp
 	Networking.cpp
+	ImageHandler.cpp
+	CSVHandling.cpp
 )
 
 # --------------------------------------------
