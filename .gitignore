@@ -1,4 +1,4 @@
-
+build/
 
 # Windows image file caches
 Thumbs.db
@@ -13,12 +13,7 @@ $RECYCLE.BIN/
 # APIs
 .idea
 
-
 include/Config.h
-
-build/
-lib/
-bin/
 
 # Compiled Object files
 *.slo
