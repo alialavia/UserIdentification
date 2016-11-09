@@ -87,7 +87,7 @@ class TCPServer:
 
     #  ----------- IMAGE HANDLERS
 
-    def receive_rgb8_image(self, client_socket, width, height):
+    def receive_rgb_image(self, client_socket, width, height):
         """receive 8 bit rgb image"""
         # 3 channels, 8 bit = 1 byte
         string_data = self.receive_message(client_socket, width * height * 3)
@@ -95,13 +95,13 @@ class TCPServer:
         reshaped = data.reshape((width, height, 3))
         return reshaped
 
-    def receive_rgb16_image(self, client_socket, width, height):
-        """receive 16 bit rgb image"""
-        # 3 channels, 16 bit = 2 byte
-        string_data = self.receive_message(client_socket, 2 * width * height * 3)
-        data = numpy.fromstring(string_data, dtype='uint16')
-        reshaped = data.reshape((width, height, 3))
-        return reshaped
+    def send_rgb_image(self, client_socket, img):
+        """send 8 bit rgb image"""
+        data = numpy.array(img)
+        stringData = data.tostring()
+        # send image size
+        # client_socket.send(str(len(stringData)).ljust(16))
+        client_socket.send(stringData)
 
         #  ----------- BINARY DATA HANDLERS
 
