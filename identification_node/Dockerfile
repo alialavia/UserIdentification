@@ -21,8 +21,7 @@ RUN cd /root/user_identification && \
 EXPOSE 8080
 
 # download detection models
-RUN cd /root/user_identification/ && \
-    ./models/get-models.sh
+CMD /bin/bash -l -c '/root/user_identification/models/get-models.sh'
 
 # Set the default directory where CMD will execute
 WORKDIR /root/user_identification/src
