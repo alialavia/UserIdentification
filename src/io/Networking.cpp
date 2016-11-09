@@ -10,6 +10,7 @@
 
 #include <opencv2/core.hpp>
 #include <iostream>
+#include <opencv2/highgui/highgui.hpp>
 
 
 using namespace io;
@@ -44,14 +45,6 @@ bool TCPClient::Connect(char* host_name, int host_port) const
 	return true;
 }
 
-void TCPClient::WaitForResponse()
-{
-	char buf[20];
-	long rc;
-	rc = recv(mSocketID, buf, 20,0);
-	std::cout << "Server response: " << buf << std::endl;
-}
-
 unsigned int TCPClient::ReceiveUnsignedInt()
 {
 	// id is a 4 byte/32 bit integer
@@ -70,14 +63,14 @@ unsigned short int TCPClient::ReceiveUnsignedShortInt()
 }
 
 // return -1 on failure, 0 on success
-int TCPClient::ReceiveMessage(int s, char *buf, int *len)
+int TCPClient::ReceiveMessage(int socket, char *buf, int *len)
 {
 	int total = 0;        // how many bytes we've received
 	int bytesleft = *len; // how many we have left to receive
 	int n = -1;
 
 	while (total < *len) {
-		n = recv(s, buf + total, bytesleft, 0);
+		n = recv(socket, buf + total, bytesleft, 0);
 		if (n <= 0) { break; }
 		total += n;
 		bytesleft -= n;
@@ -88,7 +81,25 @@ int TCPClient::ReceiveMessage(int s, char *buf, int *len)
 	return (n <= 0) ? -1 : 0;
 }
 
-int TCPClient::SendRequestID(char id)
+int TCPClient::ReceiveRGBImage(cv::Mat &output, int img_dim)
+{
+	output = cv::Mat::zeros(img_dim, img_dim, CV_8UC3);
+	int  buffer_length = output.total()*output.elemSize();
+
+	// allocate memory
+	char * sockData = new char[buffer_length];
+	// receive image
+	int bytes_recv = ReceiveMessage(mSocketID, sockData, &buffer_length);
+	// apply to opencv header
+	cv::Mat img(cv::Size(img_dim, img_dim), CV_8UC3, sockData);
+	// deep copy
+	output = img.clone();
+	// delete buffer
+	delete[] sockData;
+	return bytes_recv;
+}
+
+int TCPClient::SendChar(char id)
 {
 	int bytecount;
 	// send 1 byte identifier = char
@@ -99,7 +110,7 @@ int TCPClient::SendRequestID(char id)
 	return bytecount;
 }
 
-int TCPClient::SendMessageSize(uint32_t size)
+int TCPClient::SendUInt(uint32_t size)
 {
 	uint32_t network_byte_order;
 	network_byte_order = htonl(size);
@@ -109,7 +120,6 @@ int TCPClient::SendMessageSize(uint32_t size)
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
 		return 0;
 	}
-	std::cout << "Sent " << bytecount << " bytes\n";
 	return bytecount;
 }
 
@@ -120,18 +130,63 @@ void TCPClient::Close()
 	mSocketID = -1;
 }
 
-int TCPClient::SendImage(cv::Mat img)
+int TCPClient::SendImageWithLength(const cv::Mat &img)
 {
 	//cv::Mat frame = cv::Mat::zeros(size, size, CV_8UC3);
-	img = (img.reshape(0, 1)); // to make it continuous
-	const int imgSize = img.total()*img.elemSize();
+	cv::Mat flattend= (img.reshape(0, 1)); // to make it continuous
+	const int imgSize = flattend.total()*flattend.elemSize();
+
+	// first send message size
+	SendUInt(imgSize);
+
+	// then send flattened image
 	int bytecount;
-	if ((bytecount = send(mSocketID, (const char *)img.data, imgSize, 0)) == SOCKET_ERROR) {
+	if ((bytecount = send(mSocketID, (const char *)flattend.data, imgSize, 0)) == SOCKET_ERROR) {
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
-		return;
+		return 0;
 	}
 	return bytecount;
 }
+
+
+int TCPClient::SendImageBatchWithLength(const std::vector<cv::Mat> &images)
+{
+	// send number of images
+	SendChar(images.size());
+
+	// send image size
+	const int imgSize = images[0].cols * images[0].rows * images[0].elemSize();
+	SendUInt(imgSize);
+
+	// send images
+	int bytecount = 0, totalbytecount = 0;
+	for(int i = 0; i<images.size();i++)
+	{
+		cv::Mat flattend = (images[i].reshape(0, 1));
+		// send data
+		if ((bytecount = send(mSocketID, (const char *)flattend.data, imgSize, 0)) == SOCKET_ERROR) {
+			fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
+			return totalbytecount;
+		}
+		totalbytecount += bytecount;
+	}
+
+	return totalbytecount;
+}
+
+int TCPClient::SendRGBImage(const cv::Mat &img)
+{
+	cv::Mat frame = (img.reshape(0, 1)); // to make it continuous
+	const int imgSize = frame.total()*frame.elemSize();
+
+	int bytecount;
+	if ((bytecount = send(mSocketID, (const char *)frame.data, imgSize, 0)) == SOCKET_ERROR) {
+		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
+		return 0;
+	}
+	return bytecount;
+}
+
 
 void TCPClient::SendRGBTestImage(int size)
 {
