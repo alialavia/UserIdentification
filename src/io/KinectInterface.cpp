@@ -482,7 +482,6 @@ HRESULT KinectSensorMultiSource::ProcessBodyFrame(IBodyFrame* body_frame)
 	return hr;
 }
 
-
 HRESULT KinectSensorMultiSource::ProcessColorFrame(IColorFrame* color_frame, int& height, int& width, RGBQUAD* & buffer, UINT& buffer_len) const
 {
 	IFrameDescription* frameDesc = nullptr;

@@ -2,9 +2,11 @@
 #include <io/KinectInterface.h>
 #include <strsafe.h>
 #include <opencv2\opencv.hpp>
-
-
 #include "tracking/SkeletonTracker.h"
+#include "io/ImageHandler.h"
+#include <gflags/gflags.h>
+
+DEFINE_string(output, "output", "Output path");
 
 int main(int argc, char** argv)
 {
@@ -52,14 +54,22 @@ int main(int argc, char** argv)
 
 			// get face bounding boxes
 			std::vector<cv::Rect2f> bounding_boxes;
-			st.GetFaceBoundingBoxesRobust(bounding_boxes, base::ImageSpace_Color, color_image.cols, color_image.rows);
+			st.GetFaceBoundingBoxesRobust(bounding_boxes, base::ImageSpace_Color);
 
 			if (bounding_boxes.size() > 0)
 			{
 				cv::Mat face = color_image(bounding_boxes[0]);
 				// show image
 				cv::imshow("Face", face);
-				cv::waitKey(3);
+				int key = cv::waitKey(3);
+				if (key == 32)	// space = save
+				{
+					std::string filename = "face.png";
+					std::string path = FLAGS_output;
+
+					// save image
+					io::ImageHandler::SaveImage(face, path, filename);
+				}
 			}
 
 			// draw bounding boxes

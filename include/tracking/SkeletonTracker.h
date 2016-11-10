@@ -48,11 +48,9 @@ namespace tracking
 		/// <param name="outputHeight">Height of the output space.</param>
 		/// <param name="box_size">Size of the box in meter.</param>
 		/// <returns>Number of faces.</returns>
-		int GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space,
-								 int outputWidth, int outputHeight, float box_size = 0.4) const;
+		int GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space,float box_size = 0.4) const;
 
-		int GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space,
-			int outputWidth, int outputHeight, float box_size = 0.4) const;
+		int GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space, float box_size = 0.4) const;
 
 		int GetUserIDs(std::vector<int> &ids) const;
 		// --------------- drawing methods
@@ -65,7 +63,7 @@ namespace tracking
 		/// <returns>HRESULT.</returns>
 		HRESULT RenderFaceBoundingBoxes(cv::Mat &target, base::ImageSpace space) const;
 
-		void ExtractFaces(cv::Mat img, int patch_size) const;
+		void ExtractFacesPatches(cv::Mat img, int patch_size, std::vector<cv::Mat> &patches, std::vector<int> &user_ids) const;
 
 
 	private:

@@ -138,8 +138,7 @@ int SkeletonTracker::GetJoints(std::vector<std::vector<cv::Point2f>>& joint_coor
 	return mUserIDs.size();
 }
 
-int SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space,
-	int outputWidth, int outputHeight, float box_size) const
+int SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space, float box_size) const
 {
 	int srcWidth, srcHeight;
 	if ((base::ImageSpace_Color & space) == base::ImageSpace_Color)
@@ -202,26 +201,43 @@ int SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxe
 }
 
 // TODO: fix boundaries
-int SkeletonTracker::GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space,
-	int outputWidth, int outputHeight, float box_size) const
+int SkeletonTracker::GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space, float box_size) const
 {
-	GetFaceBoundingBoxes(bounding_boxes, space, outputWidth, outputHeight, box_size);
+	GetFaceBoundingBoxes(bounding_boxes, space, box_size);
 
 	float xmin, xmax, ymin, ymax, width, height;
+
+	int srcWidth, srcHeight;
+	if ((base::ImageSpace_Color & space) == base::ImageSpace_Color)
+	{
+		srcWidth = base::StreamSize_WidthColor;
+		srcHeight = base::StreamSize_HeightColor;
+	}
+	else
+	{
+		srcWidth = base::StreamSize_WidthDepth;
+		srcHeight = base::StreamSize_HeightDepth;
+	}
 
 	// check for boundary overlapping values
 	for(size_t i=0; i<bounding_boxes.size();i++)
 	{
 		xmin = (bounding_boxes[i].x > 0 ? bounding_boxes[i].x : 0);
 		ymin = (bounding_boxes[i].y > 0 ? bounding_boxes[i].y : 0);
-		width = (bounding_boxes[i].x + bounding_boxes[i].width > (outputWidth -1) ? outputWidth - bounding_boxes[i].x -1: bounding_boxes[i].width);
-		height = (bounding_boxes[i].y + bounding_boxes[i].height > (outputHeight - 1) ? outputHeight - bounding_boxes[i].y -1: bounding_boxes[i].height);
+		width = (bounding_boxes[i].x + bounding_boxes[i].width > (srcWidth -1) ? srcWidth - bounding_boxes[i].x -1: bounding_boxes[i].width);
+		height = (bounding_boxes[i].y + bounding_boxes[i].height > (srcHeight - 1) ? srcHeight - bounding_boxes[i].y -1: bounding_boxes[i].height);
 		bounding_boxes[i].x = xmin;
 		bounding_boxes[i].y = ymin;
 		bounding_boxes[i].width = width;
 		bounding_boxes[i].height = height;
 	}
 	return bounding_boxes.size();
+}
+
+int SkeletonTracker::GetUserIDs(std::vector<int> &ids) const
+{
+	ids = mUserIDs;
+	return mUserIDs.size();
 }
 
 // --------------- drawing methods
@@ -263,7 +279,7 @@ HRESULT SkeletonTracker::RenderFaceBoundingBoxes(cv::Mat &target, base::ImageSpa
 
 	// get face bounding boxes
 	std::vector<cv::Rect2f> bounding_boxes;
-	GetFaceBoundingBoxes(bounding_boxes, space, output_width, output_height);
+	GetFaceBoundingBoxes(bounding_boxes, space);
 	// draw bounding boxes
 	for (size_t i = 0; i < bounding_boxes.size(); i++)
 	{
@@ -273,23 +289,23 @@ HRESULT SkeletonTracker::RenderFaceBoundingBoxes(cv::Mat &target, base::ImageSpa
 	return S_OK;
 }
 
-// --------------- User Tracker
-
-UserTracker::UserTracker(IKinectSensor* sensor):
-	pKinectSensor(sensor),
-	pSkeletonTracker(nullptr)
+void SkeletonTracker::ExtractFacesPatches(cv::Mat img, int patch_size, std::vector<cv::Mat> &patches, std::vector<int> &user_ids) const
 {
-}
+	// get face bounding boxes
+	std::vector<cv::Rect2f> bounding_boxes;
+	GetFaceBoundingBoxesRobust(bounding_boxes, base::ImageSpace_Color);
 
-UserTracker::~UserTracker()
-{
-}
-
-HRESULT UserTracker::Init()
-{
-	// initialize tracking routines
-	pSkeletonTracker = new SkeletonTracker(pKinectSensor);
-	HRESULT hr = pSkeletonTracker->Init();
-
-	return hr;
+	for(int j = 0; j<mUserIDs.size();j++)
+	{
+		cv::Mat face = img(bounding_boxes[j]);
+		if(face.cols == face.rows)
+		{
+			// resize
+			cv::resize(face, face, cv::Size(patch_size, patch_size));
+			// save id
+			user_ids.push_back(mUserIDs[j]);
+			// save face patch
+			patches.push_back(face);
+		}
+	}
 }
