@@ -38,8 +38,9 @@ class TCPTestServer(TCPServer):
 
     def handle_image(self, conn):
         """receive image, draw and send back"""
-        img = self.receive_rgb_image(conn, 100, 100)
+        img = self.receive_rgb_image(conn, 96, 96)
         height, width, channels = img.shape
+        print '--- Received image'
         # display image
         cv2.imshow('Server image', img)
         cv2.waitKey(0)

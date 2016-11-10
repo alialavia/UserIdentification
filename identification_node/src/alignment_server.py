@@ -24,6 +24,14 @@ modelDir = os.path.join(fileDir, '..', 'models')	# path to the model directory
 dlibModelDir = os.path.join(modelDir, 'dlib')		# dlib face detector model
 openfaceModelDir = os.path.join(modelDir, 'openface')
 
+class Arguments:
+    def __init__(self):
+        self.dlibFacePredictor = "shape_predictor_68_face_landmarks.dat"
+        self.landmarks = "outerEyesAndNose"
+        self.size = 96
+        self.skipMulti = True
+        self.verbose = True
+
 class TCPTestServer(TCPServer):
 
     def __init__(self, host, port):
@@ -39,7 +47,7 @@ class TCPTestServer(TCPServer):
 
             if request_id == 1:
                 print '--- '+str(request_id)+': Normalizing image...'
-                self.handle_training(conn)
+                self.handle_image_normalization(conn)
             elif request_id == 2:
                 print '--- '+str(request_id)+': Identification...'
             else:
@@ -51,32 +59,47 @@ class TCPTestServer(TCPServer):
 
     #  ----------- REQUEST HANDLERS
 
-    def handle_training(self, conn):
-        args = {}
-        args.dlibFacePredictor = "shape_predictor_68_face_landmarks.dat"  # Path to dlib's face predictor.
-        args.landmarks = "outerEyesAndNose"
-        choices = ['outerEyesAndNose',
-                   'innerEyesAndBottomLip',
-                   'eyes_1']
-        args.size = 96  # Default image size.
-        args.skipMulti = True  # "Skip images with more than one face."
-        args.verbose = True
+    def handle_image_normalization(self, conn):
+        """Normalize face patch and send back to client"""
+        args = Arguments()
+        new_img = self.receive_rgb_image(conn, 96, 96)
+        # normalize
+        aligned = self.align_face(args, new_img)
+        if aligned is not None:
+            # send image back
+            self.send_rgb_image(conn, aligned)
+        else:
+            print "Image could not be aligned"
 
-        # image batch
-        images = []
+    def handle_batch_training(self, conn):
+
+        args = Arguments()
+
+        # receive image size
+        img_size = self.receive_integer(conn)
+
+        # receive batch size
+        nr_images = self.receive_char(conn)
 
         # receive image batch
-        new_img = self.receive_rgb_image(conn, 96, 96)
-        images.append(new_img)
+        images = []
+        for x in range(0, nr_images):
+            # receive image
+            new_img = self.receive_rgb_image(conn, img_size, img_size)
+            images.append(new_img)
 
         # normalize images
+        images_normalized = []
         if len(images) > 0:
             # random.shuffle(images)
             # do alignment
             for imgObject in images:
-                aligned = self.align_face(args, imgObject)
+                aligned = self.align_face(imgObject)
                 # send image back
-                self.send_rgb_image(conn, aligned)
+                if aligned is not None:
+                    images_normalized.append(aligned)
+
+        # train svm
 
     def handle_image(self, conn):
         """receive image, draw and send back"""
@@ -103,12 +126,12 @@ class TCPTestServer(TCPServer):
         landmarkIndices = landmarkMap[args.landmarks]
 
         # dlib aligner
-        align = openface.AlignDlib(args.dlibFacePredictor)
+        align = openface.AlignDlib(dlibModelDir + "/" +args.dlibFacePredictor)
         outRgb = align.align(args.size, image,
                              landmarkIndices=landmarkIndices,
                              skipMulti=args.skipMulti)
         if outRgb is None:
-            print("  + Unable to align.")
+            print("--- Unable to align.")
 
         return outRgb
 
