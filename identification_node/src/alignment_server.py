@@ -46,10 +46,13 @@ class TCPTestServer(TCPServer):
             request = REQUEST_LOOKUP[request_id]
 
             if request_id == 1:
-                print '--- '+str(request_id)+': Normalizing image...'
+                print '--- '+str(request_id)+': Starting image normalization...'
                 self.handle_image_normalization(conn)
             elif request_id == 2:
-                print '--- '+str(request_id)+': Identification...'
+                print '--- '+str(request_id)+': Starting identification...'
+            elif request_id == 3:
+                print '--- ' + str(request_id) + ': Starting batch training...'
+                self.handle_batch_training(conn)
             else:
                 print '--- Invalid request identifier, shutting down server...'
                 self.SERVER_STATUS = -1  # shutdown server
@@ -60,6 +63,14 @@ class TCPTestServer(TCPServer):
     #  ----------- REQUEST HANDLERS
 
     def handle_image_normalization(self, conn):
+        # receive image size
+        img_size = self.receive_integer(conn)
+
+        # receive batch size
+        nr_images = self.receive_char(conn)
+
+        print "--- Batch size: " + str(nr_images) + " | image size: " + str(img_size)
+
         """Normalize face patch and send back to client"""
         args = Arguments()
         new_img = self.receive_rgb_image(conn, 96, 96)
@@ -81,6 +92,8 @@ class TCPTestServer(TCPServer):
         # receive batch size
         nr_images = self.receive_char(conn)
 
+        print "--- Batch size: " + str(nr_images) + " | image size: " + str(img_size)
+
         # receive image batch
         images = []
         for x in range(0, nr_images):
@@ -99,7 +112,12 @@ class TCPTestServer(TCPServer):
                 if aligned is not None:
                     images_normalized.append(aligned)
 
+        if len(images_normalized) > 0:
         # train svm
+            print "Received " + str(len(images_normalized)) + " images"
+        else:
+            print "No normalized images"
+
 
     def handle_image(self, conn):
         """receive image, draw and send back"""

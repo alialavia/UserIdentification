@@ -9,7 +9,8 @@
 #include <io/Networking.h>
 
 DEFINE_string(output, "output", "Output path");
-DEFINE_int32(port, 555, "Server port");
+DEFINE_int32(port, 8080, "Server port");
+DEFINE_int32(batch_size, 1, "Number of images in a batch");
 
 int main(int argc, char** argv)
 {
@@ -51,6 +52,9 @@ int main(int argc, char** argv)
 	// send request ID
 	c.SendChar(1);
 
+	int nr_images = 0;
+	std::vector<cv::Mat> image_batch;
+
 	while (true) {
 
 		// polling
@@ -84,12 +88,16 @@ int main(int argc, char** argv)
 
 					// resize
 					cv::resize(face, face, cv::Size(96,96), 0, 0);
+					image_batch.push_back(face);
 
-					std::cout << "--- Sending image to server" << std::endl;
-					// send to server
-					std::cout << "sent " << c.SendRGBImage(face) << " bytes to server";
-					// send only one image
-					break;
+					nr_images++;
+
+					if (nr_images == FLAGS_batch_size) {
+						// stop recording
+						std::cout << "--- Captured "<< nr_images << " images" << std::endl;
+						break;
+					}
+					
 				}
 			}
 		}
@@ -99,14 +107,34 @@ int main(int argc, char** argv)
 		}
 	}
 
-	std::cout << "--- Waiting for response from server" << std::endl;
+	// close camera
+	c.Close();
 
-	// receive image
-	cv::Mat server_img = cv::Mat::zeros(96, 96, CV_8UC3);
-	c.ReceiveRGBImage(server_img, 96);
-	// display image
-	cv::imshow("Received from server", server_img);
-	cv::waitKey(0);
+	if (image_batch.size() == 0) {
+		std::cout << "--- No images captured. Shutdown Client." << std::endl;
+		return -1;
+	}
+
+	std::cout << "--- Sending image batch to server" << std::endl;
+
+	// send image size
+	c.SendUInt(image_batch[0].cols);
+
+	// send number of images
+	c.SendChar(1);
+
+	for (int i = 0; i < image_batch.size();i++) {
+		std::cout << "sent " << c.SendRGBImage(image_batch[i]) << " bytes to server\n";
+	}
+
+	std::cout << "--- Image batch has been sent" << std::endl;
+
+	//// receive image
+	//cv::Mat server_img = cv::Mat::zeros(96, 96, CV_8UC3);
+	//c.ReceiveRGBImage(server_img, 96);
+	//// display image
+	//cv::imshow("Received from server", server_img);
+	//cv::waitKey(0);
 
 	return 0;
 }
