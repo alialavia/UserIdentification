@@ -17,7 +17,7 @@ REQUEST_LOOKUP = {
 }
 
 # tcp networking
-from src.lib.TCPServer import TCPServer
+from lib.TCPServer import TCPServer
 
 fileDir = os.path.dirname(os.path.realpath(__file__))
 modelDir = os.path.join(fileDir, '..', 'models')	# path to the model directory
@@ -71,7 +71,7 @@ class TCPTestServer(TCPServer):
 
         # normalize images
         if len(images) > 0:
-            random.shuffle(images)
+            # random.shuffle(images)
             # do alignment
             for imgObject in images:
                 aligned = self.align_face(args, imgObject)
