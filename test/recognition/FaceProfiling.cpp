@@ -12,6 +12,48 @@ DEFINE_string(output, "output", "Output path");
 DEFINE_int32(port, 8080, "Server port");
 DEFINE_int32(batch_size, 1, "Number of images in a batch");
 
+
+void sendTrainingBatch(io::TCPClient *c, int16_t user_id, const std::vector<cv::Mat> &image_batch)
+{
+
+	std::cout << "--- Sending " << image_batch.size() << " images to server" << std::endl;
+
+	std::cout << "--- " << c->SendChar(user_id) << " bytes sent (user id)";
+
+	// send image size
+	std::cout << "--- " << c->SendUInt(image_batch[0].size().width) << " bytes sent (image size)";
+
+	// send number of images
+	std::cout << "--- " << c->SendChar(image_batch.size()) << " bytes sent (nr images)";
+
+	for (int i = 0; i < image_batch.size(); i++) {
+		std::cout << "sent " << c->SendRGBImage(image_batch[i]) << " bytes to server\n";
+	}
+
+	std::cout << "--- Image batch has been sent" << std::endl;
+};
+
+int inputUserID() {
+
+	// How to get a number.
+	int myNumber = 0;
+	std::string input = "";
+
+	while (true) {
+		std::cout << "--- Please enter a valid user id >= 0: ";
+		std::getline(std::cin, input);
+
+		// This code converts from string to number safely.
+		std::stringstream myStream(input);
+		if (myStream >> myNumber)
+			break;
+		std::cout << "--- Invalid number, please try again" << std::endl;
+	}
+	std::cout << "--- You entered: " << myNumber << std::endl << std::endl;
+
+	return myNumber;
+};
+
 int main(int argc, char** argv)
 {
 	gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -55,7 +97,8 @@ int main(int argc, char** argv)
 	int nr_images = 0;
 	std::vector<cv::Mat> image_batch;
 
-	while (true) {
+	while (true) 
+	{
 
 		// polling
 		hr = k.AcquireFrame();
@@ -94,10 +137,17 @@ int main(int argc, char** argv)
 
 					if (nr_images == FLAGS_batch_size) {
 						// stop recording
-						std::cout << "--- Captured "<< nr_images << " images" << std::endl;
-						break;
+						std::cout << "--- Captured " << nr_images << " images" << std::endl;
+
+						int user_id = inputUserID();
+
+						// send batch
+						sendTrainingBatch(&c, user_id, image_batch);
+
+						// reset batch
+						nr_images = 0;
+						image_batch.clear();
 					}
-					
 				}
 			}
 		}
@@ -110,23 +160,9 @@ int main(int argc, char** argv)
 	// close camera
 	k.Close();
 
-	if (image_batch.size() == 0) {
-		std::cout << "--- No images captured. Shutdown Client." << std::endl;
-		return -1;
-	}
 
-	// send image size
-	std::cout << "--- " << c.SendUInt(image_batch[0].size().width) << " bytes sent (image size)";
 
-	// send number of images
-	std::cout << "--- " << c.SendChar(1) << " bytes sent (nr images)";
 
-	std::cout << "--- Sending " << image_batch.size() << " images to server" << std::endl;
-	for (int i = 0; i < image_batch.size();i++) {
-		std::cout << "sent " << c.SendRGBImage(image_batch[i]) << " bytes to server\n";
-	}
-
-	std::cout << "--- Image batch has been sent" << std::endl;
 
 	//// receive image
 	//cv::Mat server_img = cv::Mat::zeros(96, 96, CV_8UC3);

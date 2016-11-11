@@ -15,7 +15,8 @@ namespace io
 	public:
 		TCPClient();
 		~TCPClient();
-		bool Connect(char* host_name = "127.0.0.1", int host_port = 80) const;
+		bool Connect(char* host_name = "127.0.0.1", int host_port = 80);
+		void Reconnect();
 		void Close();
 
 		/// <summary>
@@ -46,6 +47,8 @@ namespace io
 	private:
 		bool OpenSocket();
 		int mSocketID;
+		char* mHostName;
+		int mHostPort;
 	};
 }
 

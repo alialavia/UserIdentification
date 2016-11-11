@@ -19,7 +19,7 @@ using namespace io;
 
 TCPClient::TCPClient()
 {
-	OpenSocket();
+	
 }
 
 TCPClient::~TCPClient()
@@ -27,9 +27,14 @@ TCPClient::~TCPClient()
 	Close();
 }
 
-bool TCPClient::Connect(char* host_name, int host_port) const
+bool TCPClient::Connect(char* host_name, int host_port)
 {
+	// open new socket
+	OpenSocket();
+
 	struct sockaddr_in my_addr;
+	mHostName = host_name;
+	mHostPort = host_port;
 
 	my_addr.sin_family = AF_INET;
 	my_addr.sin_port = htons(host_port);
@@ -43,6 +48,27 @@ bool TCPClient::Connect(char* host_name, int host_port) const
 	}
 
 	return true;
+}
+
+void TCPClient::Reconnect()
+{
+
+	std::cout << "=== Reconnecting to server" << std::endl;
+	// existing socket if not yet done
+	if(mSocketID != -1)
+	{
+		Close();
+	}
+
+	// reconnect
+	Connect(mHostName, mHostPort);
+}
+
+void TCPClient::Close()
+{
+	closesocket(mSocketID);
+	WSACleanup();
+	mSocketID = -1;
 }
 
 unsigned int TCPClient::ReceiveUnsignedInt()
@@ -121,13 +147,6 @@ int TCPClient::SendUInt(uint32_t size)
 		return 0;
 	}
 	return bytecount;
-}
-
-void TCPClient::Close()
-{
-	closesocket(mSocketID);
-	WSACleanup();
-	mSocketID = -1;
 }
 
 int TCPClient::SendImageWithLength(const cv::Mat &img)
