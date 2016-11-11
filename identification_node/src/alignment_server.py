@@ -13,7 +13,8 @@ from openface.data import iterImgs
 
 REQUEST_LOOKUP = {
     1: 'training',
-    2: 'identification'
+    2: 'identification',
+    3: 'batch_training'
 }
 
 # tcp networking
@@ -44,7 +45,7 @@ class TCPTestServer(TCPServer):
 
         if(request_id in REQUEST_LOOKUP):
             request = REQUEST_LOOKUP[request_id]
-
+            print "--- Request: " + request
             if request_id == 1:
                 print '--- '+str(request_id)+': Starting image normalization...'
                 self.handle_image_normalization(conn)
@@ -107,7 +108,7 @@ class TCPTestServer(TCPServer):
             # random.shuffle(images)
             # do alignment
             for imgObject in images:
-                aligned = self.align_face(imgObject)
+                aligned = self.align_face(args, imgObject)
                 # send image back
                 if aligned is not None:
                     images_normalized.append(aligned)

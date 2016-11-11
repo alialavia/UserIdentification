@@ -50,7 +50,7 @@ int main(int argc, char** argv)
 	}
 
 	// send request ID
-	c.SendChar(1);
+	c.SendChar(3);
 
 	int nr_images = 0;
 	std::vector<cv::Mat> image_batch;
@@ -108,21 +108,20 @@ int main(int argc, char** argv)
 	}
 
 	// close camera
-	c.Close();
+	k.Close();
 
 	if (image_batch.size() == 0) {
 		std::cout << "--- No images captured. Shutdown Client." << std::endl;
 		return -1;
 	}
 
-	std::cout << "--- Sending image batch to server" << std::endl;
-
 	// send image size
-	c.SendUInt(image_batch[0].cols);
+	std::cout << "--- " << c.SendUInt(image_batch[0].size().width) << " bytes sent (image size)";
 
 	// send number of images
-	c.SendChar(1);
+	std::cout << "--- " << c.SendChar(1) << " bytes sent (nr images)";
 
+	std::cout << "--- Sending " << image_batch.size() << " images to server" << std::endl;
 	for (int i = 0; i < image_batch.size();i++) {
 		std::cout << "sent " << c.SendRGBImage(image_batch[i]) << " bytes to server\n";
 	}
