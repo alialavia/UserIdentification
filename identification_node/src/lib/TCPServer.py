@@ -22,7 +22,7 @@ class TCPServer:
         -1: 'shutdown',
         0: 'starting',
         1: 'running'
-    }
+    },
 
     def __init__(self, host, port):
         self.HOST = host
@@ -31,8 +31,6 @@ class TCPServer:
     def start_server(self):
 
         self.SERVER_SOCKET = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # non-blocking asynchronous communication
-        # socket.setblocking(0)
 
         # create socket
         try:
@@ -48,7 +46,7 @@ class TCPServer:
 
         # server loop
         while True:
-            # new socket connected
+            # accept new connection - blocking call, wait for new socket to connect to
             conn, addr = self.SERVER_SOCKET.accept()
             print '--- Connected with ' + addr[0] + ':' + str(addr[1])
 
@@ -59,6 +57,9 @@ class TCPServer:
             if self.SERVER_STATUS == -1:
                 conn.close()    # close connection
                 break
+
+            # close connection - allow new socket connections
+            conn.close()
 
     @abstractmethod
     def handle_request(self, conn, addr):
@@ -135,14 +136,6 @@ class TCPServer:
         msg = struct.pack('!H', short)  # convert to network byte order
         the_socket.send(msg)
 
-    #  ----------- DEPRECATED
-
-    def send_message_with_length(sock, msg):
-        # Prefix each message with a 4-byte length (network byte order)
-        msg = struct.pack('!I', len(msg)) + msg
-        sock.send(msg)
-
-    def send_integer(self, client_socket):
-        # must be in range 0-255
-        number = 5
-        client_socket.send(chr(number))
+class TCPServerBlocking(TCPServer):
+    def __init__(self, host, port):
+        TCPServer.__init__(self, host, port)

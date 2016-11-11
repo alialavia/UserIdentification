@@ -3,6 +3,7 @@
 # import TCP server interface
 from src.lib.TCPServer import TCPServer
 import cv2
+from time import sleep
 
 REQUEST_LOOKUP = {
     1: 'image_handling',
@@ -14,27 +15,32 @@ class TCPTestServer(TCPServer):
     def __init__(self, host, port):
         TCPServer.__init__(self, host, port)
 
-
     def handle_request(self, conn, addr):
         """general request handler"""
         request_id = self.receive_char(conn)
 
         if(request_id in REQUEST_LOOKUP):
             request = REQUEST_LOOKUP[request_id]
-
             if request_id == 1:
                 print '--- '+str(request_id)+': Handling image...'
                 self.handle_image(conn)
             elif request_id == 2:
-                print '--- '+str(request_id)+': Handling binary values...'
+                print '--- '+str(request_id)+': Handling primitive values...'
+                sleep(3)  # sleep 1 second
+                self.handle_primitive_values(conn)
+                # simulate processing
+
             else:
                 print '--- Invalid request identifier, shutting down server...'
                 self.SERVER_STATUS = -1  # shutdown server
 
-        # communication finished - close connection
+        # communication finished - close socket
         conn.close()
 
     #  ----------- REQUEST HANDLERS
+
+    def handle_primitive_values(self, conn):
+        self.send_unsigned_short(conn, 1337)
 
     def handle_image(self, conn):
         """receive image, draw and send back"""
