@@ -114,7 +114,6 @@ void ImageHandler::PutCenteredVerticalText(std::string text, double font_size, c
 	textImgRotated.copyTo(src(cv::Rect(pos.x - text_size.height / 2, pos.y - text_size.width / 2 - 1, textImgRotated.cols, textImgRotated.rows)));
 }
 
-
 void ImageHandler::DrawCenteredText(std::string text, float font_size, cv::Point pos, cv::Mat &img, cv::Scalar color) {
 	cv::Size text_size;
 	text_size = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_size, 1, 0);

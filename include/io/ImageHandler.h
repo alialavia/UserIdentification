@@ -18,9 +18,9 @@ namespace io
 		static void MakeIndexedName(std::string path, std::string &filename_orig, bool start_with_index = true);
 
 		// drawing function
-		void PutCenteredVerticalText(std::string text, double font_size, cv::Point pos, cv::Mat& src);
-		void DrawCenteredText(std::string text, float font_size, cv::Point pos, cv::Mat &img, cv::Scalar color = cv::Scalar(0, 0, 0));
-		void DrawCenteredText(double text, float font_size, cv::Point pos, cv::Mat &img, cv::Scalar color = cv::Scalar(0, 0, 0));
+		static void PutCenteredVerticalText(std::string text, double font_size, cv::Point pos, cv::Mat& src);
+		static void DrawCenteredText(std::string text, float font_size, cv::Point pos, cv::Mat &img, cv::Scalar color = cv::Scalar(0, 0, 0));
+		static void DrawCenteredText(double text, float font_size, cv::Point pos, cv::Mat &img, cv::Scalar color = cv::Scalar(0, 0, 0));
 	};
 }
 
