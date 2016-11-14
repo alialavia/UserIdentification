@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include <iostream>
 #include <windows.h>
+#include <opencv2/video.hpp>
 
 using namespace io;
 
@@ -95,3 +96,34 @@ bool ImageHandler::FileExists(const std::string& name) {
 	struct stat buffer;
 	return (stat(name.c_str(), &buffer) == 0);
 }
+
+// ------------------------ drawing functions
+
+void ImageHandler::PutCenteredVerticalText(std::string text, double font_size, cv::Point pos, cv::Mat& src) {
+	// Create mat for text
+	cv::Size text_size;
+	text_size = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_size, 1, 0);
+	cv::Mat textImg = cv::Mat(text_size.height + 1, text_size.width, src.type(), cv::Scalar(255, 255, 255));
+	cv::putText(textImg, text, cv::Point(0, text_size.height), cv::FONT_HERSHEY_SIMPLEX, font_size, cv::Scalar(0, 0, 0), 1, 8);
+
+	// rotate
+	cv::Mat textImgRotated;
+	cv::transpose(textImg, textImgRotated);
+	cv::flip(textImgRotated, textImgRotated, 0);
+
+	textImgRotated.copyTo(src(cv::Rect(pos.x - text_size.height / 2, pos.y - text_size.width / 2 - 1, textImgRotated.cols, textImgRotated.rows)));
+}
+
+
+void ImageHandler::DrawCenteredText(std::string text, float font_size, cv::Point pos, cv::Mat &img, cv::Scalar color) {
+	cv::Size text_size;
+	text_size = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_size, 1, 0);
+	cv::putText(img, text, cv::Point(pos.x - text_size.width / 2, pos.y + text_size.height / 2), cv::FONT_HERSHEY_SIMPLEX, font_size, color, 1, 8);
+}
+
+void ImageHandler::DrawCenteredText(double text, float font_size, cv::Point pos, cv::Mat &img, cv::Scalar color) {
+	char str[200];
+	sprintf(str, "%.1f", text);
+	DrawCenteredText(str, font_size, pos, img, color);
+}
+
