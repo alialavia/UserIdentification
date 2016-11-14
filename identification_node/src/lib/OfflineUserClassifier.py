@@ -9,7 +9,7 @@ from openface.data import iterImgs
 
 # path managing
 fileDir = os.path.dirname(os.path.realpath(__file__))
-modelDir = os.path.join(fileDir, '..', 'models')	# path to the model directory
+modelDir = os.path.join(fileDir, '../..', 'models')	# path to the model directory
 dlibModelDir = os.path.join(modelDir, 'dlib')		# dlib face detector model
 openfaceModelDir = os.path.join(modelDir, 'openface')
 
@@ -56,7 +56,7 @@ class OfflineUserClassifier:
         if len(images) > 0:
             for imgObject in images:
                 # align face - ignore images with multiple bounding boxes
-                aligned = self.align_face(args, imgObject)
+                aligned = self.align_face(imgObject, args.landmarks, args.size)
                 if aligned is not None:
                     images_normalized.append(aligned)
 
@@ -96,21 +96,22 @@ class OfflineUserClassifier:
         """triggers the detector training from the collected faces"""
         print "--- trigger training"
 
-    def align_face(self, args, image, multiple=False):
+    def align_face(self, image, landmark, output_size, skip_multi=False):
 
         landmarkMap = {
             'outerEyesAndNose': openface.AlignDlib.OUTER_EYES_AND_NOSE,
             'innerEyesAndBottomLip': openface.AlignDlib.INNER_EYES_AND_BOTTOM_LIP
         }
-        if args.landmarks not in landmarkMap:
-            raise Exception("Landmarks unrecognized: {}".format(args.landmarks))
+        if landmark not in landmarkMap:
+            raise Exception("Landmarks unrecognized: {}".format(landmark))
 
-        landmarkIndices = landmarkMap[args.landmarks]
+        landmarkIndices = landmarkMap[landmark]
 
+        # TODO: check if is really output size or input size
         # align image
-        outRgb = self.dlib_aligner.align(args.size, image,
+        outRgb = self.dlib_aligner.align(output_size, image,
                              landmarkIndices=landmarkIndices,
-                             skipMulti=args.skipMulti)
+                             skipMulti=skip_multi)
         if outRgb is None:
             print("--- Unable to align.")
 
