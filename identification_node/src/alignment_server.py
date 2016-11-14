@@ -14,19 +14,26 @@ from openface.data import iterImgs
 
 REQUEST_LOOKUP = {
     1: 'identification',        # request user id
-    2: 'training',              # direct classifier training
+    2: 'training',              # send training images
     3: 'embedding_calculation', # direct embedding calculation
     4: 'classifier_training',   # initialize classifier training
     5: 'image_normalization'    # face normalization
 }
 
 # tcp networking
-from lib.TCPServer import TCPServer
+from lib.TCPServer import TCPServerBlocking
+# classifier
+from lib.OfflineUserClassifier import OfflineUserClassifier
 
-class TCPTestServer(TCPServer):
+class TCPTestServer(TCPServerBlocking):
+
+    classifier = None
 
     def __init__(self, host, port):
-        TCPServer.__init__(self, host, port)
+        TCPServerBlocking.__init__(self, host, port)
+
+        # initialize classifier
+        self.classifier = OfflineUserClassifier()
 
     def handle_request(self, conn, addr):
         """general request handler"""
@@ -37,7 +44,7 @@ class TCPTestServer(TCPServer):
             print '=== Request: ' + request
             if request_id == 1:
                 self.handle_identification(conn)
-            elif request_id == 2:
+            elif request_id == 2:   # classifier training
                 self.handle_training(conn)
             elif request_id == 3:
                 self.handle_embedding_calculation(conn)
@@ -50,42 +57,11 @@ class TCPTestServer(TCPServer):
                 self.SERVER_STATUS = -1  # shutdown server
 
         # communication finished - close connection
-        # conn.close()
+        conn.close()
 
     #  ----------- REQUEST HANDLERS
 
-    def handle_classifier_training(self, conn):
-        print "--- Classifier Training"
-
     def handle_training(self, conn):
-        print "--- Training"
-
-    def handle_identification(self, conn):
-        print "--- Identification"
-
-    def handle_image_normalization(self, conn):
-        # receive image size
-        img_size = self.receive_integer(conn)
-
-        # receive batch size
-        nr_images = self.receive_char(conn)
-
-        print "--- Batch size: " + str(nr_images) + " | image size: " + str(img_size)
-
-        """Normalize face patch and send back to client"""
-        args = Arguments()
-        new_img = self.receive_rgb_image(conn, 96, 96)
-        # normalize
-        aligned = self.align_face(args, new_img)
-        if aligned is not None:
-            # send image back
-            self.send_rgb_image(conn, aligned)
-        else:
-            print "Image could not be aligned"
-
-    def handle_embedding_calculation(self, conn):
-
-        args = Arguments()
 
         # receive user id
         user_id = self.receive_char(conn)
@@ -105,48 +81,29 @@ class TCPTestServer(TCPServer):
             new_img = self.receive_rgb_image(conn, img_size, img_size)
             images.append(new_img)
 
-        print "--- Starting normalization..."
-        # normalize images
-        images_normalized = []
-        start = time.time()
-        if len(images) > 0:
-            for imgObject in images:
-                # align face - ignore images with multiple bounding boxes
-                aligned = self.align_face(args, imgObject)
-                if aligned is not None:
-                    images_normalized.append(aligned)
+        # forward to classifier
+        self.classifier.collect_embeddings(images, user_id)
 
-        if len(images_normalized) > 0:
-            print("--- Alignment took {} seconds - " + str(len(images_normalized)) + "/" + str(len(images)) + " images suitable".format(time.time() - start))
-
+    def handle_image_normalization(self, conn):
+        # receive image size
+        img_size = self.receive_integer(conn)
+        img = self.receive_rgb_image(conn, img_size, img_size)
+        # normalize
+        normalized = self.classifier.align_face(img, 'outerEyesAndNose', 96)
+        if normalized is not None:
+            # send image back
+            self.send_rgb_image(conn, normalized)
         else:
-            print "--- No suitable images (no faces detected)"
+            print "Image could not be aligned"
 
-        # generate embedding
-        net = openface.TorchNeuralNet(args.networkModel, imgDim=img_size,
-                                      cuda=args.cuda)
-        # representations
-        reps = []
-        for img in images_normalized:
-            start = time.time()
-            rep = net.forward(img)
-            print("--- = Neural network forward pass took {} seconds.".format(
-                time.time() - start))
-            reps.append(rep)
+    def handle_identification(self, conn):
+        print "--- Identification"
 
-        # print
-        # for rep in reps:
-        #     print "= rep: " + str(rep)
+    def handle_classifier_training(self, conn):
+        print "--- Classifier Training"
 
-        # save
-        if user_id in self.user_embeddings:
-            # append
-            self.user_embeddings[user_id].append(reps)
-        else:
-            self.user_embeddings[user_id] = reps
-
-        # display current representations
-        self.print_embedding_status()
+    def handle_embedding_calculation(self, conn):
+        print "--- Direct Embeddings Calculation"
 
     def handle_image(self, conn):
         """receive image, draw and send back"""
