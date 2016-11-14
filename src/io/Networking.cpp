@@ -50,7 +50,7 @@ bool TCPClient::Connect(char* host_name, int host_port)
 	return true;
 }
 
-void TCPClient::Reconnect()
+bool TCPClient::Reconnect()
 {
 
 	std::cout << "=== Reconnecting to server" << std::endl;
@@ -61,7 +61,7 @@ void TCPClient::Reconnect()
 	}
 
 	// reconnect
-	Connect(mHostName, mHostPort);
+	return Connect(mHostName, mHostPort);
 }
 
 void TCPClient::Close()

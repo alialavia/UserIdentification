@@ -16,7 +16,7 @@ namespace io
 		TCPClient();
 		~TCPClient();
 		bool Connect(char* host_name = "127.0.0.1", int host_port = 80);
-		void Reconnect();
+		bool Reconnect();
 		void Close();
 
 		/// <summary>
