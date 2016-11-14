@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 # import TCP server interface
-from src.lib.TCPServer import TCPServer
+from src.lib.TCPServer import TCPServerBlocking
 import cv2
 from time import sleep
 
@@ -10,10 +10,10 @@ REQUEST_LOOKUP = {
     2: 'binary_handling'
 }
 
-class TCPTestServer(TCPServer):
+class TCPTestServer(TCPServerBlocking):
 
     def __init__(self, host, port):
-        TCPServer.__init__(self, host, port)
+        TCPServerBlocking.__init__(self, host, port)
 
     def handle_request(self, conn, addr):
         """general request handler"""
@@ -61,5 +61,5 @@ class TCPTestServer(TCPServer):
 
 if __name__=='__main__':
 
-    server = TCPTestServer('', 555)
+    server = TCPTestServer('', 8080)
     server.start_server()

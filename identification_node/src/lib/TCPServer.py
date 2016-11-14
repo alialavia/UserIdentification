@@ -5,6 +5,7 @@ import sys
 import socket
 from abc import abstractmethod
 
+
 class TCPServer:
     """
         TCP Server Interface
@@ -15,7 +16,7 @@ class TCPServer:
     """
 
     HOST = ''     # Symbolic name meaning all available interfaces
-    PORT = '555'  # Arbitrary non-privileged port
+    PORT = '8080'  # Arbitrary non-privileged port
     SERVER_SOCKET = -1
     SERVER_STATUS = 0
     STATUS_CLEAN = {
@@ -45,26 +46,17 @@ class TCPServer:
         print '--- Server started on port ', self.PORT
 
         # server loop
-        while True:
-            # accept new connection - blocking call, wait for new socket to connect to
-            conn, addr = self.SERVER_SOCKET.accept()
-            print '--- Connected with ' + addr[0] + ':' + str(addr[1])
-
-            # handle request
-            self.handle_request(conn, addr)
-
-            # check status - eventually shutdown server
-            if self.SERVER_STATUS == -1:
-                conn.close()    # close connection
-                break
-
-            # close connection - allow new socket connections
-            conn.close()
+        self.server_loop()
 
     @abstractmethod
     def handle_request(self, conn, addr):
         """Handles the socket request in each loop"""
         raise NotImplementedError( "The basic request handler must be implemented first." )
+
+    @abstractmethod
+    def server_loop(self):
+        """The main processing loop - implement in server type (blocking/parallel)"""
+        raise NotImplementedError( "The basic processling loop must be implemented in the server type class." )
 
     #  ----------- MESSAGE HANDLERS
 
@@ -136,6 +128,26 @@ class TCPServer:
         msg = struct.pack('!H', short)  # convert to network byte order
         the_socket.send(msg)
 
+
 class TCPServerBlocking(TCPServer):
+    """Blocking TCP Server - 1 socket connected at a time"""
     def __init__(self, host, port):
         TCPServer.__init__(self, host, port)
+
+    def server_loop(self):
+        # server loop
+        while True:
+            # accept new connection - blocking call, wait for new socket to connect to
+            conn, addr = self.SERVER_SOCKET.accept()
+            print '--- Connected with ' + addr[0] + ':' + str(addr[1])
+
+            # handle request
+            self.handle_request(conn, addr)
+
+            # check status - eventually shutdown server
+            if self.SERVER_STATUS == -1:
+                conn.close()    # close connection
+                break
+
+            # close connection - allow new socket connections
+            conn.close()
