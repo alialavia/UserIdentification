@@ -27,6 +27,7 @@ HRESULT SkeletonTracker::Init()
 HRESULT SkeletonTracker::ExtractJoints(IBody* ppBodies[NR_USERS])
 {
 	HRESULT hr = E_FAIL;
+	// reset visible users
 	mUserIDs.clear();
 
 	for (int iUser = 0; iUser < NR_USERS; ++iUser)
@@ -234,7 +235,7 @@ int SkeletonTracker::GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& boundin
 	return bounding_boxes.size();
 }
 
-int SkeletonTracker::GetUserIDs(std::vector<int> &ids) const
+int SkeletonTracker::GetUserSceneIDs(std::vector<int> &ids) const
 {
 	ids = mUserIDs;
 	return mUserIDs.size();

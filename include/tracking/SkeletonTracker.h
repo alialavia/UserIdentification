@@ -52,7 +52,7 @@ namespace tracking
 
 		int GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space, float box_size = 0.4) const;
 
-		int GetUserIDs(std::vector<int> &ids) const;
+		int GetUserSceneIDs(std::vector<int> &ids) const;
 		// --------------- drawing methods
 		
 		/// <summary>
