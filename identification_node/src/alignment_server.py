@@ -13,35 +13,17 @@ import openface.helper
 from openface.data import iterImgs
 
 REQUEST_LOOKUP = {
-    1: 'training',
-    2: 'identification',
-    3: 'embedding_calculation',
-    4: 'classifier_training'
+    1: 'identification',        # request user id
+    2: 'training',              # direct classifier training
+    3: 'embedding_calculation', # direct embedding calculation
+    4: 'classifier_training',   # initialize classifier training
+    5: 'image_normalization'    # face normalization
 }
 
 # tcp networking
 from lib.TCPServer import TCPServer
 
-fileDir = os.path.dirname(os.path.realpath(__file__))
-modelDir = os.path.join(fileDir, '..', 'models')	# path to the model directory
-dlibModelDir = os.path.join(modelDir, 'dlib')		# dlib face detector model
-openfaceModelDir = os.path.join(modelDir, 'openface')
-
-class Arguments:
-    def __init__(self):
-        self.dlibFacePredictor = "shape_predictor_68_face_landmarks.dat"
-        self.landmarks = "outerEyesAndNose"
-        self.size = 96
-        self.skipMulti = True
-        self.verbose = True
-        # embedding calculation
-        self.networkModel = os.path.join(openfaceModelDir,'nn4.small2.v1.t7') # torch network model
-        self.cuda = False
-
 class TCPTestServer(TCPServer):
-
-    # key: user id, value: list of embeddings
-    user_embeddings = {}
 
     def __init__(self, host, port):
         TCPServer.__init__(self, host, port)
@@ -52,15 +34,17 @@ class TCPTestServer(TCPServer):
 
         if(request_id in REQUEST_LOOKUP):
             request = REQUEST_LOOKUP[request_id]
-            print "    Request: " + request
+            print '=== Request: ' + request
             if request_id == 1:
-                print '=== '+str(request_id)+': Starting image normalization...'
-                self.handle_image_normalization(conn)
+                self.handle_identification(conn)
             elif request_id == 2:
-                print '=== '+str(request_id)+': Starting identification...'
+                self.handle_training(conn)
             elif request_id == 3:
-                print '=== ' + str(request_id) + ': Starting embedding calculation...'
                 self.handle_embedding_calculation(conn)
+            elif request_id == 4:
+                self.handle_classifier_training(conn)
+            elif request_id == 5:
+                self.handle_image_normalization(conn)
             else:
                 print '=== Invalid request identifier, shutting down server...'
                 self.SERVER_STATUS = -1  # shutdown server
@@ -70,10 +54,14 @@ class TCPTestServer(TCPServer):
 
     #  ----------- REQUEST HANDLERS
 
-    def print_embedding_status(self):
-        print "--- Current embeddings:"
-        for user_id, embeddings in self.user_embeddings.iteritems():
-            print "     User" + str(user_id) + ": " + str(len(embeddings)) + " representations"
+    def handle_classifier_training(self, conn):
+        print "--- Classifier Training"
+
+    def handle_training(self, conn):
+        print "--- Training"
+
+    def handle_identification(self, conn):
+        print "--- Identification"
 
     def handle_image_normalization(self, conn):
         # receive image size
@@ -130,6 +118,7 @@ class TCPTestServer(TCPServer):
 
         if len(images_normalized) > 0:
             print("--- Alignment took {} seconds - " + str(len(images_normalized)) + "/" + str(len(images)) + " images suitable".format(time.time() - start))
+
         else:
             print "--- No suitable images (no faces detected)"
 
@@ -171,27 +160,6 @@ class TCPTestServer(TCPServer):
         cv2.circle(img, (width/2, height/2), height/4, (0, 0, 255), -1)
         # send image back
         self.send_rgb_image(conn, img)
-
-    def align_face(self, args, image, multiple = False):
-
-        landmarkMap = {
-            'outerEyesAndNose': openface.AlignDlib.OUTER_EYES_AND_NOSE,
-            'innerEyesAndBottomLip': openface.AlignDlib.INNER_EYES_AND_BOTTOM_LIP
-        }
-        if args.landmarks not in landmarkMap:
-            raise Exception("Landmarks unrecognized: {}".format(args.landmarks))
-
-        landmarkIndices = landmarkMap[args.landmarks]
-
-        # dlib aligner
-        align = openface.AlignDlib(dlibModelDir + "/" +args.dlibFacePredictor)
-        outRgb = align.align(args.size, image,
-                             landmarkIndices=landmarkIndices,
-                             skipMulti=args.skipMulti)
-        if outRgb is None:
-            print("--- Unable to align.")
-
-        return outRgb
 
 
 # ================================= #
