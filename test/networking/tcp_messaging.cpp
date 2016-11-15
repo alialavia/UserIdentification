@@ -4,7 +4,7 @@
 #include <opencv2/core/cvdef.h>
 #include "io/KinectInterface.h"
 
-DEFINE_int32(port, 80, "Server port");
+DEFINE_int32(port, 8080, "Server port");
 DEFINE_string(message_type, "primitive", "message types: image, primitive");
 
 void send_and_receive_image(io::TCPClient *c)
@@ -22,12 +22,6 @@ void send_and_receive_image(io::TCPClient *c)
 	cv::waitKey(0);
 }
 
-void receive_primitive(io::TCPClient *c)
-{
-	// send request ID
-	c->SendChar(2);
-	std::cout << "--- Server responded: " << c->ReceiveUnsignedShortInt() << std::endl;
-}
 
 int main(int argc, char** argv)
 {
@@ -47,21 +41,53 @@ int main(int argc, char** argv)
 	{
 		if(FLAGS_message_type == "primitive")
 		{
-			receive_primitive(&c);
+
+			// send request id
+			c.SendChar(2);
+
+			// ----- send
+			// char
+			c.SendChar(100);
+			// unsigned char
+			c.SendUChar(255);
+			// short
+			c.SendShort(32767);
+			// unsigned short
+			c.SendUShort(65535);
+			// integer
+			c.SendInt(234234);
+			// unsigned integer
+			c.SendUInt(4294967001);
+			// bool
+			c.SendBool(true);
+			// float
+			c.SendFloat(10.1f);
+
+			// ----- receive
+			std::cout << "int8: " << (int)c.Receive8bit<int8_t>() << std::endl;
+			std::cout << "uint8: " << (int)c.Receive8bit<uint8_t>() << std::endl;
+			std::cout << "short: " << c.Receive16bit<short>() << std::endl;
+			std::cout << "ushort: " << c.Receive16bit<unsigned short>() << std::endl;
+			std::cout << "int: " << c.Receive32bit<int>() << std::endl;
+			std::cout << "uint: " << c.Receive32bit<unsigned int>() << std::endl;
+			std::cout << "bool: " << c.Receive8bit<bool>() << std::endl;
+			// TODO: fix
+			std::cout << "float: " << c.Receive32bit<float>() << std::endl;
+
+			// close connection
+			c.Close();
+			break;
 		}else if(FLAGS_message_type == "image")
 		{
 			send_and_receive_image(&c);
-		} else
-		{
-			std::cout << "--- invalid message type\n";
+			// reconnect to server
+			c.Close();
 			break;
 		}
-
-		Sleep(1000);
-
-		c.Reconnect();
 		// connection is terminated by server
 	}
+
+	
 
 	return 0;
 } 

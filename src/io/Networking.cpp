@@ -71,6 +71,43 @@ void TCPClient::Close()
 	mSocketID = -1;
 }
 
+bool TCPClient::OpenSocket()
+{
+	// initialize socket
+	unsigned short wVersionRequested;
+	WSADATA wsaData;
+	int err;
+	wVersionRequested = MAKEWORD(2, 2);
+	err = WSAStartup(wVersionRequested, &wsaData);
+
+	if (err != 0 || (LOBYTE(wsaData.wVersion) != 2 ||
+		HIBYTE(wsaData.wVersion) != 2)) {
+		fprintf(stderr, "Could not find useable socket dll %d\n", WSAGetLastError());
+		return false;
+	}
+
+	// initialize sockets and set any options
+	int * p_int;
+	mSocketID = socket(AF_INET, SOCK_STREAM, 0);
+	if (mSocketID == -1) {
+		printf("Error initializing socket %d\n", WSAGetLastError());
+		return false;
+	}
+
+	p_int = (int*)malloc(sizeof(int));
+	*p_int = 1;
+	if ((setsockopt(mSocketID, SOL_SOCKET, SO_REUSEADDR, (char*)p_int, sizeof(int)) == -1) ||
+		(setsockopt(mSocketID, SOL_SOCKET, SO_KEEPALIVE, (char*)p_int, sizeof(int)) == -1)) {
+		printf("Error setting options %d\n", WSAGetLastError());
+		free(p_int);
+		return false;
+	}
+	free(p_int);
+
+	return true;
+}
+
+/*
 unsigned int TCPClient::ReceiveUnsignedInt()
 {
 	// id is a 4 byte/32 bit integer
@@ -79,6 +116,7 @@ unsigned int TCPClient::ReceiveUnsignedInt()
 	rc = recv(mSocketID, (char*)&nr, sizeof(unsigned int), 0);
 	return ntohl(nr);
 }
+
 unsigned short int TCPClient::ReceiveUnsignedShortInt()
 {
 	// id is a 2 byte/16 bit integer
@@ -87,6 +125,7 @@ unsigned short int TCPClient::ReceiveUnsignedShortInt()
 	rc = recv(mSocketID, (char*)&nr, sizeof(unsigned short int), 0);
 	return ntohs(nr);
 }
+*/
 
 // return -1 on failure, 0 on success
 int TCPClient::ReceiveMessage(int socket, char *buf, int *len)
@@ -125,6 +164,8 @@ int TCPClient::ReceiveRGBImage(cv::Mat &output, int img_dim)
 	return bytes_recv;
 }
 
+// ------ send
+
 int TCPClient::SendChar(char id)
 {
 	int bytecount;
@@ -138,11 +179,81 @@ int TCPClient::SendChar(char id)
 
 int TCPClient::SendUInt(uint32_t size)
 {
-	uint32_t network_byte_order;
-	network_byte_order = htonl(size);
+	uint32_t network_byte_order = htonl(size);
 	int bytecount;
 	// send 4 bytes message with datalength
-	if ((bytecount = send(mSocketID, (char*)&network_byte_order, sizeof(unsigned int), 0)) == SOCKET_ERROR) {
+	if ((bytecount = send(mSocketID, (char*)&network_byte_order, sizeof(uint32_t), 0)) == SOCKET_ERROR) {
+		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
+		return 0;
+	}
+	return bytecount;
+}
+
+int TCPClient::SendInt(int size)
+{
+	uint32_t network_byte_order = htonl(size);
+	int bytecount;
+	// send 4 bytes message with datalength
+	if ((bytecount = send(mSocketID, (char*)&network_byte_order, sizeof(int), 0)) == SOCKET_ERROR) {
+		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
+		return 0;
+	}
+	return bytecount;
+}
+
+int TCPClient::SendShort(short val)
+{
+	unsigned short network_byte_order = htons(val);
+	int bytecount;
+	// send 2 bytes message with datalength
+	if ((bytecount = send(mSocketID, (char*)&network_byte_order, sizeof(unsigned short), 0)) == SOCKET_ERROR) {
+		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
+		return 0;
+	}
+	return bytecount;
+}
+
+int TCPClient::SendUShort(unsigned short ushort)
+{
+	unsigned short network_byte_order = htons(ushort);
+	int bytecount;
+	// send 2 bytes message with datalength
+	if ((bytecount = send(mSocketID, (char*)&network_byte_order, sizeof(unsigned short), 0)) == SOCKET_ERROR) {
+		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
+		return 0;
+	}
+	return bytecount;
+}
+
+int TCPClient::SendBool(bool val)
+{
+	int bytecount;
+	// send 1 byte identifier = char
+	if ((bytecount = send(mSocketID, (char*)&val, sizeof(char), 0)) == SOCKET_ERROR) {
+		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
+		return 0;
+	}
+	return bytecount;
+}
+
+int TCPClient::SendFloat(float val)
+{
+	int bytecount;
+	unsigned int network_byte_order = htonf(val);
+
+	// send 1 byte identifier = char
+	if ((bytecount = send(mSocketID, (char*)&network_byte_order, sizeof(float), 0)) == SOCKET_ERROR) {
+		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
+		return 0;
+	}
+	return bytecount;
+}
+
+int TCPClient::SendUChar(unsigned char val)
+{
+	int bytecount;
+	// send 1 byte identifier = char
+	if ((bytecount = send(mSocketID, (char*)&val, sizeof(char), 0)) == SOCKET_ERROR) {
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
 		return 0;
 	}
@@ -166,7 +277,6 @@ int TCPClient::SendImageWithLength(const cv::Mat &img)
 	}
 	return bytecount;
 }
-
 
 int TCPClient::SendImageBatchWithLength(const std::vector<cv::Mat> &images)
 {
@@ -205,7 +315,6 @@ int TCPClient::SendRGBImage(const cv::Mat &img)
 	}
 	return bytecount;
 }
-
 
 void TCPClient::SendRGBTestImage(int size)
 {
@@ -251,38 +360,3 @@ bool TCPClient::SendKeyboard()
 	return true;
 }
 
-bool TCPClient::OpenSocket()
-{
-	// initialize socket
-	unsigned short wVersionRequested;
-	WSADATA wsaData;
-	int err;
-	wVersionRequested = MAKEWORD(2, 2);
-	err = WSAStartup(wVersionRequested, &wsaData);
-
-	if (err != 0 || (LOBYTE(wsaData.wVersion) != 2 ||
-		HIBYTE(wsaData.wVersion) != 2)) {
-		fprintf(stderr, "Could not find useable socket dll %d\n", WSAGetLastError());
-		return false;
-	}
-
-	// initialize sockets and set any options
-	int * p_int;
-	mSocketID = socket(AF_INET, SOCK_STREAM, 0);
-	if (mSocketID == -1) {
-		printf("Error initializing socket %d\n", WSAGetLastError());
-		return false;
-	}
-
-	p_int = (int*)malloc(sizeof(int));
-	*p_int = 1;
-	if ((setsockopt(mSocketID, SOL_SOCKET, SO_REUSEADDR, (char*)p_int, sizeof(int)) == -1) ||
-		(setsockopt(mSocketID, SOL_SOCKET, SO_KEEPALIVE, (char*)p_int, sizeof(int)) == -1)) {
-		printf("Error setting options %d\n", WSAGetLastError());
-		free(p_int);
-		return false;
-	}
-	free(p_int);
-
-	return true;
-}
