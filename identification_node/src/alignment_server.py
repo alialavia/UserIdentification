@@ -13,11 +13,11 @@ import openface.helper
 from openface.data import iterImgs
 
 REQUEST_LOOKUP = {
-    1: 'identification',        # request user id
-    2: 'training',              # send training images
-    3: 'embedding_calculation', # direct embedding calculation
-    4: 'classifier_training',   # initialize classifier training
-    5: 'image_normalization'    # face normalization
+    1: 'identification',            # request user id
+    2: 'receive_training_images',   # receive training images
+    3: 'embedding_calculation',     # direct embedding calculation
+    4: 'classifier_training',       # initialize classifier training
+    5: 'image_normalization'        # face normalization
 }
 
 # tcp networking
@@ -38,19 +38,18 @@ class TCPTestServer(TCPServerBlocking):
     def handle_request(self, conn, addr):
         """general request handler"""
         request_id = self.receive_char(conn)
-
         if(request_id in REQUEST_LOOKUP):
             request = REQUEST_LOOKUP[request_id]
             print '=== Request: ' + request
-            if request_id == 1:
+            if request_id == 1:     # identification
                 self.handle_identification(conn)
-            elif request_id == 2:   # classifier training
-                self.handle_training(conn)
-            elif request_id == 3:
+            elif request_id == 2:   # send training images
+                self.handle_embedding_collection(conn)
+            elif request_id == 3:   # embedding calculation
                 self.handle_embedding_calculation(conn)
-            elif request_id == 4:
+            elif request_id == 4:   # classifier training
                 self.handle_classifier_training(conn)
-            elif request_id == 5:
+            elif request_id == 5:   # image normalization
                 self.handle_image_normalization(conn)
             else:
                 print '=== Invalid request identifier, shutting down server...'
@@ -61,7 +60,28 @@ class TCPTestServer(TCPServerBlocking):
 
     #  ----------- REQUEST HANDLERS
 
-    def handle_training(self, conn):
+
+    def handle_identification(self, conn):
+        print "--- Identification"
+
+        # receive image size
+        img_size = self.receive_integer(conn)
+
+        # receive image
+        user_face = self.receive_rgb_image(conn, img_size, img_size)
+
+        # identify
+        user_id = self.classifier.identify_user(user_face)
+
+        # send back user id
+        self.send_unsigned_integer(conn, user_id)
+
+    def handle_classifier_training(self, conn):
+        print "--- Classifier Training"
+        self.classifier.trigger_training()
+        #self.classifier.test_training()
+
+    def handle_embedding_collection(self, conn):
 
         # receive user id
         user_id = self.receive_char(conn)
@@ -95,12 +115,6 @@ class TCPTestServer(TCPServerBlocking):
             self.send_rgb_image(conn, normalized)
         else:
             print "Image could not be aligned"
-
-    def handle_identification(self, conn):
-        print "--- Identification"
-
-    def handle_classifier_training(self, conn):
-        print "--- Classifier Training"
 
     def handle_embedding_calculation(self, conn):
         print "--- Direct Embeddings Calculation"
