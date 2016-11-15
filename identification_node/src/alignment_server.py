@@ -60,26 +60,23 @@ class TCPTestServer(TCPServerBlocking):
 
     #  ----------- REQUEST HANDLERS
 
-
     def handle_identification(self, conn):
         print "--- Identification"
 
         # receive image size
-        img_size = self.receive_integer(conn)
-
+        img_size = self.receive_int(conn)
         # receive image
         user_face = self.receive_rgb_image(conn, img_size, img_size)
-
         # identify
-        user_id = self.classifier.identify_user(user_face)
-
+        user_id, confidence = self.classifier.identify_user(user_face)
         # send back user id
-        self.send_unsigned_integer(conn, user_id)
+        self.send_uint(conn, user_id)
+        # send back confidence
+        self.send_float(conn, confidence)
 
     def handle_classifier_training(self, conn):
         print "--- Classifier Training"
         self.classifier.trigger_training()
-        #self.classifier.test_training()
 
     def handle_embedding_collection(self, conn):
 
@@ -87,7 +84,7 @@ class TCPTestServer(TCPServerBlocking):
         user_id = self.receive_char(conn)
 
         # receive image size
-        img_size = self.receive_integer(conn)
+        img_size = self.receive_int(conn)
 
         # receive batch size
         nr_images = self.receive_char(conn)
@@ -106,7 +103,7 @@ class TCPTestServer(TCPServerBlocking):
 
     def handle_image_normalization(self, conn):
         # receive image size
-        img_size = self.receive_integer(conn)
+        img_size = self.receive_int(conn)
         img = self.receive_rgb_image(conn, img_size, img_size)
         # normalize
         normalized = self.classifier.align_face(img, 'outerEyesAndNose', 96)
@@ -136,7 +133,7 @@ class TCPTestServer(TCPServerBlocking):
 # ================================= #
 #              Main
 
-if __name__=='__main__':
+if __name__ == '__main__':
 
     server = TCPTestServer('', 8080)
     server.start_server()
