@@ -37,7 +37,7 @@ class TCPTestServer(TCPServerBlocking):
     #  ----------- REQUEST HANDLERS
 
     def handle_primitive_values(self, conn):
-        # receive char
+        # receive
         print "--- char: " + str(self.receive_char(conn))
         print "--- uchar: " + str(self.receive_uchar(conn))
         print "--- short: " + str(self.receive_short(conn))
@@ -46,7 +46,7 @@ class TCPTestServer(TCPServerBlocking):
         print "--- uint: " + str(self.receive_uint(conn))
         print "--- bool: " + str(self.receive_bool(conn))
         print "--- float: " + str(self.receive_float(conn))
-
+        # send
         self.send_char(conn, 110)
         self.send_uchar(conn, 250)
         self.send_short(conn, 32766)
@@ -54,8 +54,7 @@ class TCPTestServer(TCPServerBlocking):
         self.send_int(conn, 2147483647)
         self.send_uint(conn, 4294967000)
         self.send_bool(conn, True)
-        # TODO: fix, not working atm
-        self.send_float(conn, 12.0)
+        self.send_float(conn, float(12.18948))
 
     def handle_image(self, conn):
         """receive image, draw and send back"""

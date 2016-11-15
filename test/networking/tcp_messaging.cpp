@@ -70,10 +70,9 @@ int main(int argc, char** argv)
 			std::cout << "ushort: " << c.Receive16bit<unsigned short>() << std::endl;
 			std::cout << "int: " << c.Receive32bit<int>() << std::endl;
 			std::cout << "uint: " << c.Receive32bit<unsigned int>() << std::endl;
-			std::cout << "bool: " << c.Receive8bit<bool>() << std::endl;
-			// TODO: fix
+			std::cout << "bool: " << c.Receive8bit<int>() << std::endl;
 			std::cout << "float: " << c.Receive32bit<float>() << std::endl;
-
+	
 			// close connection
 			c.Close();
 			break;

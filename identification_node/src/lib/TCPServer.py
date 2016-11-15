@@ -79,7 +79,7 @@ class TCPServer:
         return buffer
 
     #  ----------- IMAGE HANDLERS
-
+    # TODO: handle network byte order for images
     def receive_rgb_image(self, client_socket, width, height):
         """receive 8 bit rgb image"""
         # 3 channels, 8 bit = 1 byte

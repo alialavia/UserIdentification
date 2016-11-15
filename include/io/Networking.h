@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <windows.h>
 #include <vector>
+#include <iostream>
 
 namespace cv {
 	class Mat;
@@ -53,44 +54,43 @@ namespace io
 		T TCPClient::Receive8bit()
 		{
 			char data_received;	// 8bit
-			long rc;
-			rc = recv(mSocketID, (char*)&data_received, 1, 0);
-			std::cout << "--- " << rc << "bytes\n";
+			recv(mSocketID, (char*)&data_received, 1, 0);
 			return (T)data_received;
 		}
 
 		template<typename T>
 		T TCPClient::Receive16bit()
 		{
-			u_short val;	// 16bit
-			long rc;
-			rc = recv(mSocketID, (char*)&val, 2, 0);
-			std::cout << "--- " << rc << "bytes\n";
-			return (T)ntohs(val);
+			uint16_t val;	// 16bit
+			recv(mSocketID, (char*)&val, 2, 0);
+			T x;
+			val = ntohs(val);
+			memcpy(&x, &val, sizeof(T));
+			return x;
 		}
 
 		template<typename T>
 		T TCPClient::Receive32bit()
 		{
-			u_long val;	// 32bit
-			long rc;
-			rc = recv(mSocketID, (char*)&val, 4, 0);
-			std::cout << "--- " << rc << "bytes\n";
-			return (T)ntohl(val);
+			uint32_t val;	// 32bit
+			recv(mSocketID, (char*)&val, 4, 0);
+			T x;
+			val = ntohl(val);
+			memcpy(&x, &val, sizeof(T));
+			return x;
 		}
 
-		// TODO: fix - not working atm
+		// TODO: untested
 		template<typename T>
 		T TCPClient::Receive64bit()
 		{
-			unsigned long long val;	// 64bit
-			long rc;
-			rc = recv(mSocketID, (char*)&val, 8, 0);
-			std::cout << "--- " << rc << "bytes\n";
-			return (T)ntohd(val);
+			uint64_t val;	// 64bit
+			recv(mSocketID, (char*)&val, 8, 0);
+			T x;
+			val = ntohd(val);
+			memcpy(&x, &val, sizeof(T));
+			return x;
 		}
-
-
 
 		bool SendKeyboard();
 
@@ -98,7 +98,22 @@ namespace io
 		int ReceiveMessage(int socket_id, char *buf, int *len);
 		int ReceiveRGBImage(cv::Mat &output, int img_width);
 
+		// ------ Endianness conversion
 
+		uint32_t htonf(float f)
+		{
+			uint32_t x;
+			memcpy(&x, &f, sizeof(float));
+			return htonl(x);
+		}
+
+		float ntohf(uint32_t nf)
+		{
+			float x;
+			nf = ntohl(nf);
+			memcpy(&x, &nf, sizeof(float));
+			return x;
+		}
 
 
 		// ------ deprecated

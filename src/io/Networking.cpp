@@ -17,9 +17,9 @@ using namespace io;
 
 // ----------------------------- SOCKETS
 
-TCPClient::TCPClient()
+TCPClient::TCPClient(): mSocketID(-1), mHostName(nullptr), mHostPort(-1)
 {
-	
+
 }
 
 TCPClient::~TCPClient()
@@ -106,26 +106,6 @@ bool TCPClient::OpenSocket()
 
 	return true;
 }
-
-/*
-unsigned int TCPClient::ReceiveUnsignedInt()
-{
-	// id is a 4 byte/32 bit integer
-	long rc;
-	unsigned int nr;
-	rc = recv(mSocketID, (char*)&nr, sizeof(unsigned int), 0);
-	return ntohl(nr);
-}
-
-unsigned short int TCPClient::ReceiveUnsignedShortInt()
-{
-	// id is a 2 byte/16 bit integer
-	long rc;
-	unsigned short int nr;
-	rc = recv(mSocketID, (char*)&nr, sizeof(unsigned short int), 0);
-	return ntohs(nr);
-}
-*/
 
 // return -1 on failure, 0 on success
 int TCPClient::ReceiveMessage(int socket, char *buf, int *len)
