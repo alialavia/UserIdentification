@@ -40,6 +40,7 @@ class OfflineUserClassifier:
     dlib_aligner = None     # dlib face aligner
     classifier = None              # classifier
     label_encoder = None    # classifier label encoder
+    training_status = False
 
     def __init__(self):
         args = Arguments()
@@ -90,7 +91,8 @@ class OfflineUserClassifier:
         if user_id in self.user_embeddings:
             # append
             print "--- Appending "+str(len(reps))+" embeddings"
-            self.user_embeddings[user_id].append(reps)
+            #self.user_embeddings[user_id].append(reps)
+            self.user_embeddings[user_id] = np.concatenate((self.user_embeddings[user_id], reps))
         else:
             self.user_embeddings[user_id] = reps
 
@@ -98,6 +100,9 @@ class OfflineUserClassifier:
         self.print_embedding_status()
 
     def identify_user(self, user_img):
+
+        if self.training_status is False:
+            return (0, 0.0)
 
         start = time.time()
         embedding = self.get_embedding(user_img)
@@ -146,25 +151,21 @@ class OfflineUserClassifier:
             return
 
         start = time.time()
-        embeddings_accumulated = []
+        embeddings_accumulated = np.array([])
         labels = []
         for user_id, user_embeddings in self.user_embeddings.iteritems():
             # add label
             labels = np.append(labels, np.repeat(user_id, len(user_embeddings)))
-            print(user_embeddings)
-            if not embeddings_accumulated:
-                embeddings_accumulated = user_embeddings
-            else:
-                embeddings_accumulated = np.concatenate((embeddings_accumulated, user_embeddings))
-
-        embeddings_accumulated = np.array(embeddings_accumulated)
+            # print(user_embeddings)
+            embeddings_accumulated = np.concatenate((embeddings_accumulated, user_embeddings)) if embeddings_accumulated.size else np.array(user_embeddings)
 
         self.label_encoder = LabelEncoder().fit(labels)
         labelsNum = self.label_encoder.transform(labels)
 
         # train classifier
         self.classifier.fit(embeddings_accumulated, labelsNum)
-        print("    Classifier training took %s seconds for "+str(embeddings_accumulated.shape[0])+" embeddings." % time.time() - start)
+        print("    Classifier training took {} seconds".format(time.time() - start))
+        self.training_status = True
 
     def align_face(self, image, landmark, output_size, skip_multi=False):
 

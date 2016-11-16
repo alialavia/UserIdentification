@@ -243,8 +243,10 @@ int main(int argc, char** argv)
 						std::cout << "--- sent " << c.SendRGBImage(face) << " bytes to server\n";
 						cv::destroyWindow("Face");
 
-						// wait for server response
-						std::cout << "=== DETECTED USER: " << c.ReceiveUnsignedInt() << std::endl;
+						// ----- receive
+						int user_id = c.Receive32bit<int>();
+						float confidence = c.Receive32bit<float>();
+						std::cout << "=== DETECTED USER: " << user_id << " | confidence: "<< confidence << std::endl;
 
 						// cleanup
 						cv::destroyWindow("Face");
