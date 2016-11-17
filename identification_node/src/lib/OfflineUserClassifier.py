@@ -4,6 +4,7 @@ import os
 import time
 
 import numpy as np
+import pickle
 
 import openface
 import openface.helper
@@ -14,6 +15,7 @@ fileDir = os.path.dirname(os.path.realpath(__file__))
 modelDir = os.path.join(fileDir, '../..', 'models')	# path to the model directory
 dlibModelDir = os.path.join(modelDir, 'dlib')		# dlib face detector model
 openfaceModelDir = os.path.join(modelDir, 'openface')
+classifierModelDir = os.path.join(modelDir, 'classification')
 
 # classifiers
 from sklearn.svm import SVC
@@ -55,6 +57,21 @@ class OfflineUserClassifier:
         self.classifier = SVC(C=1, kernel='linear', probability=True)
 
         print("--- identifier initialization took {} seconds".format(time.time() - start))
+
+    def load_classifier(self):
+        filename = "{}/classifier.pkl".format(classifierModelDir)
+        with open(filename, 'r') as f:
+            (self.label_encoder, self.classifier) = pickle.load(f)
+
+    def store_classifier(self):
+        if self.training_status is False:
+            print("--- Classifier is not trained yet")
+            return
+
+        filename = "{}/classifier.pkl".format(classifierModelDir)
+        print("--- Saving classifier to '{}'".format(filename))
+        with open(filename, 'w') as f:
+            pickle.dump((self.label_encoder, self.classifier), f)
 
     def collect_embeddings(self, images, user_id):
         """collect embeddings of faces to train detect - for a single user id"""
@@ -120,6 +137,12 @@ class OfflineUserClassifier:
         maxI = np.argmax(probabilities)
         confidence = probabilities[maxI]
         user_id_pred = self.label_encoder.inverse_transform(maxI)
+
+
+        for i, prob in enumerate(probabilities):
+            print " -- label: "+ self.label_encoder.inverse_transform(i) +" | prob: " + str(prob)
+
+
         print("--- Identification took {} seconds.".format(time.time() - start))
 
         return (user_id_pred, confidence)
