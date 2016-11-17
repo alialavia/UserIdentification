@@ -4,6 +4,7 @@ SET(TARGET_H
     ${HEADER_PATH}/KinectInterface.h
     ${HEADER_PATH}/Networking.h
     ${HEADER_PATH}/ImageHandler.h
+    ${HEADER_PATH}/RequestHandler.h
 )
 
 SET(TARGET_SRC
@@ -11,6 +12,7 @@ SET(TARGET_SRC
 	Networking.cpp
 	ImageHandler.cpp
 	CSVHandling.cpp
+	RequestHandler.cpp
 )
 
 # --------------------------------------------
