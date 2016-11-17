@@ -122,7 +122,7 @@ namespace io
 
 	private:
 		bool OpenSocket();
-		int mSocketID;
+		SOCKET mSocketID;
 		char* mHostName;
 		int mHostPort;
 	};

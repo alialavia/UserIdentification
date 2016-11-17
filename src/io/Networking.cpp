@@ -52,9 +52,11 @@ bool TCPClient::Connect(char* host_name, int host_port)
 
 bool TCPClient::Reconnect()
 {
-
+#ifdef _DEBUG
 	std::cout << "=== Reconnecting to server" << std::endl;
-	// existing socket if not yet done
+#endif
+
+	// terminate existing connection if not yet done
 	if(mSocketID != -1)
 	{
 		Close();
