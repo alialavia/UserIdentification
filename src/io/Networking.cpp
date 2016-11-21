@@ -17,9 +17,9 @@ using namespace io;
 
 // ----------------------------- SOCKETS
 
-TCPClient::TCPClient()
+TCPClient::TCPClient(): mSocketID(-1), mHostName(nullptr), mHostPort(-1)
 {
-	
+
 }
 
 TCPClient::~TCPClient()
@@ -27,8 +27,32 @@ TCPClient::~TCPClient()
 	Close();
 }
 
+
+void TCPClient::Config(char* host_name, int host_port)
+{
+	mHostName = host_name;
+	mHostPort = host_port;
+}
+
+
+bool TCPClient::Connect()
+{
+	return Connect(mHostName, mHostPort);
+}
+
 bool TCPClient::Connect(char* host_name, int host_port)
 {
+
+#ifdef _DEBUG
+	std::cout << "=== Connecting to server: " << host_name << ":" << host_port << std::endl;
+#endif
+
+	// close open connection
+	if (mSocketID != -1)
+	{
+		Close();
+	}
+
 	// open new socket
 	OpenSocket();
 
@@ -50,20 +74,6 @@ bool TCPClient::Connect(char* host_name, int host_port)
 	return true;
 }
 
-void TCPClient::Reconnect()
-{
-
-	std::cout << "=== Reconnecting to server" << std::endl;
-	// existing socket if not yet done
-	if(mSocketID != -1)
-	{
-		Close();
-	}
-
-	// reconnect
-	Connect(mHostName, mHostPort);
-}
-
 void TCPClient::Close()
 {
 	closesocket(mSocketID);
@@ -71,21 +81,40 @@ void TCPClient::Close()
 	mSocketID = -1;
 }
 
-unsigned int TCPClient::ReceiveUnsignedInt()
+bool TCPClient::OpenSocket()
 {
-	// id is a 4 byte/32 bit integer
-	long rc;
-	unsigned int nr;
-	rc = recv(mSocketID, (char*)&nr, sizeof(unsigned int), 0);
-	return ntohl(nr);
-}
-unsigned short int TCPClient::ReceiveUnsignedShortInt()
-{
-	// id is a 2 byte/16 bit integer
-	long rc;
-	unsigned short int nr;
-	rc = recv(mSocketID, (char*)&nr, sizeof(unsigned short int), 0);
-	return ntohs(nr);
+	// initialize socket
+	unsigned short wVersionRequested;
+	WSADATA wsaData;
+	int err;
+	wVersionRequested = MAKEWORD(2, 2);
+	err = WSAStartup(wVersionRequested, &wsaData);
+
+	if (err != 0 || (LOBYTE(wsaData.wVersion) != 2 ||
+		HIBYTE(wsaData.wVersion) != 2)) {
+		fprintf(stderr, "Could not find useable socket dll %d\n", WSAGetLastError());
+		return false;
+	}
+
+	// initialize sockets and set any options
+	int * p_int;
+	mSocketID = socket(AF_INET, SOCK_STREAM, 0);
+	if (mSocketID == -1) {
+		printf("Error initializing socket %d\n", WSAGetLastError());
+		return false;
+	}
+
+	p_int = (int*)malloc(sizeof(int));
+	*p_int = 1;
+	if ((setsockopt(mSocketID, SOL_SOCKET, SO_REUSEADDR, (char*)p_int, sizeof(int)) == -1) ||
+		(setsockopt(mSocketID, SOL_SOCKET, SO_KEEPALIVE, (char*)p_int, sizeof(int)) == -1)) {
+		printf("Error setting options %d\n", WSAGetLastError());
+		free(p_int);
+		return false;
+	}
+	free(p_int);
+
+	return true;
 }
 
 // return -1 on failure, 0 on success
@@ -125,6 +154,8 @@ int TCPClient::ReceiveRGBImage(cv::Mat &output, int img_dim)
 	return bytes_recv;
 }
 
+// ------ send
+
 int TCPClient::SendChar(char id)
 {
 	int bytecount;
@@ -133,19 +164,113 @@ int TCPClient::SendChar(char id)
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
 		return 0;
 	}
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendChar sent " << bytecount << "bytes\n";
+#endif
 	return bytecount;
 }
 
 int TCPClient::SendUInt(uint32_t size)
 {
-	uint32_t network_byte_order;
-	network_byte_order = htonl(size);
+	uint32_t network_byte_order = htonl(size);
 	int bytecount;
 	// send 4 bytes message with datalength
-	if ((bytecount = send(mSocketID, (char*)&network_byte_order, sizeof(unsigned int), 0)) == SOCKET_ERROR) {
+	if ((bytecount = send(mSocketID, (char*)&network_byte_order, sizeof(uint32_t), 0)) == SOCKET_ERROR) {
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
 		return 0;
 	}
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendUInt sent " << bytecount << "bytes\n";
+#endif
+	return bytecount;
+}
+
+int TCPClient::SendInt(int size)
+{
+	uint32_t network_byte_order = htonl(size);
+	int bytecount;
+	// send 4 bytes message with datalength
+	if ((bytecount = send(mSocketID, (char*)&network_byte_order, sizeof(int), 0)) == SOCKET_ERROR) {
+		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
+		return 0;
+	}
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendInt sent " << bytecount << "bytes\n";
+#endif
+	return bytecount;
+}
+
+int TCPClient::SendShort(short val)
+{
+	unsigned short network_byte_order = htons(val);
+	int bytecount;
+	// send 2 bytes message with datalength
+	if ((bytecount = send(mSocketID, (char*)&network_byte_order, sizeof(unsigned short), 0)) == SOCKET_ERROR) {
+		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
+		return 0;
+	}
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendShort sent " << bytecount << "bytes\n";
+#endif
+	return bytecount;
+}
+
+int TCPClient::SendUShort(unsigned short ushort)
+{
+	unsigned short network_byte_order = htons(ushort);
+	int bytecount;
+	// send 2 bytes message with datalength
+	if ((bytecount = send(mSocketID, (char*)&network_byte_order, sizeof(unsigned short), 0)) == SOCKET_ERROR) {
+		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
+		return 0;
+	}
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendUShort sent " << bytecount << "bytes\n";
+#endif
+	return bytecount;
+}
+
+int TCPClient::SendBool(bool val)
+{
+	int bytecount;
+	// send 1 byte identifier = char
+	if ((bytecount = send(mSocketID, (char*)&val, sizeof(char), 0)) == SOCKET_ERROR) {
+		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
+		return 0;
+	}
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendBool sent " << bytecount << "bytes\n";
+#endif
+	return bytecount;
+}
+
+int TCPClient::SendFloat(float val)
+{
+	int bytecount;
+	unsigned int network_byte_order = htonf(val);
+
+	// send 1 byte identifier = char
+	if ((bytecount = send(mSocketID, (char*)&network_byte_order, sizeof(float), 0)) == SOCKET_ERROR) {
+		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
+		return 0;
+	}
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendFloat sent " << bytecount << "bytes\n";
+#endif
+	return bytecount;
+}
+
+int TCPClient::SendUChar(unsigned char val)
+{
+	int bytecount;
+	// send 1 byte identifier = char
+	if ((bytecount = send(mSocketID, (char*)&val, sizeof(char), 0)) == SOCKET_ERROR) {
+		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
+		return 0;
+	}
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendUChar sent " << bytecount << "bytes\n";
+#endif
 	return bytecount;
 }
 
@@ -164,9 +289,11 @@ int TCPClient::SendImageWithLength(const cv::Mat &img)
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
 		return 0;
 	}
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendImageWithLength sent " << bytecount << "bytes\n";
+#endif
 	return bytecount;
 }
-
 
 int TCPClient::SendImageBatchWithLength(const std::vector<cv::Mat> &images)
 {
@@ -195,7 +322,25 @@ int TCPClient::SendImageBatchWithLength(const std::vector<cv::Mat> &images)
 
 int TCPClient::SendRGBImage(const cv::Mat &img)
 {
-	cv::Mat frame = (img.reshape(0, 1)); // to make it continuous
+
+#ifdef _DEBUG
+	if (img.rows == 0 || img.cols == 0) {
+		std::cout << "Could not empty image.";
+		return 0;
+	}
+#endif
+
+	cv::Mat frame = img.clone();
+
+	if (!frame.isContinuous())
+	{
+#ifdef _DEBUG_NETWORKING
+		std::cout << "Image is not continuous (maybe ROI)\n";
+#endif
+		frame = frame.clone();
+	}
+
+	frame = (frame.reshape(0, 1)); // to make it continuous
 	const int imgSize = frame.total()*frame.elemSize();
 
 	int bytecount;
@@ -203,15 +348,19 @@ int TCPClient::SendRGBImage(const cv::Mat &img)
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
 		return 0;
 	}
+
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendRGBImage sent " << bytecount << "bytes\n";
+#endif
 	return bytecount;
 }
-
 
 void TCPClient::SendRGBTestImage(int size)
 {
 	cv::Mat frame = cv::Mat::zeros(size, size, CV_8UC3);
 	frame = (frame.reshape(0, 1)); // to make it continuous
 
+	// send size
 	const int imgSize = frame.total()*frame.elemSize();
 
 	int bytecount;
@@ -219,6 +368,9 @@ void TCPClient::SendRGBTestImage(int size)
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
 		return;
 	}
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendRGBTestImage sent " << bytecount << "bytes\n";
+#endif
 	printf("Sent bytes: %d\n", bytecount);
 }
 
@@ -251,38 +403,3 @@ bool TCPClient::SendKeyboard()
 	return true;
 }
 
-bool TCPClient::OpenSocket()
-{
-	// initialize socket
-	unsigned short wVersionRequested;
-	WSADATA wsaData;
-	int err;
-	wVersionRequested = MAKEWORD(2, 2);
-	err = WSAStartup(wVersionRequested, &wsaData);
-
-	if (err != 0 || (LOBYTE(wsaData.wVersion) != 2 ||
-		HIBYTE(wsaData.wVersion) != 2)) {
-		fprintf(stderr, "Could not find useable socket dll %d\n", WSAGetLastError());
-		return false;
-	}
-
-	// initialize sockets and set any options
-	int * p_int;
-	mSocketID = socket(AF_INET, SOCK_STREAM, 0);
-	if (mSocketID == -1) {
-		printf("Error initializing socket %d\n", WSAGetLastError());
-		return false;
-	}
-
-	p_int = (int*)malloc(sizeof(int));
-	*p_int = 1;
-	if ((setsockopt(mSocketID, SOL_SOCKET, SO_REUSEADDR, (char*)p_int, sizeof(int)) == -1) ||
-		(setsockopt(mSocketID, SOL_SOCKET, SO_KEEPALIVE, (char*)p_int, sizeof(int)) == -1)) {
-		printf("Error setting options %d\n", WSAGetLastError());
-		free(p_int);
-		return false;
-	}
-	free(p_int);
-
-	return true;
-}

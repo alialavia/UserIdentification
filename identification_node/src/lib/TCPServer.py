@@ -3,6 +3,7 @@ import numpy
 import struct
 import sys
 import socket
+import time
 from abc import abstractmethod
 
 
@@ -60,18 +61,32 @@ class TCPServer:
 
     #  ----------- MESSAGE HANDLERS
 
-    def receive_message(self, the_socket, datasize):
+    def receive_message(self, the_socket, datasize, timeout = 2):
         """Basic message receiver for known datasize"""
         buffer = ''
+        begin = time.time()
+        refresh_rate = 0.01
+
         try:
             while len(buffer) < datasize:
+                # if you got some data, then break after timeout
+                if buffer and time.time() - begin > timeout:
+                    raise ValueError('receive_message timeout. Only partial data received.')
+                # if you got no data at all, wait a little longer, twice the timeout
+                elif time.time() - begin > timeout * 2:
+                    raise ValueError('receive_message timeout. No data received.')
+
                 packet = the_socket.recv(datasize - len(buffer))
-                # read-in finished too early - return None
+
+                if packet:
+                    # append to buffer
+                    buffer += packet
+                    # print 'Total ' + str(sys.getsizeof(buffer)) + ' bytes'
+                    begin = time.time()
                 if not packet:
-                    return None
-                # append to buffer
-                buffer += packet
-                # print 'Total ' + str(sys.getsizeof(buffer)) + ' bytes'
+                    # wait
+                    time.sleep(refresh_rate)
+
         except socket.error, (errorCode, message):
             # error 10035 is no data available, it is non-fatal
             if errorCode != 10035:
@@ -79,7 +94,6 @@ class TCPServer:
         return buffer
 
     #  ----------- IMAGE HANDLERS
-
     def receive_rgb_image(self, client_socket, width, height):
         """receive 8 bit rgb image"""
         # 3 channels, 8 bit = 1 byte
@@ -98,6 +112,8 @@ class TCPServer:
 
         #  ----------- BINARY DATA HANDLERS
 
+    #  ----------- RECEIVE PRIMITIVES
+
     def receive_char(self, client_socket):
         """1 byte - unsigned: 0 .. 255"""
         # read 1 byte = char = 8 bit (2^8), BYTE datatype: minimum value of -127 and a maximum value of 127
@@ -105,11 +121,31 @@ class TCPServer:
         if not raw_msg:
             return None
         # 8-bit string to integer
-        request_id = ord(raw_msg)
-        # print 'Client request ID: ' + str(request_id)
-        return request_id
+        numerical = ord(raw_msg)
+        return numerical
 
-    def receive_integer(self, client_socket):
+    def receive_uchar(self, client_socket):
+        return self.receive_char(client_socket)
+
+    def receive_short(self, client_socket):
+        """read 2 bytes"""
+        raw_msglen = self.receive_message(client_socket, 2)
+        if not raw_msglen:
+            return None
+        # network byte order
+        msglen = struct.unpack('!h', raw_msglen)[0]  # convert to host byte order
+        return msglen
+
+    def receive_ushort(self, client_socket):
+        """read 2 bytes"""
+        raw_msglen = self.receive_message(client_socket, 2)
+        if not raw_msglen:
+            return None
+        # network byte order
+        msglen = struct.unpack('!H', raw_msglen)[0]  # convert to host byte order
+        return msglen
+
+    def receive_int(self, client_socket):
         """read 4 bytes"""
         raw_msglen = self.receive_message(client_socket, 4)
         if not raw_msglen:
@@ -118,15 +154,67 @@ class TCPServer:
         msglen = struct.unpack('!i', raw_msglen)[0]  # convert to host byte order
         return msglen
 
-    def send_unsigned_integer(self, the_socket, int):
-        """4 byte, 32bit: 0 .. 4294967296"""
-        msg = struct.pack('!I', int)  # convert to network byte order
-        the_socket.send(msg)
+    def receive_uint(self, client_socket):
+        """read 4 bytes"""
+        raw_msglen = self.receive_message(client_socket, 4)
+        if not raw_msglen:
+            return None
+        # network byte order
+        msglen = struct.unpack('!I', raw_msglen)[0]  # convert to host byte order
+        return msglen
 
-    def send_unsigned_short(self, the_socket, short):
+    def receive_bool(self, client_socket):
+        """bool saced as char, 1 byte"""
+        char = client_socket.recv(1)
+        return bool(ord(char))
+
+    def receive_float(self, client_socket):
+        """read 4 bytes - python float equals c double. When receiving C floats you loose precision"""
+        raw_msglen = self.receive_message(client_socket, 4)
+        if not raw_msglen:
+            return None
+        # network byte order
+        msglen = struct.unpack('!f', raw_msglen)[0]  # convert to host byte order
+        return msglen
+
+    #  ----------- SEND PRIMITIVES
+
+    def send_char(self, target_socket, char):
+        msg = struct.pack('c', chr(char))
+        target_socket.send(msg)
+
+    def send_uchar(self, target_socket, uchar):
+        target_socket.send(chr(uchar))
+
+    def send_short(self, target_socket, short):
+        """"2 byte, 16bit: -32,768 .. 32,767"""
+        msg = struct.pack('!h', short)  # convert to network byte order
+        target_socket.send(msg)
+
+    def send_ushort(self, target_socket, short):
         """"2 byte, 16bit: 0 .. 65535"""
         msg = struct.pack('!H', short)  # convert to network byte order
-        the_socket.send(msg)
+        target_socket.send(msg)
+
+    def send_int(self, target_socket, int):
+        """"4 byte, 32bit: -2,147,483,648 .. 2,147,483,647"""
+        msg = struct.pack('!i', int)  # convert to network byte order
+        target_socket.send(msg)
+
+    def send_uint(self, target_socket, uint):
+        """"4 byte, 32bit: 0 .. 4,294,967,295"""
+        msg = struct.pack('!I', uint)  # convert to network byte order
+        target_socket.send(msg)
+
+    def send_bool(self, target_socket, bool):
+        """1 byte, 8 bit"""
+        msg = struct.pack('?', bool)
+        target_socket.send(msg)
+
+    def send_float(self, target_socket, val):
+        """4 byte, 32bit: 10^-38 .. 10^38"""
+        msg = struct.pack('!f', val)  # convert to network byte order
+        target_socket.send(msg)
 
 
 class TCPServerBlocking(TCPServer):

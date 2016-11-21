@@ -1,53 +1,34 @@
-
 #include <opencv2/core.hpp>
 #include <user/User.h>
 
-namespace user
+using namespace user;
+
+User::~User()
 {
-	
-	class FacePatchBatch
-	{
-		public:
-			FacePatchBatch()
-			{
-			
-			}
 
-
-		private:
-
-		
-	};
-
-
-
-	class User
-	{
-
-	public:
-		User() : mUserID(-1)
-		{
-
-		}
-
-		~User()
-		{
-
-		}
-
-	private:
-		void TryToExtractFacePatch()
-		{
-			
-		}
-
-
-	public:
-		int mUserID;
-		const int cFacePatchSize = 100;
-	private:
-		
-
-	};
-
+}
+void User::SetUserID(int id)
+{
+	mUserID = id;
+	mIDStatus = IDStatus_Identified;
+}
+void User::SetIDStatus(enum IdentificationStatus status)
+{
+	mIDStatus = status;
+}
+void User::SetFaceBoundingBox(cv::Rect2f bb)
+{
+	mFaceBoundingBox = bb;
+}
+enum IdentificationStatus User::GetIDStatus()
+{
+	return mIDStatus;
+}
+int User::GetUserID()
+{
+	return mUserID;
+}
+cv::Rect2f User::GetFaceBoundingBox()
+{
+	return mFaceBoundingBox;
 }

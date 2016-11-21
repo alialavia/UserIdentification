@@ -1,153 +1,68 @@
-#include <thread>
 #include <iostream>
-#include <queue>
 #include <Windows.h>
-
-#include <mutex>
-#include <Kinect.Face.h>
 #include <opencv2/core.hpp>
-#include "io/KinectInterface.h"
-#include "tracking/SkeletonTracker.h"
-
 #include "gflags/gflags.h"
 
-enum RequestHandlerStatus
-{
-	Status_Shutdown = 0,
-	Status_Pause = 1,
-	Status_Running = 2
-};
+#include "io/KinectInterface.h"
+#include "io/Networking.h"
+#include <io/RequestHandler.h>
+#include <io/RequestTypes.h>
+#include <io/ResponseTypes.h>
+
+typedef io::IdentificationRequestSingleImage req;
 
 
-class Request
-{
-public:
-
-	Request(int request_id, std::vector<cv::Mat> payload)
-	{
-		
-
-	}
-
-private:
-
-
-	std::vector<cv::Mat> mRequest;
-
-};
-
-class RequestHandler
-{
-public:
-	RequestHandler()
-	{
-		
-	}
-	~RequestHandler()
-	{
-		// stop thread
-		stop();
-	}
-
-	void processRequests()
-	{
-		while(mStatus == Status_Running)
-		{
-
-			if(!mRequests.empty())
-			{
-				std::cout << "Processing request: " << mRequests.front() << std::endl;
-				mRequestsLock.lock();
-
-				// send request id
-
-				// send message length
-
-
-				mRequests.pop();	// pop front
-									// simulate waiting time
-				mRequestsLock.unlock();
-			}
-
-			Sleep(1000);
-		}
-	}
-	void start()
-	{
-		mStatus = Status_Running;
-		mThread = std::thread(&RequestHandler::processRequests, this);
-	}
-	void stop()
-	{
-		mStatus = Status_Shutdown;
-		mThread.join();
-	}
-
-
-	// identification request
-	
-
-	// training request
-
-
-	void addRequest(int value)
-	{
-		mRequestsLock.lock();
-		// push back
-		mRequests.push(value);
-
-		mRequestsLock.unlock();
-	}
-
-
-
-private:
-	std::thread mThread;
-	// tasks to process
-	std::queue<int> mRequests;
-	std::queue<int> mProcessedRequests;
-
-	int mStatus;
-
-	std::mutex mRequestsLock;
-	std::mutex mProcessedRequestsLock;
-
-};
-
+DEFINE_int32(port, 9999, "Server port");
 int main(int argc, char** argv)
 {
 	gflags::ParseCommandLineFlags(&argc, &argv, true);
-	RequestHandler handle;
 
-	// start handling requests
-	handle.start();
-	std::cout << "Starting request handler..." << std::endl;
-	Sleep(1000);
-	std::cout << "Generating requests..." << std::endl;
-
-
-	io::KinectSensorMultiSource k;
-
-	cv::Mat color_image;
-
-	// initialize sensor
-	if (FAILED(k.Open())) {
-		std::cout << "Initialization failed" << std::endl;
+	// connect to server
+	io::TCPClient c;
+	if (!c.Connect("127.0.0.1", FLAGS_port))
+	{
+		std::cout << "--- Could not connect to server" << std::endl;
 		return -1;
 	}
 
+	// start request handler
+	io::NetworkRequestHandler req_handler;
+	req_handler.start(); // parallel processing
 
-	// add 3 requests
-	for(int i=0;i<3;i++)
-	{
-		handle.addRequest(i);
-	}
-	
+	// allocate state data
+	cv::Mat color_image;
+	HRESULT hr;
 
-	while(1)
+	while (true)
 	{
-		Sleep(1000);
+		hr = 1;
+
+		// check if there is a new frame available
+		if (SUCCEEDED(hr)) {
+
+			// generate image
+			color_image = cv::Mat::zeros(96, 96, CV_8UC3);
+			cv::resize(color_image, color_image, cv::Size(96, 96), 0, 0);
+
+			// handle processed requests
+			io::IdentificationResponse response;
+			io::NetworkRequest* request = nullptr;
+			while(req_handler.PopResponse(&response, request))
+			{
+				// display response
+				std::cout << response.mUserID << std::endl;
+			}
+
+			// make new request
+			req* new_request =  new req(&c, color_image);
+			req_handler.addRequest(new_request);
+
+			// simulate delay
+			//Sleep(1000);
+		}
+
 	}
+
 	// blocking call - wait till request handler is finished (processRequests terminates)
-	handle.stop();
+	req_handler.stop(); 
 }

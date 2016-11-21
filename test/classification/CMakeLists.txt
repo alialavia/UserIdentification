@@ -1,5 +1,5 @@
 SET(TARGET_SRC
-    FaceProfiling.cpp 
+    classifierTraining.cpp 
     # mainsource.cpp	# only this file contains the main() function!
 )
 SET(TARGET_H
@@ -8,7 +8,6 @@ SET(TARGET_H
 
 SET(TARGET_EXTERNAL_LIBRARIES
 	Tracking
-	User
 )
 
-SETUP_APPLICATION(face_profiling Tests)
+SETUP_APPLICATION(classifier_training Tests)

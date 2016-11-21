@@ -1,306 +1,155 @@
-#!/usr/bin/python
-import socket
-import cv2
-import numpy
-import time
-import sys
-import struct
-import sys
-import socket
-import os
-import errno
-from time import sleep
-
+#!/usr/bin/env python2
 
 import argparse
 import cv2
-import os
-import pickle
-
-from operator import itemgetter
-
 import numpy as np
-np.set_printoptions(precision=2)
-import pandas as pd
+import os
+import random
+import shutil
+import time
 
 import openface
-
-from sklearn.pipeline import Pipeline
-from sklearn.lda import LDA
-from sklearn.preprocessing import LabelEncoder
-from sklearn.svm import SVC
-from sklearn.grid_search import GridSearchCV
-from sklearn.mixture import GMM
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.naive_bayes import GaussianNB
-
-fileDir = os.path.dirname(os.path.realpath(__file__))
-modelDir = os.path.join(fileDir, '..', 'models')
-dlibModelDir = os.path.join(modelDir, 'dlib')
-openfaceModelDir = os.path.join(modelDir, 'openface')
-
+import openface.helper
+from openface.data import iterImgs
 
 REQUEST_LOOKUP = {
-    1: 'identification',
-    2: 'offline_training',
-    3: 'online_training'
+    1: 'identification',            # request user id
+    2: 'receive_training_images',   # receive training images
+    3: 'embedding_calculation',     # direct embedding calculation
+    4: 'classifier_training',       # initialize classifier training
+    5: 'image_normalization'        # face normalization
 }
 
-class TCPServer:
-    HOST = ''     # Symbolic name meaning all available interfaces
-    PORT = '555'  # Arbitrary non-privileged port
-    SERVER_SOCKET = -1
+# tcp networking
+from lib.TCPServer import TCPServerBlocking
+# classifier
+from lib.OfflineUserClassifier import OfflineUserClassifier
+
+class TCPTestServer(TCPServerBlocking):
+
+    classifier = None
 
     def __init__(self, host, port):
-        self.HOST = host
-        self.PORT = port
+        TCPServerBlocking.__init__(self, host, port)
 
-    def start_server(self):
+        # initialize classifier
+        self.classifier = OfflineUserClassifier()
 
-        self.SERVER_SOCKET = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # non-blocking asynchronous communication
-        # socket.setblocking(0)
-
-        # create socket
-        try:
-            self.SERVER_SOCKET.bind((self.HOST, self.PORT))
-        except socket.error, msg:
-            print '--- Bind failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
-            sys.exit()
-
-        # begin listening to connections
-        self.SERVER_SOCKET.listen(5)
-        print '--- Server started on port ', self.PORT
-
-        # server loop
-        while True:
-            # new socket connected
-            conn, addr = self.SERVER_SOCKET.accept()
-            print '--- Connected with ' + addr[0] + ':' + str(addr[1])
-
-            # wait to receive request id
-            request_id = self.receiveChar(conn)
-
-            print '--- Request ID: ' + str(request_id)
-
-            message_length = self.receiveInteger(conn)
-
-            print '--- Message of length ' + str(message_length) + " received."
-
-
-            print '--- Sending ID to client'
-            self.sendUnsignedInteger(conn, 4294967295)
-
-
-            if(request_id in REQUEST_LOOKUP):
-                request = REQUEST_LOOKUP[request_id]
-                if request == 'offline_training':
-                    print '--- Do offline training'
-                elif request == 'online_training':
-                    print '--- Do online training'
-                elif request == 'identification':
-                    print '--- Do identification'
-                else:
-                    print '--- Request Handling not yet implemented for: '.request
+    def handle_request(self, conn, addr):
+        """general request handler"""
+        request_id = self.receive_uchar(conn)
+        if(request_id in REQUEST_LOOKUP):
+            request = REQUEST_LOOKUP[request_id]
+            print '=== Request: ' + request
+            if request_id == 1:     # identification
+                self.handle_identification(conn)
+            elif request_id == 2:   # send training images
+                self.handle_embedding_collection(conn)
+            elif request_id == 3:   # embedding calculation
+                self.handle_embedding_calculation(conn)
+            elif request_id == 4:   # classifier training
+                self.handle_classifier_training(conn)
+            elif request_id == 5:   # image normalization
+                self.handle_image_normalization(conn)
             else:
-                print '--- Invalid request identifier, shutting down server...'
-                break
+                print '=== Invalid request identifier, shutting down server...'
+                self.SERVER_STATUS = -1  # shutdown server
 
-            # processing
-            # stringData = self.recv_basic(conn, 30000)
-            #
-            # print 'Received ' + str(sys.getsizeof(stringData)) + ' bytes'
-            #
-            # print '--- Image received...'
-            # data = numpy.fromstring(stringData, dtype='uint8')
-            # decimg = data.reshape((100, 100, 3))
-            #
-            # # display image
-            # cv2.imshow('SERVER', decimg)
-            # cv2.waitKey(2000)
-            # cv2.destroyAllWindows()
-            #
-            # # short int - network byte order
-            # short = struct.pack('!h', 3)
-            # conn.send(short)
-            # # conn.send(b'hey theere')
-            # print '--- Reply sent...'
+        # communication finished - close connection
+        conn.close()
 
-            # communication finished - close connection
-            conn.close()
+    #  ----------- REQUEST HANDLERS
 
-    """Message Receiving"""
+    def handle_identification(self, conn):
+        print "--- Identification"
 
-    def receiveMessage(self, the_socket, datasize):
-        buffer = ''
-        try:
-            while len(buffer) < datasize:
-                packet = the_socket.recv(datasize - len(buffer))
-                # read-in finished too early - return None
-                if not packet:
-                    return None
-                # append to buffer
-                buffer += packet
-                # print 'Total ' + str(sys.getsizeof(buffer)) + ' bytes'
-        except socket.error, (errorCode, message):
-            # error 10035 is no data available, it is non-fatal
-            if errorCode != 10035:
-                print 'socket.error - (' + str(errorCode) + ') ' + message
-        return buffer
+        # receive image size
+        img_size = self.receive_uint(conn)
+        # receive image
+        user_face = self.receive_rgb_image(conn, img_size, img_size)
+        # identify
+        user_id, confidence = self.classifier.identify_user(user_face)
 
-    #  --------------------------------------- IMAGE HANDLERS
+        if user_id is None:
+            print "--- Identification Error"
+            return
 
-    def receiveRGB8Image(self, client_socket, width, height):
-        # 3 channels, 8 bit = 1 byte
-        string_data = self.receiveMessage(client_socket, width * height * 3)
-        data = numpy.fromstring(string_data, dtype='uint8')
-        reshaped = data.reshape((width, height, 3))
-        return reshaped
+        print "--- User ID: " + str(user_id) + " | confidence: " + str(confidence)
 
-    def receiveRGB16Image(self, client_socket, width, height):
-        # 3 channels, 16 bit = 2 byte
-        string_data = self.receiveMessage(client_socket, 2 * width * height * 3)
-        data = numpy.fromstring(string_data, dtype='uint16')
-        reshaped = data.reshape((width, height, 3))
-        return reshaped
+        # send back response type
+        self.send_int(conn, 1)
 
-    #  --------------------------------------- BINARY DATA HANDLERS
+        # send back user id
+        self.send_int(conn, int(user_id))
 
-    # 1 byte - unsigned: 0 .. 255
-    def receiveChar(self, client_socket):
-        # read 1 byte = char = 8 bit (2^8), BYTE datatype: minimum value of -127 and a maximum value of 127
-        raw_msg = self.receiveMessage(client_socket, 1)
-        if not raw_msg:
-            return None
-        # 8-bit string to integer
-        request_id = ord(raw_msg)
-        # print 'Client request ID: ' + str(request_id)
-        return request_id
+        # send back confidence
+        self.send_float(conn, float(confidence))
 
-    # 4 byte
-    def receiveInteger(self, client_socket):
-        # read 4 bytes
-        raw_msglen = self.receiveMessage(client_socket, 4)
-        if not raw_msglen:
-            return None
-        # network byte order
-        msglen = struct.unpack('!i', raw_msglen)[0]
-        return msglen
+    def handle_classifier_training(self, conn):
+        print "--- Classifier Training"
+        self.classifier.trigger_training()
 
-    # 4 byte: 0 .. 4294967296
-    def sendUnsignedInteger(self, the_socket, int):
-        # 4-byte length
-        # convert to network byte order
-        msg = struct.pack('!I', int)
-        the_socket.send(msg)
+    def handle_embedding_collection(self, conn):
 
-    #  --------------------------------------- DEPRECATED
+        # receive user id
+        user_id = self.receive_char(conn)
 
-# ================================= #
-#              CLASSIFIER TRAINING
+        # receive image size
+        img_size = self.receive_int(conn)
 
-def train(args):
+        # receive batch size
+        nr_images = self.receive_char(conn)
 
-    # load image labels
-    print("Loading embeddings.")
-    fname = "{}/labels.csv".format(args.workDir)
-    labels = pd.read_csv(fname, header=None).as_matrix()[:, 1]
-    labels = map(itemgetter(1),
-                 map(os.path.split,
-                     map(os.path.dirname, labels)))  # Get the directory.
+        print "--- Image batch received: size: " + str(nr_images) + " | image size: " + str(img_size)
 
+        # receive image batch
+        images = []
+        for x in range(0, nr_images):
+            # receive image
+            new_img = self.receive_rgb_image(conn, img_size, img_size)
+            images.append(new_img)
 
-    fname = "{}/reps.csv".format(args.workDir)
-    embeddings = pd.read_csv(fname, header=None).as_matrix()
-    le = LabelEncoder().fit(labels)
-    labelsNum = le.transform(labels)
-    nClasses = len(le.classes_)
-    print("Training for {} classes.".format(nClasses))
+        # forward to classifier
+        self.classifier.collect_embeddings(images, user_id)
 
-    if args.classifier == 'LinearSvm':
-        clf = SVC(C=1, kernel='linear', probability=True)
-    elif args.classifier == 'GridSearchSvm':
-        print("""
-        Warning: In our experiences, using a grid search over SVM hyper-parameters only
-        gives marginally better performance than a linear SVM with C=1 and
-        is not worth the extra computations of performing a grid search.
-        """)
-        param_grid = [
-            {'C': [1, 10, 100, 1000],
-             'kernel': ['linear']},
-            {'C': [1, 10, 100, 1000],
-             'gamma': [0.001, 0.0001],
-             'kernel': ['rbf']}
-        ]
-        clf = GridSearchCV(SVC(C=1, probability=True), param_grid, cv=5)
-    elif args.classifier == 'GMM':  # Doesn't work best
-        clf = GMM(n_components=nClasses)
+    def handle_image_normalization(self, conn):
+        # receive image size
+        img_size = self.receive_int(conn)
+        img = self.receive_rgb_image(conn, img_size, img_size)
+        # normalize
+        normalized = self.classifier.align_face(img, 'outerEyesAndNose', 96)
+        if normalized is not None:
+            # send image back
+            self.send_rgb_image(conn, normalized)
+        else:
+            print "Image could not be aligned"
 
-    # ref:
-    # http://scikit-learn.org/stable/auto_examples/classification/plot_classifier_comparison.html#example-classification-plot-classifier-comparison-py
-    elif args.classifier == 'RadialSvm':  # Radial Basis Function kernel
-        # works better with C = 1 and gamma = 2
-        clf = SVC(C=1, kernel='rbf', probability=True, gamma=2)
-    elif args.classifier == 'DecisionTree':  # Doesn't work best
-        clf = DecisionTreeClassifier(max_depth=20)
-    elif args.classifier == 'GaussianNB':
-        clf = GaussianNB()
+    def handle_embedding_calculation(self, conn):
+        print "--- Direct Embeddings Calculation"
 
-    # ref: https://jessesw.com/Deep-Learning/
-    elif args.classifier == 'DBN':
-        from nolearn.dbn import DBN
-        clf = DBN([embeddings.shape[1], 500, labelsNum[-1:][0] + 1],  # i/p nodes, hidden nodes, o/p nodes
-                  learn_rates=0.3,
-                  # Smaller steps mean a possibly more accurate result, but the
-                  # training will take longer
-                  learn_rate_decays=0.9,
-                  # a factor the initial learning rate will be multiplied by
-                  # after each iteration of the training
-                  epochs=300,  # no of iternation
-                  # dropouts = 0.25, # Express the percentage of nodes that
-                  # will be randomly dropped as a decimal.
-                  verbose=1)
-
-    if args.ldaDim > 0:
-        clf_final = clf
-        clf = Pipeline([('lda', LDA(n_components=args.ldaDim)),
-                        ('clf', clf_final)])
-
-    clf.fit(embeddings, labelsNum)
-
-    fName = "{}/classifier.pkl".format(args.workDir)
-    print("Saving classifier to '{}'".format(fName))
-    with open(fName, 'w') as f:
-        pickle.dump((le, clf), f)
-
-
+    def handle_image(self, conn):
+        """receive image, draw and send back"""
+        img = self.receive_rgb_image(conn, 100, 100)
+        height, width, channels = img.shape
+        # display image
+        cv2.imshow('Server image', img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        # draw circle in the center
+        cv2.circle(img, (width/2, height/2), height/4, (0, 0, 255), -1)
+        # send image back
+        self.send_rgb_image(conn, img)
 
 
 # ================================= #
 #              Main
 
-if __name__=='__main__':
+if __name__ == '__main__':
 
-    server = TCPServer('', 555)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--port', type=int, help="Server port.", default=8080)
+
+    args = parser.parse_args()
+
+    server = TCPTestServer('', args.port)
     server.start_server()
-
-    # set arguments
-    args = {}
-    args.classifier = 'LinearSvm'
-    args.dlibFacePredictor = os.path.join(dlibModelDir, "shape_predictor_68_face_landmarks.dat")
-    args.networkModel = os.path.join(openfaceModelDir,'nn4.small2.v1.t7')
-    args.imgDim = 96
-    args.cuda = None
-
-    # specify face predictor
-    align = openface.AlignDlib(args.dlibFacePredictor)
-    # specify neural network model
-    net = openface.TorchNeuralNet(args.networkModel, imgDim=args.imgDim,
-                                  cuda=args.cuda)
-
-    args.workDir =
-    
-
-    # train the classifier
-    train(args)
-
