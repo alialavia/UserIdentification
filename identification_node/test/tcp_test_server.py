@@ -58,19 +58,27 @@ class TCPTestServer(TCPServerBlocking):
 
     def handle_image(self, conn):
         """receive image, draw and send back"""
-        size = self.receive_integer(conn)
+        size = self.receive_uint(conn)
+
+        print "size: "+str(size)
+
         img = self.receive_rgb_image(conn, size, size)
         height, width, channels = img.shape
         print '--- Received image'
         # draw circle in the center
         cv2.circle(img, (width/2, height/2), height/4, (0, 0, 255), -1)
         # send image back
-        self.send_rgb_image(conn, img)
+        # self.send_rgb_image(conn, img)
+
+        self.send_int(conn, 123)
+
+        print "--- sent int"
+        self.send_float(conn, 1.11)
 
 # ================================= #
 #              Main
 
 if __name__=='__main__':
 
-    server = TCPTestServer('', 999)
+    server = TCPTestServer('', 9999)
     server.start_server()
