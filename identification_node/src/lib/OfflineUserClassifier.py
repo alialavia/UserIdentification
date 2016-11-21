@@ -149,7 +149,7 @@ class OfflineUserClassifier:
 
         if np.shape(probabilities)[0] > 1:
             for i, prob in enumerate(probabilities):
-                label = self.label_encoder.inverse_transform(np.int64(index))
+                label = self.label_encoder.inverse_transform(np.int64(i))
                 print "    label: "+ str(label) + " | prob: " + str(prob)
 
         print("--- Identification took {} seconds.".format(time.time() - start))
