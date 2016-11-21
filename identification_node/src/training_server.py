@@ -37,7 +37,7 @@ class TCPTestServer(TCPServerBlocking):
 
     def handle_request(self, conn, addr):
         """general request handler"""
-        request_id = self.receive_char(conn)
+        request_id = self.receive_uchar(conn)
         if(request_id in REQUEST_LOOKUP):
             request = REQUEST_LOOKUP[request_id]
             print '=== Request: ' + request

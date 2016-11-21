@@ -56,19 +56,25 @@ class OfflineUserClassifier:
         # initialize classifier
         self.classifier = SVC(C=1, kernel='linear', probability=True)
 
+        # load stored classifier
+        self.load_classifier()
+
         print("--- identifier initialization took {} seconds".format(time.time() - start))
 
     def load_classifier(self):
-        filename = "{}/classifier.pkl".format(classifierModelDir)
-        with open(filename, 'r') as f:
-            (self.label_encoder, self.classifier) = pickle.load(f)
+        filename = "{}/svm_classifier.pkl".format(classifierModelDir)
+        if os.path.isfile(filename):
+            with open(filename, 'r') as f:
+                (self.label_encoder, self.classifier) = pickle.load(f)
+            return True
+        return False
 
     def store_classifier(self):
         if self.training_status is False:
             print("--- Classifier is not trained yet")
             return
 
-        filename = "{}/classifier.pkl".format(classifierModelDir)
+        filename = "{}/svm_classifier.pkl".format(classifierModelDir)
         print("--- Saving classifier to '{}'".format(filename))
         with open(filename, 'w') as f:
             pickle.dump((self.label_encoder, self.classifier), f)
@@ -138,13 +144,14 @@ class OfflineUserClassifier:
         confidence = probabilities[maxI]
         user_id_pred = self.label_encoder.inverse_transform(maxI)
 
+        print "--- IDENTIFICATION"
 
-        for i, prob in enumerate(probabilities):
-            print " -- label: "+ self.label_encoder.inverse_transform(i) +" | prob: " + str(prob)
-
+        if np.shape(probabilities)[0] > 1:
+            for i, prob in enumerate(probabilities):
+                label = self.label_encoder.inverse_transform(np.int64(index))
+                print "    label: "+ str(label) + " | prob: " + str(prob)
 
         print("--- Identification took {} seconds.".format(time.time() - start))
-
         return (user_id_pred, confidence)
 
     #  ----------- UTILITIES
@@ -170,7 +177,12 @@ class OfflineUserClassifier:
         print "--- Triggered classifier training"
 
         if len(self.user_embeddings) < 2:
-            print "Number of users must be greater than one"
+            print "--- Number of users must be greater than one. Trying to load stored model..."
+
+            if self.load_classifier() is True:
+                print "--- Classifier loaded from file."
+            else:
+                print "--- Could not find classifier model."
             return
 
         start = time.time()
@@ -182,13 +194,19 @@ class OfflineUserClassifier:
             # print(user_embeddings)
             embeddings_accumulated = np.concatenate((embeddings_accumulated, user_embeddings)) if embeddings_accumulated.size else np.array(user_embeddings)
 
+        # transform to numerical labels
         self.label_encoder = LabelEncoder().fit(labels)
-        labelsNum = self.label_encoder.transform(labels)
+
+        # get numerical labels
+        labels_numeric = self.label_encoder.transform(labels)
 
         # train classifier
-        self.classifier.fit(embeddings_accumulated, labelsNum)
+        self.classifier.fit(embeddings_accumulated, labels_numeric)
         print("    Classifier training took {} seconds".format(time.time() - start))
         self.training_status = True
+
+        # store classifier
+        self.store_classifier()
 
     def align_face(self, image, landmark, output_size, skip_multi=False):
 
