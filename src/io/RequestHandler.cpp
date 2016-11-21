@@ -18,15 +18,34 @@ NetworkRequestHandler::NetworkRequestHandler()
 {
 
 }
+
 NetworkRequestHandler::~NetworkRequestHandler()
 {
 	// stop the processing thread thread
 	stop();
+
+	// delete all pending requests
+	while (!mRequests.empty())
+	{
+		NetworkRequest* req = mRequests.front();
+		delete(req);
+		mRequests.pop();
+	}
+
+	// delete all unread responses
+	for (auto it = mResponds.begin(); it != mResponds.end(); ++it)
+	{
+		while (!it->second.empty())
+		{
+			NetworkResponse* resp = it->second.front();
+			delete(resp);
+			mRequests.pop();
+		}
+	}
 }
 
 void NetworkRequestHandler::addRequest(io::NetworkRequest* request)
 {
-
 	// block request adding till request queue is empty again
 	if (GetRequestCount() == mMaxRequests) {
 #ifdef _DEBUG
@@ -89,8 +108,6 @@ void NetworkRequestHandler::processRequests()
 				// delete request
 				delete(request_ptr);
 			}
-
-
 
 		}
 	}

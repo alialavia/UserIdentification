@@ -2,10 +2,7 @@
 #include <stdexcept>
 #include <io/Networking.h>
 
-
-
 using namespace io;
-
 
 std::type_index ResponseFactory::AllocateAndLoad(NetworkResponseType type_id, io::TCPClient* conn, NetworkResponse* &ptr)
 {

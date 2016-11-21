@@ -51,7 +51,7 @@ namespace io {
 		void addRequest(io::NetworkRequest* request);
 
 		template<class T>
-		bool PopResponse(T *response_container)
+		bool PopResponse(T *response_container, NetworkRequest* &request_ref)
 		{
 			bool status = false;
 			mRespondsLock.lock();
@@ -73,6 +73,7 @@ namespace io {
 				mMappingLock.lock();
 				// delete corresponding request and mapping
 				std::map<NetworkResponse*, NetworkRequest*>::iterator it1 = mResponseToRequest.find(response);
+				request_ref = it1->second;		// share request pointer
 				delete(it1->second);			// delete request
 				mResponseToRequest.erase(it1);	// delete map item
 				mMappingLock.unlock();
@@ -102,6 +103,7 @@ namespace io {
 		std::map<std::type_index, std::queue<NetworkResponse*>> mResponds;
 
 		// linking
+		// TODO: use smart pointers
 		std::map<NetworkResponse*, NetworkRequest*> mResponseToRequest;
 
 		std::mutex mMappingLock;

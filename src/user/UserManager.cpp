@@ -1,35 +1,46 @@
 #include <user\UserManager.h>
 #include <user\User.h>
 #include <opencv2/imgproc.hpp>
+#include <io\ResponseTypes.h>
 
+#include <io/RequestHandler.h>
+#include <io/RequestTypes.h>
+#include <io/ResponseTypes.h>
 
 using namespace  user;
 
-bool UserManager::Init(io::TCPClient* connection)
+bool UserManager::Init(io::TCPClient* connection, io::NetworkRequestHandler* handler)
 {
-	if (connection == nullptr)
+	if (connection == nullptr || handler == nullptr)
 	{
 		return false;
 	}
 	pServerConn = connection;
+	pRequestHandler = handler;
 	return true;
 }
 
 
 // refresh tracked users: scene_id, bounding boxes
-void UserManager::RefreshTrackedUsers(const std::vector<int> &user_scene_ids)
+void UserManager::RefreshTrackedUsers(const std::vector<int> &user_scene_ids, std::vector<cv::Rect2f> bounding_boxes)
 {
 	// update existing users - remove non tracked
 	for (auto it = mFrameIDToUser.begin(); it != mFrameIDToUser.end(); ++it)
 	{
-		if (std::find(user_scene_ids.begin(), user_scene_ids.end(), it->first) != user_scene_ids.end())
+		int user_index = find(user_scene_ids.begin(), user_scene_ids.end(), it->first) - user_scene_ids.begin();
+		if (user_index < user_scene_ids.size())
 		{
-			// user is in scene - update positional data
+			// user is in scene - update scene data (bounding box, position etc.)
+			it->second->SetFaceBoundingBox(bounding_boxes[user_index]);
 		}
 		else
 		{
+			// remove request mapping
+			RemovePointerMapping(it->second);
+
 			// user has left scene - delete tracking instance
 			delete(it->second);
+
 			// remove mapping
 			mFrameIDToUser.erase(it);
 		}
@@ -50,26 +61,51 @@ void UserManager::RefreshTrackedUsers(const std::vector<int> &user_scene_ids)
 // incorporate processed requests: update user ids
 void UserManager::ApplyUserIdentification()
 {
-	// handle processed requests
+	// handle all processed identification requests
+	io::IdentificationResponse response;
+	io::NetworkRequest* request = nullptr;
+	while (pRequestHandler->PopResponse(&response, request))
+	{
+		// display response
+		std::cout << "User ID: " << response.mUserID << std::endl;
 
+		// locate user for which request was sent
+		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request);
 
-	// apply to users
+		if (it != mRequestToUser.end()) {
+			// extract user
+			User* target_user = it->second;
+			// remove request mapping
+			RemovePointerMapping(it->second);
+			// apply user identification
+			target_user->SetUserID(response.mUserID);
+		}
+		else {
+			// user corresponding to request not found (may have left scene) - drop response
+
+		}
+	}
 }
 
 // send identification requests for all unknown users
-void UserManager::RequestUserIdentification()
+void UserManager::RequestUserIdentification(cv::Mat scene_rgb)
 {
 	for (auto it = mFrameIDToUser.begin(); it != mFrameIDToUser.end(); ++it)
 	{
 		if (it->second->GetIDStatus() == IDStatus_Unknown)
 		{
-			// TODO: make identification request
+			// extract face patch
+			cv::Mat face = scene_rgb(it->second->GetFaceBoundingBox());
 
-			// send request id
-			//pServerConn->SendChar();
+			// make new identification request
+			IDReq* new_request = new IDReq(pServerConn, face);
+			pRequestHandler->addRequest(new_request);
 
+			// update linking
+			mRequestToUser[new_request] = it->second;
+			mUserToRequest[it->second] = new_request;
 
-			// send payload
+			// set user status
 			it->second->SetIDStatus(IDStatus_Pending);
 		}
 	}
@@ -93,7 +129,7 @@ void UserManager::DrawUsers(cv::Mat &img)
 		enum IdentificationStatus status = it->second->GetIDStatus();
 		if (status == IDStatus_Identified)
 		{
-			text = "Status: identified";
+			text = "Status: identified - ID" + std::to_string(it->second->GetUserID());
 		}
 		else if (status == IDStatus_Pending)
 		{
