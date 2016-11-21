@@ -3,21 +3,28 @@ import numpy as np
 import struct
 import sys
 
-a = []
-a.append([1,2,3])
-a.append([1,2,3])
-a.append([1,2,3])
 
-b = []
-b.append([1,2,3])
-b.append([1,2,3])
+def test_concat():
+    a = []
+    a.append([1,2,3])
+    a.append([1,2,3])
+    a.append([1,2,3])
 
-all2 = np.array([])
+    b = []
+    b.append([1,2,3])
+    b.append([1,2,3])
 
-all2 = np.concatenate((all2, a)) if all2.size else a
-all2 = np.concatenate((all2, b))
+    all2 = np.array([])
+
+    all2 = np.concatenate((all2, a)) if all2.size else a
+    all2 = np.concatenate((all2, b))
+
+    print all2
 
 
 
+def test_type_conversion():
+    print type(np.asscalar(np.int64(1)))
 
-print all2
+
+test_type_conversion()
