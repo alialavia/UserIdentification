@@ -15,13 +15,13 @@ void sendTrainingBatch(io::TCPClient *c, int16_t user_id, const std::vector<cv::
 
 	std::cout << "--- Sending " << image_batch.size() << " images to server" << std::endl;
 
-	std::cout << "--- " << c->SendChar(user_id) << " bytes sent (user id)" << std::endl;
+	std::cout << "--- " << c->SendUChar(user_id) << " bytes sent (user id)" << std::endl;
 
 	// send image size
 	std::cout << "--- " << c->SendUInt(image_batch[0].size().width) << " bytes sent (image size)" << std::endl;
 
 	// send number of images
-	std::cout << "--- " << c->SendChar(image_batch.size()) << " bytes sent (nr images)" << std::endl;
+	std::cout << "--- " << c->SendUChar(image_batch.size()) << " bytes sent (nr images)" << std::endl;
 
 	for (int i = 0; i < image_batch.size(); i++) {
 		std::cout << "sent " << c->SendRGBImage(image_batch[i]) << " bytes to server\n";
@@ -96,13 +96,9 @@ int main(int argc, char** argv)
 	tracking::SkeletonTracker st(pSensor);
 	st.Init();
 
-	// connect to server
+	// config to server connection
 	io::TCPClient c;
-	if (!c.Connect("127.0.0.1", FLAGS_port))
-	{
-		std::cout << "Could not connect to server" << std::endl;
-		return -1;
-	}
+	c.Config("127.0.0.1", FLAGS_port);
 
 	int nr_images = 0;
 	std::vector<cv::Mat> image_batch;
@@ -118,6 +114,13 @@ int main(int argc, char** argv)
 
 			// get color image
 			k.GetImageCopyRGB(color_image);
+
+			// connect to server
+			if (!c.Connect())
+			{
+				std::cout << "Could not connect to server" << std::endl;
+				return -1;
+			}
 
 			// mode selection
 			if(MODE == Mode_none)
@@ -143,6 +146,7 @@ int main(int argc, char** argv)
 					break;
 				}
 			}
+
 
 			if(MODE == Mode_training)
 			{
@@ -180,7 +184,7 @@ int main(int argc, char** argv)
 							int user_id = inputUserID();
 							// send request ID to server
 							// 2: send training images
-							c.SendChar(2);
+							c.SendUChar(2);
 							sendTrainingBatch(&c, user_id, image_batch);
 							// reset batch
 							nr_images = 0;
@@ -189,25 +193,17 @@ int main(int argc, char** argv)
 							// reset control mode
 							MODE = Mode_none;
 							// request terminated - reconnect to server
-							if (!c.Reconnect())
-							{
-								std::cout << "Could not reconnect to server - terminating..." << std::endl;
-								return -1;
-							}
+							c.Close();
 						}
 					}	//	/space
 				}	// /bounding boxes
 			}else if(MODE == Mode_trigger_classifier_training)
 			{
 				// send request ID to server
-				c.SendChar(4);
+				c.SendUChar(4);
 
 				MODE = Mode_none;
-				if (!c.Reconnect())
-				{
-					std::cout << "Could not reconnect to server - terminating..." << std::endl;
-					return -1;
-				}
+				c.Close();
 
 			}else if(MODE == Mode_identification)
 			{
@@ -236,7 +232,7 @@ int main(int argc, char** argv)
 						// resize
 						cv::resize(face, face, cv::Size(96, 96), 0, 0);
 						// send request ID to server
-						c.SendChar(1);
+						c.SendUChar(1);
 						// image size
 						c.SendUInt(face.size().width);
 						// send image
@@ -251,11 +247,7 @@ int main(int argc, char** argv)
 						// cleanup
 						cv::destroyWindow("Face");
 						MODE = Mode_none;
-						if (!c.Reconnect())
-						{
-							std::cout << "Could not reconnect to server - terminating..." << std::endl;
-							return -1;
-						}
+						c.Close();
 					}
 
 					// draw bounding boxes
