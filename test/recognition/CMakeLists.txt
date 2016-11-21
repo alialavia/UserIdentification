@@ -8,6 +8,7 @@ SET(TARGET_H
 
 SET(TARGET_EXTERNAL_LIBRARIES
 	Tracking
+	User
 )
 
 SETUP_APPLICATION(face_profiling Tests)
