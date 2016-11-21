@@ -64,6 +64,13 @@ namespace io {
 				// copy response to response container
 				memcpy(response_container, response, sizeof(T));
 
+				mMappingLock.lock();
+				// delete corresponding request and mapping
+				std::map<NetworkResponse*, NetworkRequest*>::iterator it1 = mResponseToRequest.find(response);
+				delete(it1->second);	// delete request
+				mResponseToRequest.erase(it1);	// delete map item
+				mMappingLock.unlock();
+
 				// delete original response container
 				delete(response);
 			}
@@ -86,9 +93,9 @@ namespace io {
 		std::map<std::type_index, std::queue<NetworkResponse*>> mResponds;
 
 		// linking
-		std::map<NetworkRequest*, NetworkResponse*> mRequestToResponse;
 		std::map<NetworkResponse*, NetworkRequest*> mResponseToRequest;
 
+		std::mutex mMappingLock;
 		std::mutex mRequestsLock;
 		std::mutex mRespondsLock;
 	};

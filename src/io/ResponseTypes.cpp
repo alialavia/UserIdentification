@@ -26,7 +26,6 @@ std::type_index ResponseFactory::AllocateAndLoad(NetworkResponseType type_id, io
 
 	}else
 	{
-		std::cout << "INVALID!!!" << std::endl;
 		throw std::invalid_argument("This response type is not supported.");
 	}
 }

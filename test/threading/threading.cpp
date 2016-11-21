@@ -67,6 +67,10 @@ int main(int argc, char** argv)
 			// make new request
 			req* new_request =  new req(&c, color_image);
 			req_handler.addRequest(new_request);
+
+			// simulate delay
+
+			Sleep(1000);
 		}
 
 	}

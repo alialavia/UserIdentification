@@ -38,12 +38,11 @@ void NetworkRequestHandler::processRequests()
 	{
 		if (!mRequests.empty())
 		{
-			
-#ifdef _DEBUG
-			std::cout << "Processing request of type ID(" << mRequests.front()->cRequestID << ") | total: " << mRequests.size() << std::endl;
-#endif
 			// submit the request to the server
 			mRequestsLock.lock();
+#ifdef _DEBUG
+			std::cout << "--- Processing request of type ID(" << mRequests.front()->cRequestID << ") | total: " << mRequests.size() << std::endl;
+#endif
 			NetworkRequest* request_ptr = mRequests.front();
 			mRequests.pop();	// pop front
 			mRequestsLock.unlock();
@@ -58,22 +57,28 @@ void NetworkRequestHandler::processRequests()
 			// response factory
 			int response_identifier = socket->Receive32bit<int>();
 
-			std::cout << "response id: " << response_identifier << std::endl;
-			std::cout << "response id casted: " << (io::NetworkResponseType)response_identifier << std::endl;
+			try {
+				// allocate response
+				NetworkResponse* response_ptr = nullptr;
+				std::type_index response_type_id = ResponseFactory::AllocateAndLoad((io::NetworkResponseType)response_identifier, socket, response_ptr);
+				
+				// add linking
+				mResponseToRequest[response_ptr] = request_ptr;
+
+				// move to processed stack - sort by response type identifier
+				mMappingLock.lock();
+				mResponds[response_type_id].push(response_ptr);
+				mMappingLock.unlock();
+			}
+			catch (std::invalid_argument e) {
+
+				std::cout << "--- Got invalid response identifier from server - dropping request: " << response_identifier << std::endl;
+				// delete request
+				delete(request_ptr);
+			}
 
 
-			// allocate response
-			NetworkResponse* response_ptr = nullptr;
-			std::type_index response_type_id = ResponseFactory::AllocateAndLoad((io::NetworkResponseType)response_identifier, socket, response_ptr);
 
-			// add linking
-			//mRequestToResponse[request_ptr] = response_ptr;
-			//mResponseToRequest[response_ptr] = request_ptr;
-
-			// move to processed stack - sort by response type identifier
-			mRespondsLock.lock();
-			mResponds[response_type_id].push(response_ptr);
-			mRespondsLock.unlock();
 		}
 	}
 }
