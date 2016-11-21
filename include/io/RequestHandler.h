@@ -9,6 +9,8 @@
 #include <opencv2/core.hpp>
 #include "ResponseTypes.h"
 
+#define _DEBUG_REQUESTHANDLER
+
 namespace io {
 
 	class NetworkRequest;
@@ -48,6 +50,15 @@ namespace io {
 			return count;
 		}
 
+		template<class T>
+		int GetResponseCount() {
+			int count = 0;
+			mRespondsLock.lock();
+			count = mResponds.count(typeid(T));
+			mRespondsLock.unlock();
+			return count;
+		}
+
 		void addRequest(io::NetworkRequest* request);
 
 		template<class T>
@@ -60,6 +71,10 @@ namespace io {
 				mResponds.count(typeid(T)) > 0 &&
 				mResponds[typeid(T)].size() > 0
 				) {
+
+#ifdef _DEBUG_REQUESTHANDLER
+				std::cout << "Typeid exists: " << mResponds.count(typeid(T)) << " | count: " << mResponds[typeid(T)].size() << std::endl;
+#endif
 
 				// load response from specific request type
 				NetworkResponse* response = mResponds[typeid(T)].front();
@@ -80,6 +95,7 @@ namespace io {
 
 				// delete original response container
 				delete(response);
+				status = true;
 			}
 
 			mRespondsLock.unlock();
