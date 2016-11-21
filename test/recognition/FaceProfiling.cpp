@@ -10,9 +10,9 @@
 #include <user\UserManager.h>
 #include <user\User.h>
 #include <io/Networking.h>
+#include <io/RequestHandler.h>
 
 DEFINE_int32(port, 8080, "Server port");
-
 
 int main(int argc, char** argv)
 {
@@ -46,20 +46,23 @@ int main(int argc, char** argv)
 	}
 
 	// connect to server
-	io::TCPClient c;
-	if(!c.Connect("127.0.0.1", FLAGS_port))
+	io::TCPClient server_conn;
+	if(!server_conn.Connect("127.0.0.1", FLAGS_port))
 	{
 		std::cout << "Could not connect to server - 127.0.0.1:" << FLAGS_port << std::endl;
 		return -1;
 	}
 
-	// user manager/request handler
+	// start request handler
+	io::NetworkRequestHandler req_handler;
+	req_handler.start(); // parallel processing
+
+	// user manager
 	user::UserManager um;
-	if (!um.Init(&c)) {
+	if (!um.Init(&server_conn, &req_handler)) {
 		std::cout << "Could not initialize user manager" << std::endl;
 		return -1;
 	}
-
 
 
 	while (true) 
@@ -84,23 +87,20 @@ int main(int argc, char** argv)
 			st.GetFaceBoundingBoxesRobust(bounding_boxes, base::ImageSpace_Color);
 			st.GetUserSceneIDs(user_scene_ids);
 
-
 			// if users in scene
 			if (user_scene_ids.size() > 0)
 			{
 				// refresh users
-				um.RefreshTrackedUsers(user_scene_ids);
+				um.RefreshTrackedUsers(user_scene_ids, bounding_boxes);
 
 				// update user ids
 				um.ApplyUserIdentification();
 
 				// draw users
-				//um.DrawUsers(color_image);
+				um.DrawUsers(color_image);
 
 				// request identification for unknown users
-				um.RequestUserIdentification();
-
-				// (send training batches)
+				um.RequestUserIdentification(color_image);
 			}
 
 		}
