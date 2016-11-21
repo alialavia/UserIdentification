@@ -7,158 +7,90 @@
 #include <thread>
 
 #include <opencv2/core.hpp>
-
+#include "ResponseTypes.h"
 
 namespace io {
+
+	class NetworkRequest;
 
 	// forward declarations
 	class TCPClient;
 
 	enum RequestHandlerStatus
 	{
-		Status_Shutdown = 0,
-		Status_Pause = 1,
-		Status_Running = 2
+		RequestHandlerStatus_Shutdown = 0,
+		RequestHandlerStatus_Pause = 1,
+		RequestHandlerStatus_Running = 2
 	};
-
-	// define network request types (request ids are parsed on the server side)
-	enum NetworkRequestType
-	{
-		NetworkRequest_SingleImageIdentification = 1,
-		NetworkRequest_BatchImageIdentification = 2,
-	};
-
-
-	// request base class
-	class Request
-	{
-	public:
-		Request()
-		{
-		}
-	};
-
-
-	// response types
-	struct IdentificationResponse {
-		int mUserID = -1;
-		float mProbability = 0.0f;
-	};
-
-
-	// request type
-	class NetworkRequest: public Request
-	{
-	public:
-		NetworkRequest(io::TCPClient* server_conn);
-
-		// submits the request over the network
-		bool SubmitRequest();
-		// wait for response - request specific
-		virtual void AcquireResponse() = 0;
-
-		int GetRequestID();
-
-	protected:
-		// submit the request id to the server
-		void SubmitRequestID();
-
-		// submit specific payload (data size and data)
-		virtual void SubmitPayload() = 0;
-
-		int mRequestID;
-		io::TCPClient* pServerConn;
-	};
-
-	class IdentificationRequestSingleImage: public NetworkRequest
-	{
-	public:
-		IdentificationRequestSingleImage(
-			io::TCPClient* server_conn,
-			cv::Mat img
-		): 
-			NetworkRequest(server_conn),
-			mImage(img),
-			mUserID(-1),
-			mProbability(0.0f)
-		{
-			// set request id
-			mRequestID = NetworkRequest_SingleImageIdentification;
-		}
-
-		void AcquireResponse();
-		void GetResponse(IdentificationResponse& response);
-
-	private:
-		// submit specific payload
-		void SubmitPayload();
-
-		// payload: quadratic(!) image
-		cv::Mat mImage;
-
-		// response
-		int mUserID;
-		float mProbability;
-	};
-
-
-
 
 	class NetworkRequestHandler
 	{
-	/*
-	// USAGE:
-	cv::Mat myImage;
-	// chose request type
-	typedef io::IdentificationRequestSingleImage req;
-
-	// start request handler
-	NetworkRequestHandler handler();
-	handler.start();	// parallel processing
-
-	// generate request
-	req* new_request = new req(&server_conn, myImage);
-	// submit request
-	handler.addRequest(new_request);
-
-	// try to get response
-	while(){
-	
-	}
-
-	*/
 	public:
 		NetworkRequestHandler();
 		~NetworkRequestHandler();
 
 		void start()
 		{
-			mStatus = Status_Running;
+			mStatus = RequestHandlerStatus_Running;
 			mThread = std::thread(&NetworkRequestHandler::processRequests, this);
 		}
 		void stop()
 		{
-			mStatus = Status_Shutdown;
+			mStatus = RequestHandlerStatus_Shutdown;
 			mThread.join();
 		}
 
-		void processRequests();
+		// ok
 		void addRequest(io::NetworkRequest* request);
 
+		// ok
+		template<class T>
+		bool PopResponse(T *response_container)
+		{
+			bool status = false;
+			mRespondsLock.lock();
 
-		template<typename T>
-		bool PopResponse(int request_type, T &response_container);
+			if (
+				mResponds.count(typeid(T)) > 0 &&
+				mResponds[typeid(T)].size() > 0
+				) {
+
+				// load response from specific request type
+				NetworkResponse* response = mResponds[typeid(T)].front();
+
+				// remove from queue - pop front
+				mResponds[typeid(T)].pop();
+
+				// copy response to response container
+				memcpy(response_container, response, sizeof(T));
+
+				// delete original response container
+				delete(response);
+			}
+
+			mRespondsLock.unlock();
+			return status;
+		}
+
+		// ok
+		void processRequests();
+
 
 	private:
 		int mStatus;			// status of the request handler
 		std::thread mThread;	// processing thread
+
 		// unprocessed requests in submit order
 		std::queue<NetworkRequest*> mRequests;
 		// processed requests ordered by request type in processing order (stacked)
-		std::map<int, std::queue<NetworkRequest*>> mProcessedRequests;
+		std::map<std::type_index, std::queue<NetworkResponse*>> mResponds;
+
+		// linking
+		std::map<NetworkRequest*, NetworkResponse*> mRequestToResponse;
+		std::map<NetworkResponse*, NetworkRequest*> mResponseToRequest;
 
 		std::mutex mRequestsLock;
-		std::mutex mProcessedRequestsLock;
+		std::mutex mRespondsLock;
 	};
 
 };

@@ -1,7 +1,9 @@
 #include "io/RequestHandler.h"
 #include <iostream>
 // tcp networking
-#include <io\Networking.h>
+#include <io/Networking.h>
+#include "io/RequestTypes.h"
+#include "io/ResponseTypes.h"
 
 
 #ifdef _DEBUG
@@ -11,77 +13,6 @@
 
 using namespace io;
 
-
-// -------- Base Request Type
-
-
-
-// -------- Network Requests
-
-NetworkRequest::NetworkRequest(io::TCPClient* server_conn) : pServerConn(server_conn) {
-#ifdef _DEBUG
-	if (server_conn == nullptr) {
-		std::cout << "Network request failed: Invalid server connection" << std::endl;
-	}
-#endif
-}
-
-void NetworkRequest::SubmitRequestID() {
-	// send request id to server as uchar (0-255)
-	pServerConn->SendUChar(mRequestID);
-}
-
-bool NetworkRequest::SubmitRequest()
-{
-	// request terminated - reconnect to server
-	if (!pServerConn->Reconnect())
-	{
-		std::cout << "Could not connect to server..." << std::endl;
-		return false;
-	}
-
-	// send request id
-	SubmitRequestID();
-
-	// send payload
-	SubmitPayload();
-
-	return true;
-}
-
-int NetworkRequest::GetRequestID() {
-	return mRequestID;
-}
-
-// -- Single Image Identification Request
-void IdentificationRequestSingleImage::SubmitPayload() {
-	
-#ifdef _DEBUG
-	if (mImage.size().width != mImage.size().height) {
-		throw std::invalid_argument("Invalid image dimensions - Image must be quadratic!");
-	}
-#endif
-	// send image dimension
-	pServerConn->SendUInt(mImage.size().width);
-
-	// send image
-	pServerConn->SendRGBImage(mImage);
-}
-
-void IdentificationRequestSingleImage::AcquireResponse(){
-	// get user id
-	mUserID = pServerConn->Receive32bit<int>();
-	// get probability
-	mProbability = pServerConn->Receive32bit<float>();
-}
-
-void IdentificationRequestSingleImage::GetResponse(IdentificationResponse& response) {
-	response.mProbability = mProbability;
-	response.mUserID = mUserID;
-}
-
-
-// -------- Threaded Request Handler
 
 NetworkRequestHandler::NetworkRequestHandler()
 {
@@ -93,35 +24,6 @@ NetworkRequestHandler::~NetworkRequestHandler()
 	stop();
 }
 
-void NetworkRequestHandler::processRequests()
-{
-	while (mStatus == Status_Running)
-	{
-		if (!mRequests.empty())
-		{
-			
-#ifdef _DEBUG
-			std::cout << "Processing request of type ID(" << mRequests.front()->GetRequestID() << ") | total: " << mRequests.size() << std::endl;
-#endif
-			// submit the request to the server
-			mRequestsLock.lock();
-			NetworkRequest* oldest_req = mRequests.front();
-			mRequests.pop();	// pop front
-			// submit
-			oldest_req->SubmitRequest();
-			mRequestsLock.unlock();
-
-			// wait for response - blocking
-			oldest_req->AcquireResponse();
-
-			// move to processed stack
-			mProcessedRequestsLock.lock();
-			mProcessedRequests[oldest_req->GetRequestID()].push(oldest_req);
-			mProcessedRequestsLock.unlock();
-		}
-	}
-}
-
 void NetworkRequestHandler::addRequest(io::NetworkRequest* request)
 {
 	mRequestsLock.lock();
@@ -130,31 +32,48 @@ void NetworkRequestHandler::addRequest(io::NetworkRequest* request)
 	mRequestsLock.unlock();
 }
 
-template<typename T>
-bool NetworkRequestHandler::PopResponse(int request_type, T &response_container) {
+void NetworkRequestHandler::processRequests()
+{
+	while (mStatus == RequestHandlerStatus_Running)
+	{
+		if (!mRequests.empty())
+		{
+			
+#ifdef _DEBUG
+			std::cout << "Processing request of type ID(" << mRequests.front()->cRequestID << ") | total: " << mRequests.size() << std::endl;
+#endif
+			// submit the request to the server
+			mRequestsLock.lock();
+			NetworkRequest* request_ptr = mRequests.front();
+			mRequests.pop();	// pop front
+			mRequestsLock.unlock();
 
-	bool status = false;
-	mProcessedRequestsLock.lock();
+			// submit
+			request_ptr->SubmitRequest();
 
-	if (
-		mProcessedRequests.count(request_type) > 0 && 
-		mProcessedRequests[request_type].size() > 0
-		) {
+			// extract server connection
+			io::TCPClient* socket = request_ptr->GetServerConnection();
+
+			// wait for response from this socket - blocking
+			// response factory
+			int response_identifier = socket->Receive32bit<int>();
+
+			std::cout << "response id: " << response_identifier << std::endl;
+			std::cout << "response id casted: " << (io::NetworkResponseType)response_identifier << std::endl;
 
 
-		// load response from specific request type
-		NetworkRequest* processed_req = mProcessedRequests[request_type].front();
+			// allocate response
+			NetworkResponse* response_ptr = nullptr;
+			std::type_index response_type_id = ResponseFactory::AllocateAndLoad((io::NetworkResponseType)response_identifier, socket, response_ptr);
 
-		// remove from queue - pop front
-		mProcessedRequests[request_type].pop();
+			// add linking
+			//mRequestToResponse[request_ptr] = response_ptr;
+			//mResponseToRequest[response_ptr] = request_ptr;
 
-		// copy response to response container
-		processed_req->GetResponse(response_container);
-
-		// delete request container
-		delete(processed_req);
+			// move to processed stack - sort by response type identifier
+			mRespondsLock.lock();
+			mResponds[response_type_id].push(response_ptr);
+			mRespondsLock.unlock();
+		}
 	}
-
-	mProcessedRequestsLock.unlock();
-	return status;
 }

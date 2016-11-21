@@ -11,22 +11,6 @@ namespace io {
 	// request base class
 	class Request
 	{
-	public:
-		Request::Request();
-		Request::~Request();
-
-		// copy
-		template<class ResponseType>
-		void CopyResponse(ResponseType* out)
-		{
-			// copy data
-			memcpy(out, pR, sizeof(ResponseType));
-		}
-
-		virtual void AcquireResponse() = 0;
-
-		void* pR;
-
 	};
 
 	// ------------ NETWORKING REQUEST TYPE
@@ -48,9 +32,11 @@ namespace io {
 		// 1. Submit request id
 		// 2: Submit payload (defined in explicite implementation)
 		bool SubmitRequest();
-		// 1. Get network response identifier
-		// 2. Generate and load corresponding response using response factory
-		void AcquireResponse();
+
+		io::TCPClient* GetServerConnection()
+		{
+			return pServerConn;
+		}
 
 		const NetworkRequestType cRequestID;
 	protected:
@@ -90,6 +76,10 @@ namespace io {
 				throw std::invalid_argument("Invalid image dimensions - Image must be quadratic!");
 			}
 #endif
+			std::cout << mImage.size().width << std::endl;
+
+
+			// TODO: fix this - size not received by server
 			// send image dimension
 			pServerConn->SendUInt(mImage.size().width);
 

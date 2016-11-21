@@ -6,21 +6,23 @@
 #include "io/KinectInterface.h"
 #include "io/Networking.h"
 #include <io/RequestHandler.h>
+#include <io/RequestTypes.h>
+#include <io/ResponseTypes.h>
 
 typedef io::IdentificationRequestSingleImage req;
 
 
-DEFINE_int32(port, 8080, "Server port");
+DEFINE_int32(port, 9999, "Server port");
 int main(int argc, char** argv)
 {
 	gflags::ParseCommandLineFlags(&argc, &argv, true);
 	
 	// initialize sensor
-	io::KinectSensorMultiSource k;
-	if (FAILED(k.Open())) {
-		std::cout << "--- Initialization failed" << std::endl;
-		return -1;
-	}
+	//io::KinectSensorMultiSource k;
+	//if (FAILED(k.Open())) {
+	//	std::cout << "--- Initialization failed" << std::endl;
+	//	return -1;
+	//}
 
 	// connect to server
 	io::TCPClient c;
@@ -41,22 +43,30 @@ int main(int argc, char** argv)
 	while (true)
 	{
 		// polling
-		hr = k.AcquireFrame();
+		//hr = k.AcquireFrame();
+		hr = 1;
 
 		// check if there is a new frame available
 		if (SUCCEEDED(hr)) {
 
 			// get color image
-			k.GetImageCopyRGB(color_image);
+			///k.GetImageCopyRGB(color_image);
+
+			color_image = cv::Mat::zeros(96, 96, CV_8UC3);
+
+			cv::resize(color_image, color_image, cv::Size(96, 96), 0, 0);
 
 			// handle processed requests
+			io::IdentificationResponse response;
+			while(req_handler.PopResponse(&response))
+			{
+				// display response
+				std::cout << response.mUserID << std::endl;
+			}
 
 			// make new request
 			req* new_request =  new req(&c, color_image);
-
-			// submit request
 			req_handler.addRequest(new_request);
-
 		}
 
 	}

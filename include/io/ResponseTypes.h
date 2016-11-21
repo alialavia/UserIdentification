@@ -1,7 +1,10 @@
 #ifndef IO_RESPONSETYPES_H_
 #define IO_RESPONSETYPES_H_
 
+#include <typeindex>
+
 namespace io {
+	class NetworkResponse;
 	class TCPClient;
 
 	// response IDs: received from server
@@ -17,12 +20,7 @@ namespace io {
 	class ResponseFactory
 	{
 	public:		
-		/// <summary>
-		/// Allocates respond of specific type corresponding to identifier. See NetworkRequestType
-		/// </summary>
-		/// <param name="type_id">The type identifier.</param>
-		/// <returns>void *.</returns>
-		static void* AllocateAndLoad(NetworkResponseType type_id, io::TCPClient* conn);
+		static std::type_index AllocateAndLoad(NetworkResponseType type_id, io::TCPClient* conn, NetworkResponse* &ptr);
 	};
 
 	// ------------ RESPONSE DEFINITIONS
@@ -39,9 +37,7 @@ namespace io {
 	public:
 		NetworkResponse(io::TCPClient* conn): pConn(conn)
 		{
-			
 		}
-	protected:
 		io::TCPClient* pConn;
 	};
 
@@ -56,7 +52,7 @@ namespace io {
 	class IdentificationResponse : public NetworkResponse
 	{
 	public:
-		IdentificationResponse(io::TCPClient* conn):NetworkResponse(conn)
+		IdentificationResponse(io::TCPClient* conn = nullptr):NetworkResponse(conn)
 		{
 		}
 		void Load(); // receive response specific data from server
