@@ -40,7 +40,7 @@ class OfflineUserClassifier:
     user_embeddings = {}    # raw embeddings
     neural_net = None       # torch network
     dlib_aligner = None     # dlib face aligner
-    classifier = None              # classifier
+    classifier = None       # classifier
     label_encoder = None    # classifier label encoder
     training_status = False
 
@@ -58,6 +58,7 @@ class OfflineUserClassifier:
 
         # load stored classifier
         self.load_classifier()
+        self.training_status = True
 
         print("--- identifier initialization took {} seconds".format(time.time() - start))
 
@@ -125,13 +126,13 @@ class OfflineUserClassifier:
     def identify_user(self, user_img):
 
         if self.training_status is False:
-            return (0, 0.0)
+            return (None, None)
 
         start = time.time()
         embedding = self.get_embedding(user_img)
 
         if embedding is None:
-            return None
+            return (None, None)
 
         embedding = embedding.reshape(1, -1)
 
