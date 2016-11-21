@@ -18,15 +18,10 @@ NetworkRequest::NetworkRequest(io::TCPClient* server_conn, NetworkRequestType re
 
 bool NetworkRequest::SubmitRequest()
 {
-	// request terminated - reconnect to server
-	if (!pServerConn->Reconnect())
-	{
-		std::cout << "Could not connect to server..." << std::endl;
-		return false;
-	}
 
 	// send request id to server as uchar (0-255)
-	pServerConn->SendUChar(cRequestID);
+	int bytecount;
+	bytecount = pServerConn->SendUChar(cRequestID);
 
 	// send payload
 	SubmitPayload();

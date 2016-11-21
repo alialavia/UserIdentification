@@ -6,6 +6,8 @@
 #include <vector>
 #include <iostream>
 
+#define _DEBUG_NETWORKING
+
 namespace cv {
 	class Mat;
 }
@@ -17,8 +19,9 @@ namespace io
 	public:
 		TCPClient();
 		~TCPClient();
-		bool Connect(char* host_name = "127.0.0.1", int host_port = 80);
-		bool Reconnect();
+		void Config(char* host_name = "127.0.0.1", int host_port = 80);
+		bool Connect(char* host_name, int host_port);
+		bool Connect();
 		void Close();
 
 		/// <summary>

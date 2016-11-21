@@ -66,7 +66,7 @@ namespace io {
 		{
 		}
 
-	private:
+	protected:
 
 		// submit specific payload
 		void SubmitPayload() {

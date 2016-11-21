@@ -27,8 +27,32 @@ TCPClient::~TCPClient()
 	Close();
 }
 
+
+void TCPClient::Config(char* host_name, int host_port)
+{
+	mHostName = host_name;
+	mHostPort = host_port;
+}
+
+
+bool TCPClient::Connect()
+{
+	return Connect(mHostName, mHostPort);
+}
+
 bool TCPClient::Connect(char* host_name, int host_port)
 {
+
+#ifdef _DEBUG
+	std::cout << "=== Connecting to server: " << host_name << ":" << host_port << std::endl;
+#endif
+
+	// close open connection
+	if (mSocketID != -1)
+	{
+		Close();
+	}
+
 	// open new socket
 	OpenSocket();
 
@@ -48,22 +72,6 @@ bool TCPClient::Connect(char* host_name, int host_port)
 	}
 
 	return true;
-}
-
-bool TCPClient::Reconnect()
-{
-#ifdef _DEBUG
-	std::cout << "=== Reconnecting to server" << std::endl;
-#endif
-
-	// terminate existing connection if not yet done
-	if(mSocketID != -1)
-	{
-		Close();
-	}
-
-	// reconnect
-	return Connect(mHostName, mHostPort);
 }
 
 void TCPClient::Close()
@@ -156,6 +164,9 @@ int TCPClient::SendChar(char id)
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
 		return 0;
 	}
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendChar sent " << bytecount << "bytes\n";
+#endif
 	return bytecount;
 }
 
@@ -168,6 +179,9 @@ int TCPClient::SendUInt(uint32_t size)
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
 		return 0;
 	}
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendUInt sent " << bytecount << "bytes\n";
+#endif
 	return bytecount;
 }
 
@@ -180,6 +194,9 @@ int TCPClient::SendInt(int size)
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
 		return 0;
 	}
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendInt sent " << bytecount << "bytes\n";
+#endif
 	return bytecount;
 }
 
@@ -192,6 +209,9 @@ int TCPClient::SendShort(short val)
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
 		return 0;
 	}
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendShort sent " << bytecount << "bytes\n";
+#endif
 	return bytecount;
 }
 
@@ -204,6 +224,9 @@ int TCPClient::SendUShort(unsigned short ushort)
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
 		return 0;
 	}
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendUShort sent " << bytecount << "bytes\n";
+#endif
 	return bytecount;
 }
 
@@ -215,6 +238,9 @@ int TCPClient::SendBool(bool val)
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
 		return 0;
 	}
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendBool sent " << bytecount << "bytes\n";
+#endif
 	return bytecount;
 }
 
@@ -228,6 +254,9 @@ int TCPClient::SendFloat(float val)
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
 		return 0;
 	}
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendFloat sent " << bytecount << "bytes\n";
+#endif
 	return bytecount;
 }
 
@@ -239,6 +268,9 @@ int TCPClient::SendUChar(unsigned char val)
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
 		return 0;
 	}
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendUChar sent " << bytecount << "bytes\n";
+#endif
 	return bytecount;
 }
 
@@ -257,6 +289,9 @@ int TCPClient::SendImageWithLength(const cv::Mat &img)
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
 		return 0;
 	}
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendImageWithLength sent " << bytecount << "bytes\n";
+#endif
 	return bytecount;
 }
 
@@ -287,7 +322,25 @@ int TCPClient::SendImageBatchWithLength(const std::vector<cv::Mat> &images)
 
 int TCPClient::SendRGBImage(const cv::Mat &img)
 {
-	cv::Mat frame = (img.reshape(0, 1)); // to make it continuous
+
+#ifdef _DEBUG
+	if (img.rows == 0 || img.cols == 0) {
+		std::cout << "Could not empty image.";
+		return 0;
+	}
+#endif
+
+	cv::Mat frame = img.clone();
+
+	if (!frame.isContinuous())
+	{
+#ifdef _DEBUG_NETWORKING
+		std::cout << "Image is not continuous (maybe ROI)\n";
+#endif
+		frame = frame.clone();
+	}
+
+	frame = (frame.reshape(0, 1)); // to make it continuous
 	const int imgSize = frame.total()*frame.elemSize();
 
 	int bytecount;
@@ -295,6 +348,10 @@ int TCPClient::SendRGBImage(const cv::Mat &img)
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
 		return 0;
 	}
+
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendRGBImage sent " << bytecount << "bytes\n";
+#endif
 	return bytecount;
 }
 
@@ -303,6 +360,7 @@ void TCPClient::SendRGBTestImage(int size)
 	cv::Mat frame = cv::Mat::zeros(size, size, CV_8UC3);
 	frame = (frame.reshape(0, 1)); // to make it continuous
 
+	// send size
 	const int imgSize = frame.total()*frame.elemSize();
 
 	int bytecount;
@@ -310,6 +368,9 @@ void TCPClient::SendRGBTestImage(int size)
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
 		return;
 	}
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendRGBTestImage sent " << bytecount << "bytes\n";
+#endif
 	printf("Sent bytes: %d\n", bytecount);
 }
 

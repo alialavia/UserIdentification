@@ -45,13 +45,9 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
-	// connect to server
+	// config to server connection
 	io::TCPClient server_conn;
-	if(!server_conn.Connect("127.0.0.1", FLAGS_port))
-	{
-		std::cout << "Could not connect to server - 127.0.0.1:" << FLAGS_port << std::endl;
-		return -1;
-	}
+	server_conn.Config("127.0.0.1", FLAGS_port);
 
 	// start request handler
 	io::NetworkRequestHandler req_handler;
@@ -102,6 +98,10 @@ int main(int argc, char** argv)
 				// request identification for unknown users
 				um.RequestUserIdentification(color_image);
 			}
+
+			// display image
+			cv::imshow("Scene", color_image);
+			cv::waitKey(3);
 
 		}
 		else {

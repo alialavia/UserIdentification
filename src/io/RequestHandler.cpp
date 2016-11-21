@@ -21,6 +21,11 @@ NetworkRequestHandler::NetworkRequestHandler()
 
 NetworkRequestHandler::~NetworkRequestHandler()
 {
+
+#ifdef _DEBUG_REQUESTHANDLER
+	std::cout << "--- Destructing Request Handler " << std::endl;
+#endif
+
 	// stop the processing thread thread
 	stop();
 
@@ -48,7 +53,7 @@ void NetworkRequestHandler::addRequest(io::NetworkRequest* request)
 {
 	// block request adding till request queue is empty again
 	if (GetRequestCount() == mMaxRequests) {
-#ifdef _DEBUG
+#ifdef _DEBUG_REQUESTHANDLER
 		std::cout << "Reached max. request count. Waiting to synchronize with request handler..." << std::endl;
 #endif
 
@@ -66,28 +71,45 @@ void NetworkRequestHandler::addRequest(io::NetworkRequest* request)
 
 void NetworkRequestHandler::processRequests()
 {
+
+#ifdef _DEBUG_REQUESTHANDLER
+	std::cout << "--- Starting NetworkRequestHandler::processRequests()" << std::endl;
+#endif
+
 	while (mStatus == RequestHandlerStatus_Running)
 	{
 		if (!mRequests.empty())
 		{
 			// submit the request to the server
 			mRequestsLock.lock();
-#ifdef _DEBUG
+#ifdef _DEBUG_REQUESTHANDLER
 			std::cout << "--- Processing request of type ID(" << mRequests.front()->cRequestID << ") | total: " << mRequests.size() << std::endl;
 #endif
 			NetworkRequest* request_ptr = mRequests.front();
 			mRequests.pop();	// pop front
 			mRequestsLock.unlock();
 
+			// extract server connection
+			io::TCPClient* socket = request_ptr->GetServerConnection();
+
+			// connect to server
+			socket->Connect();
+
 			// submit
 			request_ptr->SubmitRequest();
 
-			// extract server connection
-			io::TCPClient* socket = request_ptr->GetServerConnection();
+
+#ifdef _DEBUG_REQUESTHANDLER
+			std::cout << "--- Wait for response id" << std::endl;
+#endif
 
 			// wait for response from this socket - blocking
 			// response factory
 			int response_identifier = socket->Receive32bit<int>();
+
+#ifdef _DEBUG_REQUESTHANDLER
+			std::cout << "--- Response id: " << response_identifier << " | Waiting for response data" << std::endl;
+#endif
 
 			NetworkResponse* response_ptr = nullptr;
 			// allocate response
@@ -101,7 +123,18 @@ void NetworkRequestHandler::processRequests()
 			mResponds[response_type_id].push(response_ptr);
 			mMappingLock.unlock();
 
+			// disconnect from server
+			socket->Close();
+
+#ifdef _DEBUG_REQUESTHANDLER
+			std::cout << "--- Request terminated - Disconnected from server " << std::endl;
+#endif
 
 		}
 	}
+
+#ifdef _DEBUG_REQUESTHANDLER
+	std::cout << "--- NetworkRequestHandler processRequests() terminated" << std::endl;
+#endif
+
 }
