@@ -17,7 +17,11 @@ class TCPTestServer(TCPServerBlocking):
 
     def handle_request(self, conn, addr):
         """general request handler"""
-        request_id = self.receive_char(conn)
+        request_id = self.receive_uchar(conn)
+        # request_id = conn.recv(1)
+        # print "request_id: " + request_id
+        #
+        # print ord(request_id)
 
         if(request_id in REQUEST_LOOKUP):
             request = REQUEST_LOOKUP[request_id]
@@ -58,27 +62,34 @@ class TCPTestServer(TCPServerBlocking):
 
     def handle_image(self, conn):
         """receive image, draw and send back"""
-        size = self.receive_uint(conn)
 
-        print "size: "+str(size)
+        try:
+            size = self.receive_uint(conn)
+        except ValueError:
+            print "Could not receive image size"
+            return
 
         img = self.receive_rgb_image(conn, size, size)
         height, width, channels = img.shape
         print '--- Received image'
         # draw circle in the center
-        cv2.circle(img, (width/2, height/2), height/4, (0, 0, 255), -1)
+        # cv2.circle(img, (width/2, height/2), height/4, (0, 0, 255), -1)
         # send image back
         # self.send_rgb_image(conn, img)
 
-        self.send_int(conn, 123)
-
-        print "--- sent int"
+        # send response type
+        self.send_int(conn, 1)
+        print "--- sent: "+ str(1)
+        # send id
+        self.send_int(conn, 23)
+        print "--- sent: "+ str(23)
         self.send_float(conn, 1.11)
+        print "--- sent float"
 
 # ================================= #
 #              Main
 
 if __name__=='__main__':
 
-    server = TCPTestServer('', 9999)
+    server = TCPTestServer('', 8080)
     server.start_server()
