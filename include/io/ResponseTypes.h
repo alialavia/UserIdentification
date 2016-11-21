@@ -2,6 +2,7 @@
 #define IO_RESPONSETYPES_H_
 
 #include <typeindex>
+#include <string>
 
 namespace io {
 	class NetworkResponse;
@@ -60,6 +61,15 @@ namespace io {
 		float mProbability = 0.0f;
 	};
 
+	class ErrorResponse : public NetworkResponse
+	{
+	public:
+		ErrorResponse(io::TCPClient* conn = nullptr) :NetworkResponse(conn)
+		{
+		}
+		void Load() {};
+		std::string mMessage = "Invalid response";
+	};
 
 }
 

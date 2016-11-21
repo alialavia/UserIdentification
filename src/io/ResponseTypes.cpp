@@ -15,16 +15,18 @@ std::type_index ResponseFactory::AllocateAndLoad(NetworkResponseType type_id, io
 		resp = new IdentificationResponse(conn);
 		resp->Load();
 		ptr = resp;
-		// pass byck type index
-
-		std::cout << resp->mUserID << std::endl;
-
 		return typeid(IdentificationResponse);
 
 	}else
 	{
-		throw std::invalid_argument("This response type is not supported.");
+		ErrorResponse* resp = nullptr;
+		resp = new ErrorResponse(conn);
+		resp->mMessage = "Invalid response type id";
+		resp->Load();
+		ptr = resp;
+		return typeid(IdentificationResponse);
 	}
+
 }
 
 // ------------ RESPONSE DEFINITIONS

@@ -89,25 +89,18 @@ void NetworkRequestHandler::processRequests()
 			// response factory
 			int response_identifier = socket->Receive32bit<int>();
 
-			try {
-				// allocate response
-				NetworkResponse* response_ptr = nullptr;
-				std::type_index response_type_id = ResponseFactory::AllocateAndLoad((io::NetworkResponseType)response_identifier, socket, response_ptr);
-				
-				// add linking
-				mResponseToRequest[response_ptr] = request_ptr;
+			NetworkResponse* response_ptr = nullptr;
+			// allocate response
+			std::type_index response_type_id = ResponseFactory::AllocateAndLoad((io::NetworkResponseType)response_identifier, socket, response_ptr);
 
-				// move to processed stack - sort by response type identifier
-				mMappingLock.lock();
-				mResponds[response_type_id].push(response_ptr);
-				mMappingLock.unlock();
-			}
-			catch (std::invalid_argument e) {
+			// add linking
+			mResponseToRequest[response_ptr] = request_ptr;
 
-				std::cout << "--- Got invalid response identifier from server - dropping request: " << response_identifier << std::endl;
-				// delete request
-				delete(request_ptr);
-			}
+			// move to processed stack - sort by response type identifier
+			mMappingLock.lock();
+			mResponds[response_type_id].push(response_ptr);
+			mMappingLock.unlock();
+
 
 		}
 	}

@@ -76,10 +76,6 @@ namespace io {
 				throw std::invalid_argument("Invalid image dimensions - Image must be quadratic!");
 			}
 #endif
-			std::cout << mImage.size().width << std::endl;
-
-
-			// TODO: fix this - size not received by server
 			// send image dimension
 			pServerConn->SendUInt(mImage.size().width);
 
