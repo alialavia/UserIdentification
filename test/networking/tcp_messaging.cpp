@@ -7,22 +7,6 @@
 DEFINE_int32(port, 8080, "Server port");
 DEFINE_string(message_type, "primitive", "message types: image, primitive");
 
-void send_and_receive_image(io::TCPClient *c)
-{
-	// send request ID
-	c->SendChar(1);
-	// send image
-	c->SendRGBTestImage(100);
-	std::cout << "--- image sent, now waiting to receive\n";
-	// receive image
-	cv::Mat server_img = cv::Mat::zeros(100, 100, CV_8UC3);
-	c->ReceiveRGBImage(server_img, 100);
-	// display image
-	cv::imshow("Received from server", server_img);
-	cv::waitKey(0);
-}
-
-
 int main(int argc, char** argv)
 {
 
@@ -78,7 +62,26 @@ int main(int argc, char** argv)
 			break;
 		}else if(FLAGS_message_type == "image")
 		{
-			send_and_receive_image(&c);
+
+			// send request ID
+			c.SendUChar(1);
+			// send image size
+			c.SendUInt(100);
+			// send image
+			c.SendRGBTestImage(100);
+			std::cout << "--- image sent, now waiting to receive\n";
+
+			std::cout << c.Receive32bit<int>() << std::endl;
+			std::cout << c.Receive32bit<float>() << std::endl;
+
+			// receive image
+			//cv::Mat server_img = cv::Mat::zeros(100, 100, CV_8UC3);
+			//c.ReceiveRGBImage(server_img, 100);
+			//// display image
+			//cv::imshow("Received from server", server_img);
+			//cv::waitKey(0);
+
+
 			// reconnect to server
 			c.Close();
 			break;
