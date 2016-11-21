@@ -1,11 +1,13 @@
 #include <user\UserManager.h>
 #include <user\User.h>
 #include <opencv2/imgproc.hpp>
-#include <io\ResponseTypes.h>
+
 
 #include <io/RequestHandler.h>
 #include <io/RequestTypes.h>
 #include <io/ResponseTypes.h>
+
+#include <opencv2/highgui/highgui.hpp>
 
 using namespace  user;
 
@@ -24,7 +26,19 @@ bool UserManager::Init(io::TCPClient* connection, io::NetworkRequestHandler* han
 // refresh tracked users: scene_id, bounding boxes
 void UserManager::RefreshTrackedUsers(const std::vector<int> &user_scene_ids, std::vector<cv::Rect2f> bounding_boxes)
 {
-	// update existing users - remove non tracked
+
+	// add new users
+	for (int i = 0; i<user_scene_ids.size(); i++)
+	{
+		int scene_id = user_scene_ids[i];
+		// user not tracked yet - initiate new user model
+		if (mFrameIDToUser.count(scene_id) == 0)
+		{
+			mFrameIDToUser[scene_id] = new User();
+		}
+	}
+
+	// update users infos - remove non tracked
 	for (auto it = mFrameIDToUser.begin(); it != mFrameIDToUser.end(); ++it)
 	{
 		int user_index = find(user_scene_ids.begin(), user_scene_ids.end(), it->first) - user_scene_ids.begin();
@@ -46,16 +60,7 @@ void UserManager::RefreshTrackedUsers(const std::vector<int> &user_scene_ids, st
 		}
 	}
 
-	// add new users
-	for (int i = 0; i<user_scene_ids.size(); i++)
-	{
-		int scene_id = user_scene_ids[i];
-		// user not tracked yet - initiate new user model
-		if (mFrameIDToUser.count(scene_id) == 0)
-		{
-			mFrameIDToUser[scene_id] = new User();
-		}
-	}
+
 }
 
 // incorporate processed requests: update user ids
@@ -64,10 +69,19 @@ void UserManager::ApplyUserIdentification()
 	// handle all processed identification requests
 	io::IdentificationResponse response;
 	io::NetworkRequest* request = nullptr;
+
+#ifdef _DEBUG_USERMANAGER
+	std::cout << "--- Count: io::IdentificationResponse: " << pRequestHandler->GetResponseCount<io::IdentificationResponse>() << std::endl;
+#endif
+
 	while (pRequestHandler->PopResponse(&response, request))
 	{
+#ifdef _DEBUG_USERMANAGER
+		std::cout << "--- Processing io::IdentificationResponse" << std::endl;
+#endif
+
 		// display response
-		std::cout << "User ID: " << response.mUserID << std::endl;
+		std::cout << "--- User ID: " << response.mUserID << std::endl;
 
 		// locate user for which request was sent
 		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request);
@@ -85,6 +99,34 @@ void UserManager::ApplyUserIdentification()
 
 		}
 	}
+
+
+	// handle erronomous requests
+	io::ErrorResponse err_response;
+	while (pRequestHandler->PopResponse(&err_response, request))
+	{
+		// display response
+		std::cout << "--- Invalid request: " << err_response.mMessage << std::endl;
+
+		// locate user for which request was sent
+		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request);
+
+		if (it != mRequestToUser.end()) {
+			// extract user
+			User* target_user = it->second;
+			// remove request mapping
+			RemovePointerMapping(it->second);
+			// reset user identification status if it was an identification request
+			if (request->cRequestID == io::NetworkRequest_SingleImageIdentification) {
+				target_user->SetIDStatus(user::IDStatus_Unknown);
+			}
+		}
+		else {
+			// user corresponding to request not found (may have left scene) - drop response
+
+		}
+	}
+
 }
 
 // send identification requests for all unknown users
@@ -96,6 +138,9 @@ void UserManager::RequestUserIdentification(cv::Mat scene_rgb)
 		{
 			// extract face patch
 			cv::Mat face = scene_rgb(it->second->GetFaceBoundingBox());
+
+			//cv::imshow("face", face);
+			//cv::waitKey(3);
 
 			// make new identification request
 			IDReq* new_request = new IDReq(pServerConn, face);
@@ -122,7 +167,6 @@ void UserManager::DrawUsers(cv::Mat &img)
 		// draw face bounding box
 		cv::rectangle(img, bb, cv::Scalar(0, 0, 255), 2, cv::LINE_4);
 
-
 		// draw identification status
 		float font_size = 0.5;
 		std::string text;
@@ -130,6 +174,7 @@ void UserManager::DrawUsers(cv::Mat &img)
 		if (status == IDStatus_Identified)
 		{
 			text = "Status: identified - ID" + std::to_string(it->second->GetUserID());
+			std::cout << "USER: " << it->second->GetUserID() << std::endl;
 		}
 		else if (status == IDStatus_Pending)
 		{

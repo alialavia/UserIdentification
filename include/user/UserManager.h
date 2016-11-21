@@ -5,6 +5,7 @@
 #include <vector>
 #include <opencv2/core.hpp>
 
+#define _DEBUG_USERMANAGER
 
 namespace io{
 class TCPClient;
