@@ -3,6 +3,7 @@ import numpy
 import struct
 import sys
 import socket
+import time
 from abc import abstractmethod
 
 
@@ -60,18 +61,32 @@ class TCPServer:
 
     #  ----------- MESSAGE HANDLERS
 
-    def receive_message(self, the_socket, datasize):
+    def receive_message(self, the_socket, datasize, timeout = 2):
         """Basic message receiver for known datasize"""
         buffer = ''
+        begin = time.time()
+        refresh_rate = 0.01
+
         try:
             while len(buffer) < datasize:
+                # if you got some data, then break after timeout
+                if buffer and time.time() - begin > timeout:
+                    raise ValueError('receive_message timeout. Only partial data received.')
+                # if you got no data at all, wait a little longer, twice the timeout
+                elif time.time() - begin > timeout * 2:
+                    raise ValueError('receive_message timeout. No data received.')
+
                 packet = the_socket.recv(datasize - len(buffer))
-                # read-in finished too early - return None
+
+                if packet:
+                    # append to buffer
+                    buffer += packet
+                    # print 'Total ' + str(sys.getsizeof(buffer)) + ' bytes'
+                    begin = time.time()
                 if not packet:
-                    return None
-                # append to buffer
-                buffer += packet
-                # print 'Total ' + str(sys.getsizeof(buffer)) + ' bytes'
+                    # wait
+                    time.sleep(refresh_rate)
+
         except socket.error, (errorCode, message):
             # error 10035 is no data available, it is non-fatal
             if errorCode != 10035:
@@ -79,7 +94,6 @@ class TCPServer:
         return buffer
 
     #  ----------- IMAGE HANDLERS
-    # TODO: handle network byte order for images
     def receive_rgb_image(self, client_socket, width, height):
         """receive 8 bit rgb image"""
         # 3 channels, 8 bit = 1 byte
