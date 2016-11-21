@@ -40,10 +40,16 @@ namespace io {
 			mThread.join();
 		}
 
-		// ok
+		int GetRequestCount(){
+			int count = 0;
+			mRequestsLock.lock();
+			count = mRequests.size();
+			mRequestsLock.unlock();
+			return count;
+		}
+
 		void addRequest(io::NetworkRequest* request);
 
-		// ok
 		template<class T>
 		bool PopResponse(T *response_container)
 		{
@@ -67,7 +73,7 @@ namespace io {
 				mMappingLock.lock();
 				// delete corresponding request and mapping
 				std::map<NetworkResponse*, NetworkRequest*>::iterator it1 = mResponseToRequest.find(response);
-				delete(it1->second);	// delete request
+				delete(it1->second);			// delete request
 				mResponseToRequest.erase(it1);	// delete map item
 				mMappingLock.unlock();
 
@@ -79,11 +85,14 @@ namespace io {
 			return status;
 		}
 
-		// ok
 		void processRequests();
 
-
 	private:
+
+		const int mMaxRequests = 10;		// maximum queued requests
+		const int mContinuationThresh = 5;	// request processing threshold
+		const int mRefreshRate = 100;		// refresh rate to check mContinuationThresh
+
 		int mStatus;			// status of the request handler
 		std::thread mThread;	// processing thread
 

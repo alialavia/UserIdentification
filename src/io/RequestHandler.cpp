@@ -26,9 +26,22 @@ NetworkRequestHandler::~NetworkRequestHandler()
 
 void NetworkRequestHandler::addRequest(io::NetworkRequest* request)
 {
+
+	// block request adding till request queue is empty again
+	if (GetRequestCount() == mMaxRequests) {
+#ifdef _DEBUG
+		std::cout << "Reached max. request count. Waiting to synchronize with request handler..." << std::endl;
+#endif
+
+		while (GetRequestCount() > mContinuationThresh) {
+			// wait
+			std::cout << "-- refresh" << std::endl;
+			Sleep(mRefreshRate);
+		}
+	}
+
 	mRequestsLock.lock();
-	// push back
-	mRequests.push(request);
+	mRequests.push(request);	// push back
 	mRequestsLock.unlock();
 }
 
