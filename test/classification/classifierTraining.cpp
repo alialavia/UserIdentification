@@ -115,13 +115,6 @@ int main(int argc, char** argv)
 			// get color image
 			k.GetImageCopyRGB(color_image);
 
-			// connect to server
-			if (!c.Connect())
-			{
-				std::cout << "Could not connect to server" << std::endl;
-				return -1;
-			}
-
 			// mode selection
 			if(MODE == Mode_none)
 			{
@@ -182,6 +175,14 @@ int main(int argc, char** argv)
 							// stop recording
 							std::cout << "--- Captured " << nr_images << " images" << std::endl;
 							int user_id = inputUserID();
+
+							// connect to server
+							if (!c.Connect())
+							{
+								std::cout << "Could not connect to server" << std::endl;
+								return -1;
+							}
+
 							// send request ID to server
 							// 2: send training images
 							c.SendUChar(2);
@@ -199,6 +200,14 @@ int main(int argc, char** argv)
 				}	// /bounding boxes
 			}else if(MODE == Mode_trigger_classifier_training)
 			{
+
+				// connect to server
+				if (!c.Connect())
+				{
+					std::cout << "Could not connect to server" << std::endl;
+					return -1;
+				}
+
 				// send request ID to server
 				c.SendUChar(4);
 
@@ -231,6 +240,14 @@ int main(int argc, char** argv)
 					{
 						// resize
 						cv::resize(face, face, cv::Size(96, 96), 0, 0);
+
+						// connect to server
+						if (!c.Connect())
+						{
+							std::cout << "Could not connect to server" << std::endl;
+							return -1;
+						}
+
 						// send request ID to server
 						c.SendUChar(1);
 						// image size

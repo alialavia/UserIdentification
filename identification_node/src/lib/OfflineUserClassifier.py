@@ -57,8 +57,7 @@ class OfflineUserClassifier:
         self.classifier = SVC(C=1, kernel='linear', probability=True)
 
         # load stored classifier
-        self.load_classifier()
-        self.training_status = True
+        self.training_status = self.load_classifier()
 
         print("--- identifier initialization took {} seconds".format(time.time() - start))
 
@@ -77,7 +76,7 @@ class OfflineUserClassifier:
 
         filename = "{}/svm_classifier.pkl".format(classifierModelDir)
         print("--- Saving classifier to '{}'".format(filename))
-        with open(filename, 'w') as f:
+        with open(filename, 'wb') as f:
             pickle.dump((self.label_encoder, self.classifier), f)
 
     def collect_embeddings(self, images, user_id):
