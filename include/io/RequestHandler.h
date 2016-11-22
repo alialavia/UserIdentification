@@ -54,7 +54,7 @@ namespace io {
 		int GetResponseCount() {
 			int count = 0;
 			mRespondsLock.lock();
-			count = mResponds.count(typeid(T));
+			count = (mResponds.count(typeid(T)) > 0 ? mResponds[typeid(T)].size() : 0);
 			mRespondsLock.unlock();
 			return count;
 		}
@@ -73,7 +73,7 @@ namespace io {
 				) {
 
 #ifdef _DEBUG_REQUESTHANDLER
-				std::cout << "Typeid exists: " << mResponds.count(typeid(T)) << " | count: " << mResponds[typeid(T)].size() << std::endl;
+				std::cout << "--- PopResponse: " << mResponds.count(typeid(T)) << " | response count: " << mResponds[typeid(T)].size() << std::endl;
 #endif
 
 				// load response from specific request type

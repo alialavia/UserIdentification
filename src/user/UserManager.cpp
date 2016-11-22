@@ -27,6 +27,8 @@ bool UserManager::Init(io::TCPClient* connection, io::NetworkRequestHandler* han
 void UserManager::RefreshTrackedUsers(const std::vector<int> &user_scene_ids, std::vector<cv::Rect2f> bounding_boxes)
 {
 
+	// TODO: make thread safe
+
 	// add new users
 	for (int i = 0; i<user_scene_ids.size(); i++)
 	{
@@ -59,8 +61,6 @@ void UserManager::RefreshTrackedUsers(const std::vector<int> &user_scene_ids, st
 			mFrameIDToUser.erase(it);
 		}
 	}
-
-
 }
 
 // incorporate processed requests: update user ids
@@ -69,10 +69,6 @@ void UserManager::ApplyUserIdentification()
 	// handle all processed identification requests
 	io::IdentificationResponse response;
 	io::NetworkRequest* request = nullptr;
-
-#ifdef _DEBUG_USERMANAGER
-	std::cout << "--- Count: io::IdentificationResponse: " << pRequestHandler->GetResponseCount<io::IdentificationResponse>() << std::endl;
-#endif
 
 	while (pRequestHandler->PopResponse(&response, request))
 	{
@@ -174,7 +170,6 @@ void UserManager::DrawUsers(cv::Mat &img)
 		if (status == IDStatus_Identified)
 		{
 			text = "Status: identified - ID" + std::to_string(it->second->GetUserID());
-			std::cout << "USER: " << it->second->GetUserID() << std::endl;
 		}
 		else if (status == IDStatus_Pending)
 		{
