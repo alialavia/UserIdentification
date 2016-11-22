@@ -27,9 +27,7 @@ bool UserManager::Init(io::TCPClient* connection, io::NetworkRequestHandler* han
 void UserManager::RefreshTrackedUsers(const std::vector<int> &user_scene_ids, std::vector<cv::Rect2f> bounding_boxes)
 {
 
-	// TODO: make thread safe
-
-	// add new users
+	// add new user for all scene ids that are new
 	for (int i = 0; i<user_scene_ids.size(); i++)
 	{
 		int scene_id = user_scene_ids[i];
@@ -41,24 +39,34 @@ void UserManager::RefreshTrackedUsers(const std::vector<int> &user_scene_ids, st
 	}
 
 	// update users infos - remove non tracked
-	for (auto it = mFrameIDToUser.begin(); it != mFrameIDToUser.end(); ++it)
+	for (auto it = mFrameIDToUser.begin(); it != mFrameIDToUser.end();)
 	{
 		int user_index = find(user_scene_ids.begin(), user_scene_ids.end(), it->first) - user_scene_ids.begin();
+
+		// check if user is in scene
 		if (user_index < user_scene_ids.size())
 		{
 			// user is in scene - update scene data (bounding box, position etc.)
 			it->second->SetFaceBoundingBox(bounding_boxes[user_index]);
+			++it;
 		}
+		// remove user if he has left scene
 		else
 		{
 			// remove request mapping
 			RemovePointerMapping(it->second);
 
+			// TODO: cancel requests
+
 			// user has left scene - delete tracking instance
 			delete(it->second);
 
+#ifdef _DEBUG_USERMANAGER
+			std::cout << "=== User has left scene - removing UserSceneID " << it->first << std::endl;
+#endif
+
 			// remove mapping
-			mFrameIDToUser.erase(it);
+			mFrameIDToUser.erase(it++);	// increment after deletion
 		}
 	}
 }
@@ -74,10 +82,9 @@ void UserManager::ApplyUserIdentification()
 	{
 #ifdef _DEBUG_USERMANAGER
 		std::cout << "--- Processing io::IdentificationResponse" << std::endl;
-#endif
-
 		// display response
 		std::cout << "--- User ID: " << response.mUserID << std::endl;
+#endif
 
 		// locate user for which request was sent
 		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request);
@@ -179,6 +186,6 @@ void UserManager::DrawUsers(cv::Mat &img)
 		{
 			text = "Status: unknown";
 		}
-		cv::putText(img, text, cv::Point(bb.x, bb.y), cv::FONT_HERSHEY_SIMPLEX, font_size, cv::Scalar(0, 0, 0), 1, 8);
+		cv::putText(img, text, cv::Point(bb.x+10, bb.y+20), cv::FONT_HERSHEY_SIMPLEX, font_size, cv::Scalar(0, 0, 255), 1, 8);
 	}
 }

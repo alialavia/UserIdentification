@@ -11,7 +11,6 @@ namespace user
 		IDStatus_Pending = 2
 	};
 
-
 	class User {
 
 	public:
