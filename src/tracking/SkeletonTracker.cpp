@@ -77,6 +77,7 @@ void SkeletonTracker::reset()
 int SkeletonTracker::GetJoints(std::vector<std::vector<cv::Point2f>>& joint_coords, DWORD joints, base::ImageSpace space,
 	int outputWidth, int outputHeight) const
 {
+	joint_coords.clear();
 	ColorSpacePoint colorspace_pt = { 0 };
 	DepthSpacePoint depthspace_pt = { 0 };
 	CameraSpacePoint cameraspace_pt = { 0 };
@@ -153,6 +154,7 @@ int SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxe
 		srcHeight = base::StreamSize_HeightDepth;
 	}
 
+	bounding_boxes.clear();
 	ColorSpacePoint p1c, p2c, p3c, p4c;
 	CameraSpacePoint head_center, p1, p2, p3, p4;
 	std::vector <cv::Point2f> color_coordinates_cv;
