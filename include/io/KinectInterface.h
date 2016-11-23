@@ -34,6 +34,17 @@ struct IFaceFrameReader;
 struct IFaceFrame;
 struct ICoordinateMapper;
 
+struct FaceData
+{
+	bool tracked = false;
+	RectI boundingBox = { 0 };
+	RectI boundingBoxIR = { 0 };
+	PointF Points[FacePointType::FacePointType_Count];
+	PointF PointsIR[FacePointType::FacePointType_Count];
+	Vector4 Rotation;
+	DetectionResult Properties[FaceProperty::FaceProperty_Count];
+};
+
 namespace cv
 {
 	class Mat;
@@ -41,14 +52,6 @@ namespace cv
 
 namespace io
 {
-	struct Face
-	{
-		RectI faceBox = {0};
-		PointF facePoints[FacePointType::FacePointType_Count];
-		Vector4 faceRotation;
-		DetectionResult faceProperties[FaceProperty::FaceProperty_Count];
-	};
-
 	class KinectSensorMultiSource
 	{
 	public:
@@ -72,38 +75,7 @@ namespace io
 
 		HRESULT GetSensorReference(IKinectSensor* &s);
 		IBody** GetBodyDataReference();
-		IFaceFrameResult* GetFaceDataReference();
-
-
-		/*
-		void drawFaces(cv::Mat& dst)
-		{
-			for (int iFace = 0; iFace < NR_USERS; ++iFace)
-			{
-				cv::rectangle(
-					dst,
-					cv::Point(mFaces[iFace].faceBox.Bottom, mFaces[iFace].faceBox.Right),
-					cv::Point(mFaces[iFace].faceBox.Bottom, mFaces[iFace].faceBox.Left),
-					cv::Scalar(255, 255, 255)
-				);
-			}
-
-			cv::imshow("Color image", dst);
-			cv::waitKey(3);
-		}
-
-		void printFaces()
-		{
-			// iterate through each face reader
-			for (int iFace = 0; iFace < NR_USERS; ++iFace)
-			{
-				if (mFaces[iFace].faceBox.Bottom > 0 && mFaces[iFace].faceBox.Top > 0)
-				{
-					std::cout << "Face " << iFace << " - " << mFaces[iFace].faceBox.Bottom << " - " << mFaces[iFace].faceBox.Top << "\n";
-				}
-			}
-		}
-		*/
+		FaceData* GetFaceDataReference();
 
 	private:
 		HRESULT ProcessColorFrame(IColorFrame* color_frame, int& height, int& width, RGBQUAD* & buffer, UINT& buffer_len) const;
@@ -145,8 +117,7 @@ namespace io
 		// bodies
 		IBody* ppBodies[NR_USERS] = {0};
 		// faces
-		Face mFaces[NR_USERS];	// todo: refactor/move to face tracker
-		IFaceFrameResult* ppFaces[NR_USERS] = { 0 };
+		FaceData mFaces[NR_USERS];
 
 
 		// body index
