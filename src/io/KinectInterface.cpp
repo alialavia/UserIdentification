@@ -73,6 +73,11 @@ KinectSensorMultiSource::~KinectSensorMultiSource()
 		delete[] pBodyIndexBuffer;
 		pBodyIndexBuffer = nullptr;
 	}
+	// face data
+	for (int i = 0; i < _countof(ppFaces); ++i)
+	{
+		SafeRelease(ppFaces[i]);
+	}
 }
 
 void KinectSensorMultiSource::Close()
@@ -383,7 +388,7 @@ HRESULT KinectSensorMultiSource::ProcessBodyIndexFrame(IBodyIndexFrame* index_fr
 	return hr;
 }
 
-HRESULT KinectSensorMultiSource::ProcessFaceFrames(IFaceFrame* face_frames[NR_USERS])
+HRESULT KinectSensorMultiSource::ProcessFaceFrames_old(IFaceFrame* face_frames[NR_USERS])
 {
 	HRESULT hr = E_FAIL;
 	IFaceFrame* pFaceFrame = nullptr;
@@ -393,8 +398,9 @@ HRESULT KinectSensorMultiSource::ProcessFaceFrames(IFaceFrame* face_frames[NR_US
 	{
 		pFaceFrame = face_frames[iFace];
 
+		// clear face
 		Face newFace;
-		Faces[iFace] = newFace;
+		mFaces[iFace] = newFace;
 
 		BOOLEAN bFaceTracked = false;
 		if (SUCCEEDED(hr) && nullptr != pFaceFrame)
@@ -415,22 +421,94 @@ HRESULT KinectSensorMultiSource::ProcessFaceFrames(IFaceFrame* face_frames[NR_US
 				// need to verify if pFaceFrameResult contains data before trying to access it
 				if (SUCCEEDED(hr) && pFaceFrameResult != nullptr)
 				{
-					hr = pFaceFrameResult->get_FaceBoundingBoxInColorSpace(&Faces[iFace].faceBox);
+					hr = pFaceFrameResult->get_FaceBoundingBoxInColorSpace(&mFaces[iFace].faceBox);
 
 					if (SUCCEEDED(hr))
 					{
-						hr = pFaceFrameResult->GetFacePointsInColorSpace(FacePointType::FacePointType_Count, Faces[iFace].facePoints);
+						hr = pFaceFrameResult->GetFacePointsInColorSpace(FacePointType::FacePointType_Count, mFaces[iFace].facePoints);
 					}
 
 					if (SUCCEEDED(hr))
 					{
-						hr = pFaceFrameResult->get_FaceRotationQuaternion(&Faces[iFace].faceRotation);
+						hr = pFaceFrameResult->get_FaceRotationQuaternion(&mFaces[iFace].faceRotation);
 					}
 
 					if (SUCCEEDED(hr))
 					{
-						hr = pFaceFrameResult->GetFaceProperties(FaceProperty::FaceProperty_Count, Faces[iFace].faceProperties);
+						hr = pFaceFrameResult->GetFaceProperties(FaceProperty::FaceProperty_Count, mFaces[iFace].faceProperties);
 					}
+				}
+				else
+				{
+					// face tracking is not valid - attempt to fix the issue
+					// a valid body is required to perform this step
+					// check if the corresponding body is tracked 
+					// if this is true then update the face frame source to track this body
+					IBody* pBody = ppBodies[iFace];
+					if (pBody != nullptr)
+					{
+						BOOLEAN bTracked = false;
+						hr = pBody->get_IsTracked(&bTracked);
+
+						UINT64 bodyTId;
+						if (SUCCEEDED(hr) && bTracked)
+						{
+							// get the tracking ID of this body
+							hr = pBody->get_TrackingId(&bodyTId);
+							if (SUCCEEDED(hr))
+							{
+								// update the face frame source with the tracking ID
+								m_pFaceFrameSources[iFace]->put_TrackingId(bodyTId);
+							}
+						}
+					}
+				}
+
+				// release face info
+				SafeRelease(pFaceFrameResult);
+			} // /bFaceTracked valid face
+		}
+	}
+
+	return hr;
+}
+
+
+HRESULT KinectSensorMultiSource::ProcessFaceFrames(IFaceFrame* face_frames[NR_USERS])
+{
+	HRESULT hr = E_FAIL;
+	IFaceFrame* pFaceFrame = nullptr;
+
+	// iterate through each face reader
+	for (int iFace = 0; iFace < NR_USERS; ++iFace)
+	{
+		pFaceFrame = face_frames[iFace];
+
+		// clear face
+		Face newFace;
+		mFaces[iFace] = newFace;
+
+		BOOLEAN bFaceTracked = false;
+		if (SUCCEEDED(hr) && nullptr != pFaceFrame)
+		{
+			// check if a valid face is tracked in this face frame
+			hr = pFaceFrame->get_IsTrackingIdValid(&bFaceTracked);
+		}
+
+		if (SUCCEEDED(hr))
+		{
+			// valid face
+			if (bFaceTracked)
+			{
+				// TODO: check why face tracking is not working
+				IFaceFrameResult* pFaceFrameResult = nullptr;
+				hr = pFaceFrame->get_FaceFrameResult(&pFaceFrameResult);
+				ppFaces[iFace] = pFaceFrameResult;
+
+				// need to verify if pFaceFrameResult contains data before trying to access it
+				if (SUCCEEDED(hr) && pFaceFrameResult != nullptr)
+				{
+					// everything is fine
 				}
 				else
 				{
@@ -727,4 +805,9 @@ void KinectSensorMultiSource::GetImageRGBA(cv::Mat& dst)
 IBody** KinectSensorMultiSource::GetBodyDataReference()
 {
 	return ppBodies;
+}
+
+Face** KinectSensorMultiSource::GetFaceDataReference()
+{
+	return ppFaces;
 }

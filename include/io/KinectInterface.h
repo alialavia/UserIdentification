@@ -72,6 +72,7 @@ namespace io
 
 		HRESULT GetSensorReference(IKinectSensor* &s);
 		IBody** GetBodyDataReference();
+		IFaceFrameResult* GetFaceDataReference();
 
 
 		/*
@@ -81,8 +82,8 @@ namespace io
 			{
 				cv::rectangle(
 					dst,
-					cv::Point(Faces[iFace].faceBox.Bottom, Faces[iFace].faceBox.Right),
-					cv::Point(Faces[iFace].faceBox.Bottom, Faces[iFace].faceBox.Left),
+					cv::Point(mFaces[iFace].faceBox.Bottom, mFaces[iFace].faceBox.Right),
+					cv::Point(mFaces[iFace].faceBox.Bottom, mFaces[iFace].faceBox.Left),
 					cv::Scalar(255, 255, 255)
 				);
 			}
@@ -96,9 +97,9 @@ namespace io
 			// iterate through each face reader
 			for (int iFace = 0; iFace < NR_USERS; ++iFace)
 			{
-				if (Faces[iFace].faceBox.Bottom > 0 && Faces[iFace].faceBox.Top > 0)
+				if (mFaces[iFace].faceBox.Bottom > 0 && mFaces[iFace].faceBox.Top > 0)
 				{
-					std::cout << "Face " << iFace << " - " << Faces[iFace].faceBox.Bottom << " - " << Faces[iFace].faceBox.Top << "\n";
+					std::cout << "Face " << iFace << " - " << mFaces[iFace].faceBox.Bottom << " - " << mFaces[iFace].faceBox.Top << "\n";
 				}
 			}
 		}
@@ -144,7 +145,10 @@ namespace io
 		// bodies
 		IBody* ppBodies[NR_USERS] = {0};
 		// faces
-		Face Faces[NR_USERS];
+		Face mFaces[NR_USERS];	// todo: refactor/move to face tracker
+		IFaceFrameResult* ppFaces[NR_USERS] = { 0 };
+
+
 		// body index
 		BYTE* pBodyIndexBuffer;
 		UINT mBodyIndexBufferLen = 0;

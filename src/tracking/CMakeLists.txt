@@ -2,10 +2,12 @@ SET(LIB_NAME Tracking)
 SET(HEADER_PATH ${user_identification_SOURCE_DIR}/include/${LIB_NAME})
 SET(TARGET_H
     ${HEADER_PATH}/SkeletonTracker.h
+    ${HEADER_PATH}/FaceTracker.h
 )
 
 SET(TARGET_SRC
 	SkeletonTracker.cpp
+	FaceTracker.cpp
 )
 
 # --------------------------------------------
