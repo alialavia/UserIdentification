@@ -5,7 +5,7 @@ SET(USER_IDENTIFICATION_TESTS_DIR ${PROJECT_SOURCE_DIR})
 SET(TARGET_DEFAULT_PREFIX "test_")
 SET(TARGET_DEFAULT_LABEL_PREFIX "")
 # IDE folder
-SET(TARGET_DEFAULT_FOLDER "Unit Tests")
+SET(TARGET_DEFAULT_FOLDER "Test applications")
 
 # project libraries for all applications
 SET(TARGET_COMMON_LIBRARIES 
@@ -19,4 +19,6 @@ ADD_SUBDIRECTORY(tracking)
 ADD_SUBDIRECTORY(recognition)
 ADD_SUBDIRECTORY(threading)
 ADD_SUBDIRECTORY(classification)
-ADD_SUBDIRECTORY(basics)
+
+# component unit testing
+ADD_SUBDIRECTORY(components)

@@ -84,37 +84,6 @@ namespace base
 }
 
 // ---------------------------------------------------------------
-//		math containers
-// ---------------------------------------------------------------
-
-template <typename T>
-class Array3Dv {
-	size_t mWidth, mHeight;
-	std::vector<T*> mData;
-public:
-	size_t Size(size_t dim) {
-		size_t s = 0;
-		if(dim == 0) {
-			s = 
-		}
-		else if (dim == 1) {
-
-		}
-		else if (dim == 2) {
-
-		}
-		return mWidth;
-	}
-	Array3Dv(size_t x, size_t y, size_t z, int init = 0) :
-		mWidth(x), mHeight(y), mData(x*y*z, nullptr)
-	{}
-	// assignment and access
-	T& operator()(size_t x, size_t y, size_t z) {
-		return mData.at(x + y * mWidth + z * mWidth * mHeight);
-	}
-};
-
-// ---------------------------------------------------------------
 // Reference: http://stackoverflow.com/questions/81870/is-it-possible-to-print-a-variables-type-in-standard-c
 /*
 Usage:
