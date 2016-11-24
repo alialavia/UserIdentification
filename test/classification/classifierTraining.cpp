@@ -10,19 +10,18 @@
 DEFINE_int32(port, 8080, "Server port");
 DEFINE_int32(batch_size, 1, "Number of images in a batch");
 
-void sendTrainingBatch(io::TCPClient *c, int16_t user_id, const std::vector<cv::Mat> &image_batch)
+void sendTrainingBatch(io::TCPClient *c, const std::vector<cv::Mat> &image_batch)
 {
 
 	std::cout << "--- Sending " << image_batch.size() << " images to server" << std::endl;
 
-	std::cout << "--- " << c->SendUChar(user_id) << " bytes sent (user id)" << std::endl;
-
-	// send image size
+	// --- send image dimension
 	std::cout << "--- " << c->SendUInt(image_batch[0].size().width) << " bytes sent (image size)" << std::endl;
 
-	// send number of images
+	// --- send number of images
 	std::cout << "--- " << c->SendUChar(image_batch.size()) << " bytes sent (nr images)" << std::endl;
 
+	// -- send images
 	for (int i = 0; i < image_batch.size(); i++) {
 		std::cout << "sent " << c->SendRGBImage(image_batch[i]) << " bytes to server\n";
 	}
@@ -174,7 +173,6 @@ int main(int argc, char** argv)
 						if (nr_images == FLAGS_batch_size) {
 							// stop recording
 							std::cout << "--- Captured " << nr_images << " images" << std::endl;
-							int user_id = inputUserID();
 
 							// connect to server
 							if (!c.Connect())
@@ -186,7 +184,11 @@ int main(int argc, char** argv)
 							// send request ID to server
 							// 2: send training images
 							c.SendUChar(2);
-							sendTrainingBatch(&c, user_id, image_batch);
+							// send user id
+							std::cout << "Please enter a user name: ";
+							c.SendKeyboard();
+
+							sendTrainingBatch(&c, image_batch);
 							// reset batch
 							nr_images = 0;
 							image_batch.clear();

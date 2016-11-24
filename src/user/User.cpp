@@ -7,9 +7,10 @@ User::~User()
 {
 
 }
-void User::SetUserID(int id)
+void User::SetUserID(int id, std::string nice_name)
 {
 	mUserID = id;
+	mUserNiceName = nice_name;
 	mIDStatus = IDStatus_Identified;
 }
 void User::SetIDStatus(enum IdentificationStatus status)
@@ -24,9 +25,10 @@ enum IdentificationStatus User::GetIDStatus()
 {
 	return mIDStatus;
 }
-int User::GetUserID()
+void User::GetUserID(int& id, std::string& nice_name) const
 {
-	return mUserID;
+	id = mUserID;
+	nice_name = mUserNiceName;
 }
 cv::Rect2f User::GetFaceBoundingBox()
 {

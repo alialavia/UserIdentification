@@ -73,7 +73,7 @@ namespace io {
 				) {
 
 #ifdef _DEBUG_REQUESTHANDLER
-				std::cout << "--- PopResponse: " << mResponds.count(typeid(T)) << " | response count: " << mResponds[typeid(T)].size() << std::endl;
+				std::cout << "--- PopResponse: " << typeid(T).name() << " | response count: " << mResponds[typeid(T)].size() << std::endl;
 #endif
 
 				// load response from specific request type

@@ -44,7 +44,7 @@ class TCPTestServer(TCPServerBlocking):
             if request_id == 1:     # identification
                 self.handle_identification(conn)
             elif request_id == 2:   # send training images
-                self.handle_embedding_collection(conn)
+                self.handle_embedding_collection_by_nice_name(conn)
             elif request_id == 3:   # embedding calculation
                 self.handle_embedding_calculation(conn)
             elif request_id == 4:   # classifier training
@@ -68,10 +68,12 @@ class TCPTestServer(TCPServerBlocking):
         # receive image
         user_face = self.receive_rgb_image(conn, img_size, img_size)
         # identify
-        user_id, confidence = self.classifier.identify_user(user_face)
+        user_id, nice_name, confidence = self.classifier.identify_user(user_face)
 
-        if user_id is None:
+        if (user_id is None) or (confidence < 2.0):
             print "--- Identification Error"
+            # send back error response
+            self.send_int(conn, 99)
             return
 
         print "--- User ID: " + str(user_id) + " | confidence: " + str(confidence)
@@ -82,6 +84,9 @@ class TCPTestServer(TCPServerBlocking):
         # send back user id
         self.send_int(conn, int(user_id))
 
+        # send back nice name
+        self.send_string(conn, nice_name)
+
         # send back confidence
         self.send_float(conn, float(confidence))
 
@@ -89,28 +94,67 @@ class TCPTestServer(TCPServerBlocking):
         print "--- Classifier Training"
         self.classifier.trigger_training()
 
-    def handle_embedding_collection(self, conn):
+    def handle_embedding_collection_by_nice_name(self, conn):
 
-        # receive user id
-        user_id = self.receive_char(conn)
+        # receive user name size
+        user_name_bytes = self.receive_int(conn)
 
-        # receive image size
-        img_size = self.receive_int(conn)
+        # receive user nice name
+        user_nice_name = self.receive_message(conn, user_name_bytes)
+
+        # receive image dimension
+        img_dim = self.receive_int(conn)
 
         # receive batch size
         nr_images = self.receive_char(conn)
 
-        print "--- Image batch received: size: " + str(nr_images) + " | image size: " + str(img_size)
+        print "--- Image batch received: size: " + str(nr_images) + " | image dimension: " + str(img_dim)
 
         # receive image batch
         images = []
         for x in range(0, nr_images):
             # receive image
-            new_img = self.receive_rgb_image(conn, img_size, img_size)
+            new_img = self.receive_rgb_image(conn, img_dim, img_dim)
             images.append(new_img)
 
+        # get user id from nice name
+        # ASSUME USER NAME IS UNIQUE!
+        user_id = self.classifier.get_user_id_from_name(user_nice_name)
+
+        if user_id == 0:
+            # generate new user id
+            print "create new user"
+            user_id = self.classifier.create_new_user(user_nice_name)
+            # save nice name
+
         # forward to classifier
-        self.classifier.collect_embeddings(images, user_id)
+        self.classifier.collect_embeddings_for_specific_id(images, user_id)
+
+    # def handle_embedding_collection_by_id(self, conn):
+    #
+    #     # receive user id size
+    #     user_id_bytes = self.receive_int(conn)
+    #
+    #     # receive user id
+    #     user_id = self.receive_message(conn, user_id_bytes)
+    #
+    #     # receive image dimension
+    #     img_dim = self.receive_int(conn)
+    #
+    #     # receive batch size
+    #     nr_images = self.receive_char(conn)
+    #
+    #     print "--- Image batch received: size: " + str(nr_images) + " | image dimension: " + str(img_dim)
+    #
+    #     # receive image batch
+    #     images = []
+    #     for x in range(0, nr_images):
+    #         # receive image
+    #         new_img = self.receive_rgb_image(conn, img_dim, img_dim)
+    #         images.append(new_img)
+    #
+    #     # forward to classifier
+    #     self.classifier.collect_embeddings(images, user_id)
 
     def handle_image_normalization(self, conn):
         # receive image size

@@ -24,7 +24,7 @@ std::type_index ResponseFactory::AllocateAndLoad(NetworkResponseType type_id, io
 		resp->mMessage = "Invalid response type id";
 		resp->Load();
 		ptr = resp;
-		return typeid(IdentificationResponse);
+		return typeid(ErrorResponse);
 	}
 
 }
@@ -35,5 +35,6 @@ void IdentificationResponse::Load()
 {
 	// load specific data
 	mUserID = pConn->Receive32bit<int>();
+	mUserNiceName = pConn->ReceiveStringWithVarLength();
 	mProbability = pConn->Receive32bit<float>();
 }

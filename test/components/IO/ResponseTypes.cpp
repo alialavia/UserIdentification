@@ -169,6 +169,12 @@ void test_typeindex_map()
 }
 
 
+template<class T>
+void get_type_id_from_ptr(T *response_container)
+{
+	std::cout << "ID: " << typeid(T).name() << std::endl;
+}
+
 
 int main(int argc, char** argv)
 {
@@ -188,7 +194,7 @@ int main(int argc, char** argv)
 	std::cout << outResponse.mMyData1;
 
 
-	test_typeindex_map();
+	get_type_id_from_ptr(&outResponse);
 
 
 	return 0;

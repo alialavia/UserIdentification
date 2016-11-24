@@ -38,6 +38,9 @@ class Arguments:
 class OfflineUserClassifier:
     # key: user id, value: list of embeddings
     user_embeddings = {}    # raw embeddings
+    user_list = {}    # user ids to nice name
+    id_increment = 1        # user id increment
+
     neural_net = None       # torch network
     dlib_aligner = None     # dlib face aligner
     classifier = None       # classifier
@@ -65,7 +68,7 @@ class OfflineUserClassifier:
         filename = "{}/svm_classifier.pkl".format(classifierModelDir)
         if os.path.isfile(filename):
             with open(filename, 'r') as f:
-                (self.label_encoder, self.classifier) = pickle.load(f)
+                (self.id_increment, self.user_list, self.label_encoder, self.classifier) = pickle.load(f)
             return True
         return False
 
@@ -77,10 +80,13 @@ class OfflineUserClassifier:
         filename = "{}/svm_classifier.pkl".format(classifierModelDir)
         print("--- Saving classifier to '{}'".format(filename))
         with open(filename, 'wb') as f:
-            pickle.dump((self.label_encoder, self.classifier), f)
+            pickle.dump((self.id_increment, self.user_list, self.label_encoder, self.classifier), f)
 
-    def collect_embeddings(self, images, user_id):
+    def collect_embeddings_for_specific_id(self, images, user_id):
         """collect embeddings of faces to train detect - for a single user id"""
+
+        # force integer id
+        user_id = int(user_id)
 
         args = Arguments()
 
@@ -121,17 +127,18 @@ class OfflineUserClassifier:
 
         # display current representations
         self.print_embedding_status()
+        self.print_users()
 
     def identify_user(self, user_img):
 
         if self.training_status is False:
-            return (None, None)
+            return (None, None, None)
 
         start = time.time()
         embedding = self.get_embedding(user_img)
 
         if embedding is None:
-            return (None, None)
+            return (None, None, None)
 
         embedding = embedding.reshape(1, -1)
 
@@ -144,17 +151,41 @@ class OfflineUserClassifier:
         confidence = probabilities[maxI]
         user_id_pred = self.label_encoder.inverse_transform(maxI)
 
-        print "--- IDENTIFICATION"
+
+        nice_name = self.user_list[int(user_id_pred)]
 
         if np.shape(probabilities)[0] > 1:
             for i, prob in enumerate(probabilities):
+                # label encoder id: np.int64()
                 label = self.label_encoder.inverse_transform(np.int64(i))
                 print "    label: "+ str(label) + " | prob: " + str(prob)
 
         print("--- Identification took {} seconds.".format(time.time() - start))
-        return (user_id_pred, confidence)
+        return (user_id_pred, nice_name, confidence)
+
+    #  ----------- OFFLINE CLASSIFICATION UTILITIES
+
+    def get_user_id_from_name(self, search_name):
+        for user_id, name in self.user_list.iteritems():
+            if name == search_name:
+                return user_id
+        return 0
 
     #  ----------- UTILITIES
+
+    def create_new_user(self, nice_name):
+        # generate unique id
+        new_id = self.id_increment
+        self.id_increment += 1  # increment user id
+        # save nice name
+        self.user_list[int(new_id)] = nice_name
+        return new_id
+
+    def get_nice_name(self, user_id):
+        if user_id in self.user_list:
+            return self.user_list[user_id]
+        else:
+            return ""
 
     def get_embedding(self, user_img):
         args = Arguments()
@@ -172,6 +203,11 @@ class OfflineUserClassifier:
         for user_id, embeddings in self.user_embeddings.iteritems():
             print "     User" + str(user_id) + ": " + str(len(embeddings)) + " representations"
 
+    def print_users(self):
+        print "--- Current users:"
+        for user_id, name in self.user_list.iteritems():
+            print "     User: ID(" + str(user_id) + "): " + name
+
     def trigger_training(self):
         """triggers the detector training from the collected faces"""
         print "--- Triggered classifier training"
@@ -188,6 +224,7 @@ class OfflineUserClassifier:
         start = time.time()
         embeddings_accumulated = np.array([])
         labels = []
+        # label encoder id: np.int64()
         for user_id, user_embeddings in self.user_embeddings.iteritems():
             # add label
             labels = np.append(labels, np.repeat(user_id, len(user_embeddings)))

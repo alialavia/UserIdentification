@@ -58,6 +58,7 @@ namespace io {
 		}
 		void Load(); // receive response specific data from server
 		int mUserID = -1;
+		std::string mUserNiceName = "";
 		float mProbability = 0.0f;
 	};
 

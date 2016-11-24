@@ -95,7 +95,7 @@ void UserManager::ApplyUserIdentification()
 			// remove request mapping
 			RemovePointerMapping(it->second);
 			// apply user identification
-			target_user->SetUserID(response.mUserID);
+			target_user->SetUserID(response.mUserID, response.mUserNiceName);
 		}
 		else {
 			// user corresponding to request not found (may have left scene) - drop response
@@ -176,7 +176,10 @@ void UserManager::DrawUsers(cv::Mat &img)
 		enum IdentificationStatus status = it->second->GetIDStatus();
 		if (status == IDStatus_Identified)
 		{
-			text = "Status: identified - ID" + std::to_string(it->second->GetUserID());
+			int user_id = 0;
+			std::string nice_name = "";
+			it->second->GetUserID(user_id, nice_name);
+			text = "Status: " + nice_name + " - ID" + std::to_string(user_id);
 		}
 		else if (status == IDStatus_Pending)
 		{
