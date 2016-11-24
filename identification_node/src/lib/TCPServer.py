@@ -59,7 +59,22 @@ class TCPServer:
         """The main processing loop - implement in server type (blocking/parallel)"""
         raise NotImplementedError( "The basic processling loop must be implemented in the server type class." )
 
-    #  ----------- MESSAGE HANDLERS
+    #  ----------- DYNAMIC MESSAGE HANDLERS
+
+    def send_string(self, target_socket, msg):
+
+        # send message length
+        self.send_int(target_socket, len(msg))
+
+        # send string
+        totalsent = 0
+        while totalsent < len(msg):
+            sent = target_socket.send(msg[totalsent:])
+            if sent == 0:
+                raise RuntimeError("socket connection broken")
+            totalsent = totalsent + sent
+
+    #  ----------- HELPER METHODS
 
     def receive_message(self, the_socket, datasize, timeout = 2):
         """Basic message receiver for known datasize"""

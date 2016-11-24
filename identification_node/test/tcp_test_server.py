@@ -59,6 +59,7 @@ class TCPTestServer(TCPServerBlocking):
         self.send_uint(conn, 4294967000)
         self.send_bool(conn, True)
         self.send_float(conn, float(12.18948))
+        self.send_string(conn, "Hi there!")
 
     def handle_image(self, conn):
         """receive image, draw and send back"""
@@ -91,5 +92,5 @@ class TCPTestServer(TCPServerBlocking):
 
 if __name__=='__main__':
 
-    server = TCPTestServer('', 8080)
+    server = TCPTestServer('', 9999)
     server.start_server()

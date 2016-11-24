@@ -34,6 +34,7 @@ namespace io
 
 		// ----- send
 
+		bool SendKeyboard();
 		// range: -127 .. 127
 		int SendChar(char id);
 		// range:  .. 255
@@ -52,6 +53,10 @@ namespace io
 		int SendFloat(float val);
 
 		// ------ receive
+
+		std::string ReceiveStringWithVarLength();
+		int ReceiveMessage(int socket_id, char *buf, int *len);
+		int ReceiveRGBImage(cv::Mat &output, int img_width);
 
 		template<typename T>
 		T TCPClient::Receive8bit()
@@ -95,12 +100,6 @@ namespace io
 			return x;
 		}
 
-		bool SendKeyboard();
-
-		// receive
-		int ReceiveMessage(int socket_id, char *buf, int *len);
-		int ReceiveRGBImage(cv::Mat &output, int img_width);
-
 		// ------ Endianness conversion
 
 		uint32_t htonf(float f)
@@ -117,7 +116,6 @@ namespace io
 			memcpy(&x, &nf, sizeof(float));
 			return x;
 		}
-
 
 		// ------ deprecated
 		int SendImageWithLength(const cv::Mat &img);

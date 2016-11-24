@@ -117,6 +117,34 @@ bool TCPClient::OpenSocket()
 	return true;
 }
 
+std::string TCPClient::ReceiveStringWithVarLength()
+{
+	// receive char array length
+	uint32_t val;	// 32bit
+	recv(mSocketID, (char*)&val, 4, 0);
+	int nr_bytes;
+	val = ntohl(val);
+	memcpy(&nr_bytes, &val, sizeof(int));
+
+	// -----------
+
+	char * buffer = new char[nr_bytes];
+	std::string receivedString = "";
+	// receive image
+	int succ = ReceiveMessage(mSocketID, buffer, &nr_bytes);
+
+	if (succ < 0) {
+		// error
+	}
+	else
+	{
+		receivedString = std::string(buffer, nr_bytes);
+	}
+
+	delete[] buffer;
+	return receivedString;
+}
+
 // return -1 on failure, 0 on success
 int TCPClient::ReceiveMessage(int socket, char *buf, int *len)
 {
@@ -383,22 +411,20 @@ bool TCPClient::SendKeyboard()
 	int c;
 	memset(buffer, '\0', buffer_len);
 
+	// receive characters
 	for (char* p = buffer; (c = getch()) != 13; p++) {
 		printf("%c", c);
 		*p = c;
 	}
 
+	// buffer size
+	SendInt(strlen(buffer));
+
+	// send char array
 	if ((bytecount = send(mSocketID, buffer, strlen(buffer), 0)) == SOCKET_ERROR) {
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
 		return false;
 	}
-	printf("Sent bytes %d\n", bytecount);
-
-	if ((bytecount = recv(mSocketID, buffer, buffer_len, 0)) == SOCKET_ERROR) {
-		fprintf(stderr, "Error receiving data %d\n", WSAGetLastError());
-		return false;
-	}
-	printf("Recieved bytes %d\nReceived string \"%s\"\n", bytecount, buffer);
 
 	return true;
 }

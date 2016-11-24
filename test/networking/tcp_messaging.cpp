@@ -25,7 +25,6 @@ int main(int argc, char** argv)
 	{
 		if(FLAGS_message_type == "primitive")
 		{
-
 			// send request id
 			c.SendChar(2);
 
@@ -56,7 +55,8 @@ int main(int argc, char** argv)
 			std::cout << "uint: " << c.Receive32bit<unsigned int>() << std::endl;
 			std::cout << "bool: " << c.Receive8bit<int>() << std::endl;
 			std::cout << "float: " << c.Receive32bit<float>() << std::endl;
-	
+			std::cout << "string: " << c.ReceiveStringWithVarLength() << std::endl;
+			
 			// close connection
 			c.Close();
 			break;
