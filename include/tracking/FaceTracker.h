@@ -8,6 +8,9 @@
 #include <io/KinectInterface.h>
 #include "math/Math.h"
 
+#include "io/ImageHandler.h"
+
+#include <opencv2\imgproc.hpp>
 
 #define _DEBUG_FACETRACKER
 
@@ -18,13 +21,23 @@ namespace tracking
 	class RadialFaceGrid  {
 	public:
 
-		RadialFaceGrid(): 
-		image_grid(nr_steps, nr_steps, nr_steps),
-		step_size_r((roll_max - roll_min)/nr_steps),
-		step_size_p((pitch_max - pitch_min)/nr_steps),
-		step_size_y((yaw_max - yaw_min)/nr_steps)
+		RadialFaceGrid(
+			size_t interv_r_ = 3,
+			size_t interv_p_ = 6,
+			size_t interv_y_ = 10
+		): 
+			 interv_r(interv_r_),
+			 interv_p(interv_p_),
+			 interv_y(interv_y_),
+			 image_grid(interv_r_, interv_p_, interv_y_)	// init storage container
 		{
-
+			// calculate index mapping functions
+			a_r = (float)(interv_r - 1) / (cRMax - cRMin);
+			a_p = (float)(interv_p - 1) / (cPMax - cPMin);
+			a_y = (float)(interv_y - 1) / (cYMax - cYMin);
+			b_r = -a_r*cRMin;
+			b_p = -a_p*cPMin;
+			b_y = -a_y*cYMin;
 		}
 
 		~RadialFaceGrid() {
@@ -33,76 +46,126 @@ namespace tracking
 
 		void AllocateGrid() {
 			//}
-
 		}
 
 		void DumpImageGrid() {
 			// save the image grid to the hard drive
+			std::string base_name = "face_grid";
+			std::string path = "output";
+			// iterate over 3d array
+			for (int r = 0; r < image_grid.Size(0);r++) {
+				for (int p = 0; p < image_grid.Size(1); p++) {
+					for (int y = 0; y < image_grid.Size(2); y++) {
+						if (!image_grid.IsFree(r, p, y)) {
+							cv::Mat img = image_grid(r, p, y);
+				
+							// detect blur
+							//cv::Mat src_gray = cv::cvtColor(img, src_gray, CV_BGR2GRAY);
+							//Laplacian(src_gray, dst, ddepth, kernel_size, scale, delta, BORDER_DEFAULT);
 
+							// write blur
+
+							// save image
+							io::ImageHandler::SaveImage(img, path, base_name + "_" + std::to_string(r) + "_" + std::to_string(p) + "_" + std::to_string(y) + ".png");
+						}
+					}
+				}
+			}
 		}
 
+		void DisplayFaceGridPitchYaw() {
+			
+			int canvas_height = 900;
 
+			int patch_size = (int)((float)canvas_height / image_grid.Size(1));
+			int canvas_width = patch_size * image_grid.Size(2);
 
-		bool IsOccupied(int roll, int pitch, int yaw) {
+			// allocate image
+			cv::Mat canvas = cv::Mat(canvas_height, canvas_width, CV_8UC3, cv::Scalar(0, 0, 0));
+
+				for (int p = 0; p < image_grid.Size(1); p++) {
+					for (int y = 0; y < image_grid.Size(2); y++) {
+						// take first allong rol axis
+						for (int r = 0; r < image_grid.Size(0); r++) {
+							if (!image_grid.IsFree(r, p, y)) {
+								cv::Mat extr = image_grid(r, p, y);
+								// resize
+
+								std::cout << "patch size: " << patch_size << std::endl;
+								cv::resize(extr, extr, cv::Size(patch_size, patch_size));
+
+								// copy to left top
+								extr.copyTo(canvas(cv::Rect(y*patch_size, p*patch_size, extr.cols, extr.rows)));
+
+								// copy to
+								break;
+							}
+						}
+					}
+				}
+			cv::imshow("Canvas", canvas);
+			cv::waitKey(3);
+		}
+
+		bool IsFree(int roll, int pitch, int yaw) {
 			// check if we already got an image at this position
-			int iroll, ipitch, iyaw;
-			bool occupied = GetRadiantIndices(roll, pitch, yaw, iroll, ipitch, iyaw);
-
-			if(!occupied)
-			{
-				occupied = image_grid.IsFree(iroll, ipitch, iyaw);
-			}
-
-			return occupied;
-
+			int iroll = iRoll(roll);
+			int	ipitch = iPitch(pitch);
+			int iyaw = iYaw(yaw);
+			return image_grid.IsFree(iroll, ipitch, iyaw);
 		}
 
-		bool StoreSnapshot(int roll, int pitch, int yaw, cv::Mat face)
+		// NONSAVE: check first if it is free
+		bool StoreSnapshot(int roll, int pitch, int yaw, const cv::Mat &face)
 		{
-			// store snapshot in the image grid
+			int iroll = iRoll(roll);
+			int	ipitch = iPitch(pitch);
+			int iyaw = iYaw(yaw);
+			std::cout << "Store image at: ir: " << iroll << " | ip: " << ipitch << " | iy: " << iyaw << std::endl;
 
+			image_grid.CopyTo(iroll, ipitch, iyaw, face);
+	
+			return true;
 		}
 
-		bool GetRadiantIndices(int roll, int pitch, int yaw, int& iRoll, int& iYaw, int& iPitch) {
-			// calculate radiant indices for angles
 
-			bool r = false;
 
-			// check range
-			r = (roll >= roll_min && roll <= roll_max &&
-				pitch >= pitch_min && pitch <= pitch_max &&
-				yaw >= yaw_min && yaw <= yaw_max);
+		// ---------- index mapper
+		int iRoll(int roll) {
 
-			// calc indices
-			if (r) {
-				iRoll = floor(roll/step_size_r);
-				iYaw = floor(pitch/step_size_p);
-				iPitch = floor(yaw/step_size_y);
-			}
-
-			return r;
+			return floor(a_r*roll +b_r);
 		}
-
+		int iPitch(int pitch) {
+			return floor(a_p*pitch + b_p);
+		}
+		int iYaw(int yaw) {
+			return floor(a_y*yaw + b_y);
+		}
 
 		// images
 		math::Array3D<cv::Mat> image_grid;
 
+		size_t interv_r;
+		size_t interv_p;
+		size_t interv_y;
 
-		const int nr_steps = 10;
+		// image grid resolution
+		const int cRMin = -70;
+		const int cRMax = 70;
+		const int cPMin = -70;
+		const int cPMax = 70;
+		const int cYMin = -50;
+		const int cYMax = 50;
 
-		const float step_size_r;
-		const float step_size_p;
-		const float step_size_y;
+		// index mapper
+		float a_r;
+		float b_r;
+		float a_p;
+		float b_p;
+		float a_y;
+		float b_y;
 
-
-		const int roll_min = 0;
-		const int roll_max = 180;
-		const int pitch_min = 0;
-		const int pitch_max = 180;
-		const int yaw_min = 0;
-		const int yaw_max = 180;
 	};
-
 
 
 	class Face
@@ -310,9 +373,9 @@ namespace tracking
 			return S_OK;
 		}
 
-
-
-
+		std::vector<Face> GetFaces() {
+			return mFaces;
+		}
 
 
 
