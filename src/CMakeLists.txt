@@ -5,6 +5,7 @@ FOREACH( mylibfolder
 		user
 		tracking
 		math
+		imgproc
     )
 	
     ADD_SUBDIRECTORY(${mylibfolder})
