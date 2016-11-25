@@ -38,7 +38,7 @@ namespace io {
 			return pServerConn;
 		}
 
-		const NetworkRequestType cRequestID;
+		const NetworkRequestType cRequestType;
 	protected:
 		io::TCPClient* pServerConn;
 

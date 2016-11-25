@@ -83,7 +83,7 @@ void NetworkRequestHandler::processRequests()
 			// submit the request to the server
 			mRequestsLock.lock();
 #ifdef _DEBUG_REQUESTHANDLER
-			std::cout << "--- Processing request of type ID(" << mRequests.front()->cRequestID << ") | total: " << mRequests.size() << std::endl;
+			std::cout << "--- Processing request of type ID(" << mRequests.front()->cRequestType << ") | total: " << mRequests.size() << std::endl;
 #endif
 			NetworkRequest* request_ptr = mRequests.front();
 			mRequests.pop();	// pop front
