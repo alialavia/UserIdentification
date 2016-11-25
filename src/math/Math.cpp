@@ -1,20 +1,37 @@
 
 #include <math/Math.h>
 #include <opencv2/core/mat.hpp>
+#include <opencv2\imgproc.hpp>
 
 using namespace math;
+
+
+template<typename T>
+void Array3D<T>::CopyTo(size_t x, size_t y, size_t z, T in)
+{
+	size_t pos = GetPos(x, y, z);
+	if (mData.at(pos) != nullptr)
+	{
+		// free old memory
+		delete(mData.at(pos));
+	}
+	// allocate new object
+	T * obj = new T(in);
+
+	// assign
+	mData.at(pos) = obj;
+}
+
 
 // template specification
 template<>
 void Array3D<cv::Mat>::CopyTo(size_t x, size_t y, size_t z, cv::Mat in)
 {
 	// allocate new element
-
 	cv::Mat * m = new cv::Mat();
 
-	*m = in.clone();
-
 	// make deep copy of input
+	*m = in.clone();
 
 	// assign
 	size_t pos = x + y * mWidth + z * mWidth * mHeight;
