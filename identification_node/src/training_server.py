@@ -70,7 +70,7 @@ class TCPTestServer(TCPServerBlocking):
         # identify
         user_id, nice_name, confidence = self.classifier.identify_user(user_face)
 
-        if (user_id is None) or (confidence < 2.0):
+        if (user_id is None):
             print "--- Identification Error"
             # send back error response
             self.send_int(conn, 99)
