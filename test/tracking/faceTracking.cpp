@@ -6,8 +6,6 @@
 #include "io/ImageHandler.h"
 #include <gflags/gflags.h>
 
-#include <io/FaceInterface.h>
-
 DEFINE_string(output, "output", "Output path");
 
 int main(int argc, char** argv)

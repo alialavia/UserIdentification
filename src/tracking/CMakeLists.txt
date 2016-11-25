@@ -21,6 +21,7 @@ SET(TARGET_SRC
 # link externally (library paths included over "find_library(${libname})")
 SET(TARGET_EXTERNAL_LIBRARIES
 		${OpenCV_LIBS}			# OpenCV 3
+		Math
 )
 
 SETUP_LIBRARY(${LIB_NAME})

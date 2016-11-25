@@ -6,7 +6,7 @@
 #include <vector>
 #include <opencv2\opencv.hpp>
 #include <io/KinectInterface.h>
-
+#include "math/Math.h"
 
 
 #define _DEBUG_FACETRACKER
@@ -15,30 +15,23 @@ namespace tracking
 {
 
 
-	class RadialFaceGrid {
+	class RadialFaceGrid  {
 	public:
 
-		RadialFaceGrid(): image_grid(){
+		RadialFaceGrid(): 
+		image_grid(nr_steps, nr_steps, nr_steps),
+		step_size_r((roll_max - roll_min)/nr_steps),
+		step_size_p((pitch_max - pitch_min)/nr_steps),
+		step_size_y((yaw_max - yaw_min)/nr_steps)
+		{
 
 		}
+
 		~RadialFaceGrid() {
 
 		}
 
 		void AllocateGrid() {
-
-			// create empty 3x3 grid: rollxpitchxyaw
-
-			vector<vector<vector<double> > > array3D;
-
-
-
-			//for (int roll = roll_min; roll < roll_max; roll = roll + rad_step_size) {
-			//	for (int pitch = pitch_min; pitch < pitch_max; pitch = pitch + rad_step_size) {
-			//		for (int yaw = yaw_min; yaw < yaw_max; yaw = yaw + rad_step_size) {
-			//			image_grid[][][]
-			//		}
-			//	}
 			//}
 
 		}
@@ -48,13 +41,25 @@ namespace tracking
 
 		}
 
-		void StoreSnapshot(int roll, int pitch, int yaw)
-		{
-			// store snapshot in the image grid
-		}
+
 
 		bool IsOccupied(int roll, int pitch, int yaw) {
 			// check if we already got an image at this position
+			int iroll, ipitch, iyaw;
+			bool occupied = GetRadiantIndices(roll, pitch, yaw, iroll, ipitch, iyaw);
+
+			if(!occupied)
+			{
+				occupied = image_grid.IsFree(iroll, ipitch, iyaw);
+			}
+
+			return occupied;
+
+		}
+
+		bool StoreSnapshot(int roll, int pitch, int yaw, cv::Mat face)
+		{
+			// store snapshot in the image grid
 
 		}
 
@@ -70,22 +75,25 @@ namespace tracking
 
 			// calc indices
 			if (r) {
-				iRoll = floor(roll/rad_step_size);
-				iYaw = floor(pitch/rad_step_size);
-				iPitch = floor(yaw/rad_step_size);
+				iRoll = floor(roll/step_size_r);
+				iYaw = floor(pitch/step_size_p);
+				iPitch = floor(yaw/step_size_y);
 			}
 
 			return r;
 		}
 
-		// occupacy grid
-
-		int min[1][1][1] = { { { 100 } } };
 
 		// images
-		Array3D image_grid;
+		math::Array3D<cv::Mat> image_grid;
 
-		const int rad_step_size = 20;
+
+		const int nr_steps = 10;
+
+		const float step_size_r;
+		const float step_size_p;
+		const float step_size_y;
+
 
 		const int roll_min = 0;
 		const int roll_max = 180;
@@ -94,6 +102,8 @@ namespace tracking
 		const int yaw_min = 0;
 		const int yaw_max = 180;
 	};
+
+
 
 	class Face
 	{
