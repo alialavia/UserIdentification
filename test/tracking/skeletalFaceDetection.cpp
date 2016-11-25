@@ -79,8 +79,6 @@ int main(int argc, char** argv)
 			cv::imshow("Color image", color_image);
 			cv::waitKey(3);
 
-
-
 		} else {
 			// error handling (e.g. check if serious crash or just pending frame in case our system runs > 30fps)
 

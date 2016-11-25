@@ -35,6 +35,17 @@ int main(int argc, char** argv)
 
 	tracking::FaceTracker ft(pSensor);
 
+	tracking::RadialFaceGrid grid;
+	cv::Mat face_snap;
+
+	int cRMin = 0;
+	int cRMax = 0;
+	int cPMin = 0;
+	int cPMax = 0;
+	int cYMin = 0;
+	int cYMax = 0;
+
+
 	while (true) {
 
 		// polling
@@ -43,7 +54,6 @@ int main(int argc, char** argv)
 
 		}
 
-
 		// check if there is a new frame available
 		if (SUCCEEDED(hr)) {
 
@@ -51,10 +61,10 @@ int main(int argc, char** argv)
 			k.GetImageCopyRGB(color_image);
 
 			// extract raw face data
-			FaceData* faces = k.GetFaceDataReference();
+			FaceData* face_data_raw = k.GetFaceDataReference();
 
 			// copy/convert
-			ft.ExtractFacialData(faces);
+			ft.ExtractFacialData(face_data_raw);
 
 			// get face bounding boxes
 			std::vector<cv::Rect2f> bounding_boxes;
@@ -62,6 +72,8 @@ int main(int argc, char** argv)
 
 			if (bounding_boxes.size() > 0)
 			{
+
+				face_snap = color_image(bounding_boxes[0]);
 				//cv::Mat face = color_image(bounding_boxes[0]);
 				//// show image
 				//cv::imshow("Face", face);
@@ -76,20 +88,68 @@ int main(int argc, char** argv)
 				//}
 			}
 
+
+			// faces
+			std::vector<tracking::Face> faces = ft.GetFaces();
+			for (int i = 0; i < faces.size();i++) {
+
+				int roll, pitch, yaw;
+				faces[i].GetEulerAngles(roll, pitch, yaw);
+
+				if (roll < cRMin) {cRMin = roll;}
+				if (roll > cRMax) {cRMax = roll;}
+				if (pitch < cPMin) { cPMin = pitch; }
+				if (pitch > cPMax) { cPMax = pitch; }
+				if (yaw < cYMin) { cYMin = yaw; }
+				if (yaw > cYMax) { cYMax = yaw; }
+
+				//std::cout << "r: " << roll << " | p: " << pitch << " | y: " << yaw << std::endl;
+				// mirror yaw
+				yaw = -yaw;
+				try
+				{
+					// add face if not yet capture from this angle
+					if (grid.IsFree(roll, pitch, yaw)) {
+						grid.StoreSnapshot(roll, pitch, yaw, face_snap);
+						grid.DisplayFaceGridPitchYaw();
+					}
+				}
+				catch (...)
+				{
+
+
+				}
+
+			}
+
 			// draw bounding boxes
 			ft.RenderFaceBoundingBoxes(color_image, base::ImageSpace_Color);
 			ft.RenderFaceFeatures(color_image, base::ImageSpace_Color);
 
+
 			// show image
 			cv::imshow("Color image", color_image);
-			cv::waitKey(3);
+			int key = cv::waitKey(3);
+
+			if (key == 32)	// space = save
+			{
+				break;
+			}
 
 		} else {
 			// error handling (e.g. check if serious crash or just pending frame in case our system runs > 30fps)
 
 		}
+	}	// end while camera loop
 
-	}
+
+	std::cout << "R: " << cRMin << "° .. " << cRMax << "°" << std::endl;
+	std::cout << "P: " << cPMin << "° .. " << cPMax << "°" << std::endl;
+	std::cout << "Y: " << cYMin << "° .. " << cYMax << "°" << std::endl;
+
+
+	// dump faces
+	grid.DumpImageGrid();
 
 
 	return 0;

@@ -11,6 +11,8 @@
 #include <opencv2/opencv.hpp>
 #include <Math/Math.h>
 
+#include <tracking\FaceTracker.h>
+
 void ScopedCopy(math::Array3D<cv::Mat> &arr, cv::Mat*& ptr)
 {
 	// create in scope
@@ -36,8 +38,8 @@ void ScopedOperatorCopy(math::Array3D<cv::Mat> &arr, cv::Mat*& ptr)
 }
 
 
-int main(int argc, char** argv)
-{
+void BundleTestArray3D() {
+
 	cv::Mat * m = new cv::Mat(cv::Mat::zeros(20, 10, CV_32F));
 
 	// test 1: copying
@@ -61,7 +63,26 @@ int main(int argc, char** argv)
 	cv::imshow("blue", black);
 	cv::waitKey(0);
 	cv::destroyAllWindows();
+}
 
+void BundleTestFaceGrid() {
+	tracking::RadialFaceGrid grid;
+
+	cv::Mat in = cv::Mat(100, 200, CV_8UC3, cv::Scalar(255, 0, 0));
+	grid.StoreSnapshot(0, 0, 0, in);
+
+	cv::circle(in, cv::Point(0, 0), 20, cv::Scalar(255, 255, 0), cv::LINE_4);
+
+	// draw
+	grid.DisplayFaceGridPitchYaw();
+
+	cv::waitKey(0);
+}
+
+int main(int argc, char** argv)
+{
+
+	BundleTestFaceGrid();
 
 	return 0;
 } 
