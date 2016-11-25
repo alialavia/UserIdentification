@@ -94,6 +94,10 @@ void UserManager::ApplyUserIdentification()
 			User* target_user = it->second;
 			// remove request mapping
 			RemovePointerMapping(it->second);
+
+			// check if other user in scene has same id
+			// TODO: Handle Missdetection
+
 			// apply user identification
 			target_user->SetUserID(response.mUserID, response.mUserNiceName);
 		}
@@ -109,7 +113,7 @@ void UserManager::ApplyUserIdentification()
 	while (pRequestHandler->PopResponse(&err_response, request))
 	{
 		// display response
-		std::cout << "--- Invalid request: " << err_response.mMessage << std::endl;
+		std::cout << "--- Error response: " << err_response.mMessage << std::endl;
 
 		// locate user for which request was sent
 		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request);
@@ -120,7 +124,11 @@ void UserManager::ApplyUserIdentification()
 			// remove request mapping
 			RemovePointerMapping(it->second);
 			// reset user identification status if it was an identification request
-			if (request->cRequestID == io::NetworkRequest_SingleImageIdentification) {
+
+#ifdef _DEBUG_USERMANAGER
+			std::cout << "--- RequestID (type): " << request->cRequestType << std::endl;
+#endif
+			if (request->cRequestType == io::NetworkRequest_SingleImageIdentification) {
 				target_user->SetIDStatus(user::IDStatus_Unknown);
 			}
 		}
