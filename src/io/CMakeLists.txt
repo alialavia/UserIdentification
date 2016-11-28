@@ -4,6 +4,7 @@ SET(TARGET_H
     ${HEADER_PATH}/KinectInterface.h
     ${HEADER_PATH}/Networking.h
     ${HEADER_PATH}/ImageHandler.h
+    ${HEADER_PATH}/CSVHandling.h
     ${HEADER_PATH}/RequestHandler.h
     ${HEADER_PATH}/RequestTypes.h
     ${HEADER_PATH}/ResponseTypes.h
