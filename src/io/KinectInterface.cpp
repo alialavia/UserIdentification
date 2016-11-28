@@ -26,10 +26,10 @@ using namespace io;
 
 KinectSensorMultiSource::KinectSensorMultiSource():
 	pSourceReader(nullptr),
-	mColorWidth(1920),
-	mColorHeight(1080),
-	mDepthImageWidth(480),
-	mDepthImageHeight(320),
+	mColorWidth(base::StreamSize_WidthColor),
+	mColorHeight(base::StreamSize_HeightColor),
+	mDepthImageWidth(base::StreamSize_WidthDepth),
+	mDepthImageHeight(base::StreamSize_HeightDepth),
 	pColorImageBuffer(nullptr),
 	pDepthBuffer(nullptr),
 	pBodyIndexBuffer(nullptr),
@@ -95,6 +95,9 @@ void KinectSensorMultiSource::Close()
 	}
 
 	SafeRelease(pSensor);
+
+	// coordinate mapper
+	SafeRelease(m_pCoordinateMapper);
 }
 
 HRESULT KinectSensorMultiSource::Open(int timeout)
@@ -152,6 +155,12 @@ HRESULT KinectSensorMultiSource::Open(int timeout)
 				hr = m_pFaceFrameSources[i]->OpenReader(&m_pFaceFrameReaders[i]);
 			}
 		}
+	}
+
+	// coordinate mapper
+	if (SUCCEEDED(hr))
+	{
+		hr = pSensor->get_CoordinateMapper(&m_pCoordinateMapper);
 	}
 
 	long start = time(0) * 1000;
@@ -611,6 +620,19 @@ HRESULT KinectSensorMultiSource::ProcessDepthFrame(IDepthFrame* depth_frame, int
 
 // --------------------- DEEP COPY DATA ACCESS
 
+void KinectSensorMultiSource::GetImageCopyBodyIndex(cv::Mat& dst) const
+{
+	mSensorMutex.lock();
+	// uint 8bit (0-256), players: 0-5
+	cv::Mat cv_img(BodyIndexStreamHeight, BodyIndexStreamWidth, CV_8UC1, reinterpret_cast<void*>(pBodyIndexBuffer));
+	cv::Mat resized;
+	cv::resize(cv_img, resized, cv::Size(BodyIndexStreamWidth, BodyIndexStreamHeight));
+
+	// set pointer of dst to resized, colored image
+	dst = resized;
+	mSensorMutex.unlock();
+}
+
 void KinectSensorMultiSource::GetImageCopyBodyIndexColored(cv::Mat& dst) const
 {
 	mSensorMutex.lock();
@@ -653,6 +675,71 @@ void KinectSensorMultiSource::GetImageCopyBodyIndexColored(cv::Mat& dst) const
 	mSensorMutex.unlock();
 }
 
+// TODO: fix mask offset (probably comming from coordinate mapper)
+void KinectSensorMultiSource::GetImageCopyRGBSubtracted(cv::Mat& dst) const {
+	mSensorMutex.lock();
+
+	// allocate buffers
+	DepthSpacePoint* p_depth_coords = new DepthSpacePoint[ColorImageStreamHeight * ColorImageStreamWidth];
+
+	// map body index to color space
+	HRESULT hr = m_pCoordinateMapper->MapColorFrameToDepthSpace(
+		DepthStreamHeight * DepthStreamWidth, // depth size
+		pDepthBuffer,
+		ColorImageStreamHeight * ColorImageStreamWidth, // color size
+		p_depth_coords
+	);
+
+	RGBQUAD* pOutputRGB = new RGBQUAD[ColorImageStreamHeight * ColorImageStreamWidth];
+	RGBQUAD black_pt = { 0,0,0 };
+
+	// loop over output pixels
+	for (int colorIndex = 0; colorIndex < (ColorImageStreamHeight * ColorImageStreamWidth); ++colorIndex)
+	{
+		// default setting source to copy from the background pixel
+		const RGBQUAD* pSrc = &black_pt;
+		DepthSpacePoint p = p_depth_coords[colorIndex];
+
+		// Values that are negative infinity means it is an invalid color to depth mapping so we
+		// skip processing for this pixel
+		if (p.X != -std::numeric_limits<float>::infinity() && p.Y != -std::numeric_limits<float>::infinity())
+		{
+			// get depth coordinates
+			int depthX = static_cast<int>(p.X + 0.5f);
+			int depthY = static_cast<int>(p.Y + 0.5f);
+
+			if ((depthX >= 0 && depthX < DepthStreamWidth) && (depthY >= 0 && depthY < DepthStreamHeight))
+			{
+				BYTE player = pBodyIndexBuffer[depthX + (depthY * DepthStreamWidth)];
+
+				// if we're tracking a player for the current pixel, draw from the color camera
+				if (player != 0xff)
+				{
+					pSrc = pColorImageBuffer + colorIndex;
+				}
+			}
+		}
+
+		// write output
+		pOutputRGB[colorIndex] = *pSrc;
+	}
+
+	// mat header
+	cv::Mat cv_img(ColorImageStreamHeight, ColorImageStreamWidth, CV_8UC4, reinterpret_cast<void*>(pOutputRGB));
+	cv::Mat resized;
+
+	// resize/copy
+	cv::resize(cv_img, resized, cv::Size(mColorWidth, mColorHeight));
+
+	// rgba to rgb
+	cv::cvtColor(resized, resized, CV_RGBA2RGB);
+	dst = resized;
+
+	// cleanup
+	delete(pOutputRGB);
+	mSensorMutex.unlock();
+}
+
 void KinectSensorMultiSource::GetImageCopyRGBA(cv::Mat& dst) const
 {
 	mSensorMutex.lock();
@@ -662,8 +749,9 @@ void KinectSensorMultiSource::GetImageCopyRGBA(cv::Mat& dst) const
 	cv::Mat cv_img(ColorImageStreamHeight, ColorImageStreamWidth, CV_8UC4, reinterpret_cast<void*>(pColorImageBuffer));
 
 	// alternatively copy directly to cv image
-	// TODO: check if this could be useful
-	// pFrame->CopyFrameDataToArray(iWidth * iHeight,reinterpret_cast<UINT16*>(cv_img.data));
+	// Set Coordinate Buffer to cv::Mat
+	//cv::Mat rawMat = cv::Mat(colorHeight, colorWidth, CV_8UC4, reinterpret_cast<void*>(pColorImageBuffer)).clone();
+
 
 	cv::Mat resized;
 

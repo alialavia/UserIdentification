@@ -66,7 +66,9 @@ namespace io
 		// get deep copy of data
 		void GetImageCopyRGBA(cv::Mat& dst) const;
 		void GetImageCopyRGB(cv::Mat& dst) const;
+		void GetImageCopyRGBSubtracted(cv::Mat& dst) const;
 		void GetImageCopyDepth(cv::Mat& dst) const;
+		void GetImageCopyBodyIndex(cv::Mat& dst) const;
 		void GetImageCopyBodyIndexColored(cv::Mat& dst) const;
 		void GetImageCopyRGBSkeleton(cv::Mat& dst) const;
 
@@ -95,6 +97,7 @@ namespace io
 		// sensor handles
 		mutable std::mutex mSensorMutex;
 		IKinectSensor* pSensor;
+		ICoordinateMapper* m_pCoordinateMapper;
 
 		// multisource reader
 		IMultiSourceFrameReader* pSourceReader;
