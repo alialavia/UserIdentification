@@ -13,7 +13,9 @@ SET(TARGET_COMMON_LIBRARIES
 	IO
 	User
 	gflags
+	Tracking
 )
 
 ADD_SUBDIRECTORY(app1)
 ADD_SUBDIRECTORY(face_captures)
+ADD_SUBDIRECTORY(embeddings_from_images)
