@@ -20,6 +20,7 @@ namespace io {
 	{
 		NetworkRequest_SingleImageIdentification = 1,
 		NetworkRequest_BatchImageIdentification = 2,
+		NetworkRequest_EmbeddingCalculationSingleImage = 3,
 	};
 
 	// request type
@@ -87,6 +88,42 @@ namespace io {
 		cv::Mat mImage;
 
 	};
+
+	// embedding calculation
+	class EmbeddingCalculationSingleImage : public NetworkRequest
+	{
+	public:
+		EmbeddingCalculationSingleImage(
+			io::TCPClient* server_conn,
+			cv::Mat img
+		) :
+			NetworkRequest(server_conn, NetworkRequest_EmbeddingCalculationSingleImage),
+			mImage(img)
+		{
+		}
+
+	protected:
+
+		// submit specific payload
+		void SubmitPayload() {
+
+#ifdef _DEBUG
+			if (mImage.size().width != mImage.size().height) {
+				throw std::invalid_argument("Invalid image dimensions - Image must be quadratic!");
+			}
+#endif
+			// send image dimension
+			pServerConn->SendUInt(mImage.size().width);
+
+			// send image
+			pServerConn->SendRGBImage(mImage);
+		}
+
+		// payload: quadratic(!) image
+		cv::Mat mImage;
+
+	};
+
 
 
 }

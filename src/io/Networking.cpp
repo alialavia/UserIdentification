@@ -146,7 +146,7 @@ std::string TCPClient::ReceiveStringWithVarLength()
 }
 
 // return -1 on failure, 0 on success
-int TCPClient::ReceiveMessage(int socket, char *buf, int *len)
+int TCPClient::ReceiveMessage(SOCKET socket, char *buf, int *len)
 {
 	int total = 0;        // how many bytes we've received
 	int bytesleft = *len; // how many we have left to receive

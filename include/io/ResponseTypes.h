@@ -11,7 +11,8 @@ namespace io {
 	// response IDs: received from server
 	enum NetworkResponseType
 	{
-		NetworkResponse_IdentificationResponse = 1
+		NetworkResponse_IdentificationResponse = 1,
+		NetworkResponse_EmbeddingResponse = 2
 	};
 
 
@@ -71,6 +72,18 @@ namespace io {
 		void Load() {};
 		std::string mMessage = "Invalid response";
 	};
+
+	class EmbeddingResponse : public NetworkResponse
+	{
+	public:
+		EmbeddingResponse(io::TCPClient* conn = nullptr):NetworkResponse(conn)
+		{
+		}
+		void Load(); // receive response specific data from server
+		static const int cNrEmbeddings = 128;
+		double mEmbedding[cNrEmbeddings];
+	};
+
 
 }
 

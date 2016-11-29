@@ -9,6 +9,7 @@ std::type_index ResponseFactory::AllocateAndLoad(NetworkResponseType type_id, io
 
 	void* response = nullptr;
 
+	// TODO: cleanup/auto type detection
 	if (type_id == NetworkResponse_IdentificationResponse)
 	{
 		IdentificationResponse* resp = nullptr;
@@ -17,6 +18,12 @@ std::type_index ResponseFactory::AllocateAndLoad(NetworkResponseType type_id, io
 		ptr = resp;
 		return typeid(IdentificationResponse);
 
+	}else if(type_id == NetworkResponse_EmbeddingResponse){
+		EmbeddingResponse* resp = nullptr;
+		resp = new EmbeddingResponse(conn);
+		resp->Load();
+		ptr = resp;
+		return typeid(EmbeddingResponse);
 	}else
 	{
 		ErrorResponse* resp = nullptr;
@@ -38,3 +45,14 @@ void IdentificationResponse::Load()
 	mUserNiceName = pConn->ReceiveStringWithVarLength();
 	mProbability = pConn->Receive32bit<float>();
 }
+
+void EmbeddingResponse::Load()
+{
+	// load 128 dimensional vector
+	for(size_t i=0;i<cNrEmbeddings;i++)
+	{
+		mEmbedding[i] = pConn->Receive64bit<double>();
+	}
+}
+
+

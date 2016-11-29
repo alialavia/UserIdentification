@@ -61,7 +61,7 @@ namespace io
 		// ------ receive
 
 		std::string ReceiveStringWithVarLength();
-		int ReceiveMessage(int socket_id, char *buf, int *len);
+		int ReceiveMessage(SOCKET socket_id, char *buf, int *len);
 		int ReceiveRGBImage(cv::Mat &output, int img_width);
 
 		template<typename T>
