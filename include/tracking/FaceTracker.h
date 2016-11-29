@@ -11,8 +11,6 @@
 #include "io/ImageHandler.h"
 #include <opencv2\imgproc.hpp>
 
-#include <io\CSVHandling.h>
-
 #define _DEBUG_FACETRACKER
 
 namespace tracking
@@ -44,100 +42,8 @@ namespace tracking
 
 		}
 
-		void AllocateGrid() {
-			//}
-		}
-
-		void DumpImageGrid() {
-			// save the image grid to the hard drive
-			std::string base_name = "face_grid";
-			std::string path = "output";
-
-			io::CSVWriter o_h("picture_log.csv");
-
-			// iterate over 3d array
-			for (int r = 0; r < image_grid.Size(0);r++) {
-				for (int p = 0; p < image_grid.Size(1); p++) {
-					for (int y = 0; y < image_grid.Size(2); y++) {
-						if (!image_grid.IsFree(r, p, y)) {
-							cv::Mat img = image_grid(r, p, y);
-				
-							// detect blur
-							//cv::Mat src_gray = cv::cvtColor(img, src_gray, CV_BGR2GRAY);
-							//Laplacian(src_gray, dst, ddepth, kernel_size, scale, delta, BORDER_DEFAULT);
-
-							// write blur
-
-							std::string filename = base_name + "_" + std::to_string(r) + "_" + std::to_string(p) + "_" + std::to_string(y) + ".png";
-
-							// save image
-							io::ImageHandler::SaveImage(img, path, filename);
-
-							// save file name and metadata
-							o_h.addEntry<std::string>(filename);
-
-
-							cv::Vec3d precies_angles = angles[];
-
-							// roll, pitch, yaw
-							o_h.addEntry<int>
-
-							o_h.startNewRow();
-						}
-					}
-				}
-			}
-		}
-
-		void DisplayFaceGridPitchYaw() {
-			
-			int canvas_height = 900;
-
-			int patch_size = (int)((float)canvas_height / image_grid.Size(1));
-			int canvas_width = patch_size * image_grid.Size(2);
-
-			// allocate image
-			cv::Mat canvas = cv::Mat(canvas_height, canvas_width, CV_8UC3, cv::Scalar(0, 0, 0));
-
-				for (int p = 0; p < image_grid.Size(1); p++) {
-					for (int y = 0; y < image_grid.Size(2); y++) {
-						// take first allong rol axis
-						for (int r = 0; r < image_grid.Size(0); r++) {
-							if (!image_grid.IsFree(r, p, y)) {
-								cv::Mat extr = image_grid(r, p, y);
-								bool test = image_grid.IsFree(r, p, y);
-
-
-								size_t pos = image_grid.GetPos(r, p, y);
-								// 75 = 0+ 1*3 + 4* 3*6
-
-								try
-								{
-									cv::resize(extr, extr, cv::Size(patch_size, patch_size));
-								}
-								catch (...)
-								{
-
-
-									// resize
-									std::cout << "-------------------------------\n";
-									std::cout << "patch size: " << patch_size << " | " << extr.cols << " | " << extr.rows << std::endl;
-			
-
-								}
-
-								// copy to left top
-								extr.copyTo(canvas(cv::Rect(y*patch_size, p*patch_size, extr.cols, extr.rows)));
-
-								// copy to
-								break;
-							}
-						}
-					}
-				}
-			cv::imshow("Canvas", canvas);
-			cv::waitKey(3);
-		}
+		void DumpImageGrid(std::string filename = "capture", std::string log_name = "face_log.csv", std::string out_folder = "face_grid");
+		void DisplayFaceGridPitchYaw();
 
 		bool IsFree(int roll, int pitch, int yaw) {
 			// check if we already got an image at this position
@@ -147,28 +53,19 @@ namespace tracking
 			return image_grid.IsFree(iroll, ipitch, iyaw);
 		}
 
-		// NONSAVE: check first if it is free
+		// throws exception if pose out of range
 		bool StoreSnapshot(int roll, int pitch, int yaw, const cv::Mat &face)
 		{
 			int iroll = iRoll(roll);
 			int	ipitch = iPitch(pitch);
 			int iyaw = iYaw(yaw);
-			std::cout << "Store image at: ir: " << iroll << " | ip: " << ipitch << " | iy: " << iyaw << std::endl;
-	
-			// TODO: debug why face is not stored
-			// last index: 0,1,4
-			if (face.cols == 0) {
-				std::cout << "---- STOP!\n";
-				throw std::invalid_argument("Invalid image");
-			}
-
-			// store rotation
-			int pos = image_grid.GetPos(roll, pitch, yaw);
-			angles[pos] = cv::Vec3i(roll, pitch, yaw);
 
 			// save image
-			image_grid.CopyTo(iroll, ipitch, iyaw, face);
-	
+			cv::Mat * ptr = image_grid.CopyTo(iroll, ipitch, iyaw, face);
+			cv::Vec3d ang = cv::Vec3d(roll, pitch, yaw);
+
+			// store rotation
+			angles[ptr] = ang;
 			return true;
 		}
 
@@ -187,7 +84,7 @@ namespace tracking
 		math::Array3D<cv::Mat> image_grid;
 
 		// array3d index to precies angles
-		std::map<int, cv::Vec3i> angles;
+		std::map<cv::Mat*, cv::Vec3d> angles;
 
 		size_t interv_r;
 		size_t interv_p;
@@ -208,7 +105,6 @@ namespace tracking
 		float b_p;
 		float a_y;
 		float b_y;
-
 	};
 
 
@@ -255,180 +151,21 @@ namespace tracking
 			
 		}
 
-		HRESULT ExtractFacialData(FaceData face_data[NR_USERS])
-		{
+		HRESULT ExtractFacialData(FaceData face_data[NR_USERS]);
 
-			HRESULT hr = E_FAIL;
-			// reset tracking data
-			mUserIDs.clear();
-			mFaces.clear();
-
-			for (int iFace = 0; iFace < NR_USERS; ++iFace)
-			{
-				FaceData fd = face_data[iFace];
-				if (fd.tracked) {
-					// new face container
-					Face face_container;
-
-					// bounding boxes
-					face_container.boundingBox = cv::Rect2f(
-						cv::Point2f(fd.boundingBox.Left, fd.boundingBox.Bottom),
-						cv::Point2f(fd.boundingBox.Right, fd.boundingBox.Top)
-					);
-					face_container.boundingBoxIR = cv::Rect2f(
-						cv::Point2f(fd.boundingBoxIR.Top, fd.boundingBoxIR.Left),
-						cv::Point2f(fd.boundingBoxIR.Bottom, fd.boundingBoxIR.Right)
-					);
-
-					// rotation
-					face_container.Rotation = cv::Vec4f(fd.Rotation.x, fd.Rotation.y, fd.Rotation.z, fd.Rotation.w);
-
-					// copy face points
-					std::memcpy(face_container.Points, fd.Points, FacePointType::FacePointType_Count * sizeof(PointF));
-					std::memcpy(face_container.PointsIR, fd.PointsIR, FacePointType::FacePointType_Count * sizeof(PointF));
-
-					// properties
-					std::memcpy(face_container.Properties, fd.Properties, FaceProperty::FaceProperty_Count * sizeof(DetectionResult));
-
-					// save
-					mFaces.push_back(face_container);
-					mUserIDs.push_back(iFace);
-				}
-			}
-
-			return hr;
-
-		}
-
-		int GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space) const
-		{
-
-			GetFaceBoundingBoxes(bounding_boxes, space);
-
-			float xmin, xmax, ymin, ymax, width, height;
-
-			int srcWidth, srcHeight;
-			if ((base::ImageSpace_Color & space) == base::ImageSpace_Color)
-			{
-				srcWidth = base::StreamSize_WidthColor;
-				srcHeight = base::StreamSize_HeightColor;
-			}
-			else
-			{
-				srcWidth = base::StreamSize_WidthDepth;
-				srcHeight = base::StreamSize_HeightDepth;
-			}
-
-			// check for boundary overlapping values
-			for (size_t i = 0; i<bounding_boxes.size(); i++)
-			{
-				xmin = (bounding_boxes[i].x > 0 ? bounding_boxes[i].x : 0);
-				ymin = (bounding_boxes[i].y > 0 ? bounding_boxes[i].y : 0);
-				width = (bounding_boxes[i].x + bounding_boxes[i].width > (srcWidth - 1) ? srcWidth - bounding_boxes[i].x - 1 : bounding_boxes[i].width);
-				height = (bounding_boxes[i].y + bounding_boxes[i].height > (srcHeight - 1) ? srcHeight - bounding_boxes[i].y - 1 : bounding_boxes[i].height);
-				bounding_boxes[i].x = xmin;
-				bounding_boxes[i].y = ymin;
-				bounding_boxes[i].width = width;
-				bounding_boxes[i].height = height;
-			}
-			return bounding_boxes.size();
-
-		}
-
-
-		int GetUserSceneIDs(std::vector<int> &ids) const
-		{
-			ids = mUserIDs;
-			return mUserIDs.size();
-		}
-
-		/*
-		void drawFaces(cv::Mat& dst)
-		{
-		for (int iFace = 0; iFace < NR_USERS; ++iFace)
-		{
-		cv::rectangle(
-		dst,
-		cv::Point(mFaces[iFace].faceBox.Bottom, mFaces[iFace].faceBox.Right),
-		cv::Point(mFaces[iFace].faceBox.Bottom, mFaces[iFace].faceBox.Left),
-		cv::Scalar(255, 255, 255)
-		);
-		}
-
-		cv::imshow("Color image", dst);
-		cv::waitKey(3);
-		}
-
-		void printFaces()
-		{
-		// iterate through each face reader
-		for (int iFace = 0; iFace < NR_USERS; ++iFace)
-		{
-		if (mFaces[iFace].faceBox.Bottom > 0 && mFaces[iFace].faceBox.Top > 0)
-		{
-		std::cout << "Face " << iFace << " - " << mFaces[iFace].faceBox.Bottom << " - " << mFaces[iFace].faceBox.Top << "\n";
-		}
-		}
-		}
-		*/
-
-		int GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space) const
-		{
-			bounding_boxes.clear();
-			bool color_space = (base::ImageSpace_Color & space) == base::ImageSpace_Color;
-			for (size_t j = 0; j < mFaces.size(); j++)
-			{
-				RectI bb;
-				if (color_space) {
-					bounding_boxes.push_back(mFaces[j].boundingBox);
-				}
-				else {
-					bounding_boxes.push_back(mFaces[j].boundingBoxIR);
-				}
-			}
-			return bounding_boxes.size();
-		}
-
-		HRESULT RenderFaceBoundingBoxes(cv::Mat &target, base::ImageSpace space) const
-		{
-			// get face bounding boxes
-			std::vector<cv::Rect2f> bounding_boxes;
-			GetFaceBoundingBoxesRobust(bounding_boxes, space);
-
-			// draw bounding boxes
-			for (size_t i = 0; i < bounding_boxes.size(); i++)
-			{
-				cv::rectangle(target, bounding_boxes[i], cv::Scalar(0, 0, 255), 2, cv::LINE_4);
-			}
-
-			return S_OK;
-		}
-
-
-		HRESULT RenderFaceFeatures(cv::Mat &target, base::ImageSpace space) const
-		{
-			for (size_t iFace = 0; iFace < mFaces.size(); iFace++)
-			{
-				for (int i = 0; i < FacePointType::FacePointType_Count; i++) {
-					cv::circle(target, cv::Point2f(mFaces[iFace].Points[i].X, mFaces[iFace].Points[i].Y), 4, cv::Scalar(0, 255, 0), cv::LINE_4);
-				}
-			}
-
-			return S_OK;
-		}
-
-		std::vector<Face> GetFaces() {
-			return mFaces;
-		}
-
-
+		int GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space) const;
+		int GetUserSceneIDs(std::vector<int> &ids) const;
+		int GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space) const;
+		std::vector<Face> GetFaces();
+		
+		HRESULT RenderFaceBoundingBoxes(cv::Mat &target, base::ImageSpace space) const;
+		HRESULT RenderFaceFeatures(cv::Mat &target, base::ImageSpace space) const;
 
 	private:
 		IKinectSensor* m_pKinectSensor;
 		// tracked user ids
 		std::vector<int> mUserIDs;
 		std::vector<Face> mFaces;
-
 
 	};
 
