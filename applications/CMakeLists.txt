@@ -3,19 +3,20 @@ PROJECT(USER_IDENTIFICATION_APPLICATIONS)
 SET(USER_IDENTIFICATION_APPLICATION_DIR ${PROJECT_SOURCE_DIR})
 
 SET(TARGET_DEFAULT_PREFIX "application_")
-SET(TARGET_DEFAULT_LABEL_PREFIX "Applications")
+SET(TARGET_DEFAULT_LABEL_PREFIX "")
 # IDE folder
 SET(TARGET_DEFAULT_FOLDER "Applications")
 
 # project libraries for all applications
 SET(TARGET_COMMON_LIBRARIES 
     # yourAdditionalLib
+	Tracking
 	IO
 	User
 	gflags
-	Tracking
+
 )
 
-ADD_SUBDIRECTORY(app1)
 ADD_SUBDIRECTORY(face_captures)
+ADD_SUBDIRECTORY(auto_classifier_training)
 ADD_SUBDIRECTORY(embeddings_from_images)
