@@ -9,14 +9,14 @@
 #include "math/Math.h"
 
 #include "io/ImageHandler.h"
-
 #include <opencv2\imgproc.hpp>
+
+#include <io\CSVHandling.h>
 
 #define _DEBUG_FACETRACKER
 
 namespace tracking
 {
-
 
 	class RadialFaceGrid  {
 	public:
@@ -52,6 +52,9 @@ namespace tracking
 			// save the image grid to the hard drive
 			std::string base_name = "face_grid";
 			std::string path = "output";
+
+			io::CSVWriter o_h("picture_log.csv");
+
 			// iterate over 3d array
 			for (int r = 0; r < image_grid.Size(0);r++) {
 				for (int p = 0; p < image_grid.Size(1); p++) {
@@ -65,8 +68,21 @@ namespace tracking
 
 							// write blur
 
+							std::string filename = base_name + "_" + std::to_string(r) + "_" + std::to_string(p) + "_" + std::to_string(y) + ".png";
+
 							// save image
-							io::ImageHandler::SaveImage(img, path, base_name + "_" + std::to_string(r) + "_" + std::to_string(p) + "_" + std::to_string(y) + ".png");
+							io::ImageHandler::SaveImage(img, path, filename);
+
+							// save file name and metadata
+							o_h.addEntry<std::string>(filename);
+
+
+							cv::Vec3d precies_angles = angles[];
+
+							// roll, pitch, yaw
+							o_h.addEntry<int>
+
+							o_h.startNewRow();
 						}
 					}
 				}
@@ -89,10 +105,26 @@ namespace tracking
 						for (int r = 0; r < image_grid.Size(0); r++) {
 							if (!image_grid.IsFree(r, p, y)) {
 								cv::Mat extr = image_grid(r, p, y);
-								// resize
+								bool test = image_grid.IsFree(r, p, y);
 
-								std::cout << "patch size: " << patch_size << std::endl;
-								cv::resize(extr, extr, cv::Size(patch_size, patch_size));
+
+								size_t pos = image_grid.GetPos(r, p, y);
+								// 75 = 0+ 1*3 + 4* 3*6
+
+								try
+								{
+									cv::resize(extr, extr, cv::Size(patch_size, patch_size));
+								}
+								catch (...)
+								{
+
+
+									// resize
+									std::cout << "-------------------------------\n";
+									std::cout << "patch size: " << patch_size << " | " << extr.cols << " | " << extr.rows << std::endl;
+			
+
+								}
 
 								// copy to left top
 								extr.copyTo(canvas(cv::Rect(y*patch_size, p*patch_size, extr.cols, extr.rows)));
@@ -122,17 +154,26 @@ namespace tracking
 			int	ipitch = iPitch(pitch);
 			int iyaw = iYaw(yaw);
 			std::cout << "Store image at: ir: " << iroll << " | ip: " << ipitch << " | iy: " << iyaw << std::endl;
+	
+			// TODO: debug why face is not stored
+			// last index: 0,1,4
+			if (face.cols == 0) {
+				std::cout << "---- STOP!\n";
+				throw std::invalid_argument("Invalid image");
+			}
 
+			// store rotation
+			int pos = image_grid.GetPos(roll, pitch, yaw);
+			angles[pos] = cv::Vec3i(roll, pitch, yaw);
+
+			// save image
 			image_grid.CopyTo(iroll, ipitch, iyaw, face);
 	
 			return true;
 		}
 
-
-
 		// ---------- index mapper
 		int iRoll(int roll) {
-
 			return floor(a_r*roll +b_r);
 		}
 		int iPitch(int pitch) {
@@ -145,6 +186,9 @@ namespace tracking
 		// images
 		math::Array3D<cv::Mat> image_grid;
 
+		// array3d index to precies angles
+		std::map<int, cv::Vec3i> angles;
+
 		size_t interv_r;
 		size_t interv_p;
 		size_t interv_y;
@@ -152,8 +196,8 @@ namespace tracking
 		// image grid resolution
 		const int cRMin = -70;
 		const int cRMax = 70;
-		const int cPMin = -70;
-		const int cPMax = 70;
+		const int cPMin = -30;
+		const int cPMax = 40;
 		const int cYMin = -50;
 		const int cYMax = 50;
 
