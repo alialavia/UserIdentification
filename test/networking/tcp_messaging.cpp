@@ -3,6 +3,7 @@
 #include <iostream>
 #include <opencv2/core/cvdef.h>
 #include "io/KinectInterface.h"
+#include <iomanip>
 
 DEFINE_int32(port, 8080, "Server port");
 DEFINE_string(message_type, "primitive", "message types: image, primitive");
@@ -45,6 +46,8 @@ int main(int argc, char** argv)
 			c.SendBool(true);
 			// float
 			c.SendFloat(10.1f);
+			// double
+			c.SendDouble((double)10.0000000001);
 
 			// ----- receive
 			std::cout << "int8: " << (int)c.Receive8bit<int8_t>() << std::endl;
@@ -54,7 +57,8 @@ int main(int argc, char** argv)
 			std::cout << "int: " << c.Receive32bit<int>() << std::endl;
 			std::cout << "uint: " << c.Receive32bit<unsigned int>() << std::endl;
 			std::cout << "bool: " << c.Receive8bit<int>() << std::endl;
-			std::cout << "float: " << c.Receive32bit<float>() << std::endl;
+			std::cout << std::setprecision(20) << "float: " << c.Receive32bit<float>() << std::endl;
+			std::cout << std::setprecision(20) << "double: " << c.Receive64bit<double>() << std::endl;
 			std::cout << "string: " << c.ReceiveStringWithVarLength() << std::endl;
 			
 			// close connection

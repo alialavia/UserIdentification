@@ -1,10 +1,13 @@
 #ifndef IO_NETWORKING_H_
 #define IO_NETWORKING_H_
 
+
+#include <winsock2.h>
 #include <cstdint>
 #include <windows.h>
 #include <vector>
 #include <iostream>
+
 
 #define _DEBUG_NETWORKING
 
@@ -51,6 +54,9 @@ namespace io
 		int SendBool(bool val);
 		// range: 3.4E +/- 38 (7 digits)
 		int SendFloat(float val);
+		// range: +/- 1.7e +/- 308
+		// TODO: fix
+		int SendDouble(double val);
 
 		// ------ receive
 
@@ -88,19 +94,20 @@ namespace io
 			return x;
 		}
 
-		// TODO: untested
+		// TODO: fix
 		template<typename T>
 		T TCPClient::Receive64bit()
 		{
 			uint64_t val;	// 64bit
-			recv(mSocketID, (char*)&val, 8, 0);
+			int msg_length = 8;
+			ReceiveMessage(mSocketID, (char*)&val, &msg_length);
 			T x;
-			val = ntohd(val);
+			val = ntohll(val);
 			memcpy(&x, &val, sizeof(T));
 			return x;
 		}
 
-		// ------ Endianness conversion
+		// ------ Floating point Endianness conversion
 
 		uint32_t htonf(float f)
 		{
@@ -115,6 +122,13 @@ namespace io
 			nf = ntohl(nf);
 			memcpy(&x, &nf, sizeof(float));
 			return x;
+		}
+
+		uint64_t htond(double d)
+		{
+			uint64_t x;
+			memcpy(&x, &d, sizeof(double));
+			return htonll(x);
 		}
 
 		// ------ deprecated

@@ -192,6 +192,15 @@ class TCPServer:
         msglen = struct.unpack('!f', raw_msglen)[0]  # convert to host byte order
         return msglen
 
+    def receive_double(self, client_socket):
+        """read 8 bytes - python float equals c double."""
+        raw_msglen = self.receive_message(client_socket, 8)
+        if not raw_msglen:
+            return None
+        # network byte order
+        msglen = struct.unpack('!d', raw_msglen)[0]  # convert to host byte order
+        return msglen
+
     #  ----------- SEND PRIMITIVES
 
     def send_char(self, target_socket, char):
@@ -231,6 +240,10 @@ class TCPServer:
         msg = struct.pack('!f', val)  # convert to network byte order
         target_socket.send(msg)
 
+    def send_double(self, target_socket, val):
+        """8 byte, 64bit"""
+        msg = struct.pack('!d', val)  # convert to network byte order
+        target_socket.send(msg)
 
 class TCPServerBlocking(TCPServer):
     """Blocking TCP Server - 1 socket connected at a time"""

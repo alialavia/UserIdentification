@@ -1,4 +1,4 @@
-#include <winsock2.h>
+
 
 #include <fcntl.h>
 #include <string.h>
@@ -268,6 +268,22 @@ int TCPClient::SendBool(bool val)
 	}
 #ifdef _DEBUG_NETWORKING
 	std::cout << "--- SendBool sent " << bytecount << "bytes\n";
+#endif
+	return bytecount;
+}
+
+int TCPClient::SendDouble(double val)
+{
+	int bytecount;
+	uint64_t network_byte_order = htond(val);
+
+	// send 1 byte identifier = char
+	if ((bytecount = send(mSocketID, (char*)&network_byte_order, sizeof(double), 0)) == SOCKET_ERROR) {
+		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
+		return 0;
+	}
+#ifdef _DEBUG_NETWORKING
+	std::cout << "--- SendDouble sent " << bytecount << "bytes\n";
 #endif
 	return bytecount;
 }
