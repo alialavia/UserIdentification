@@ -7,7 +7,7 @@ using namespace math;
 
 
 template<typename T>
-void Array3D<T>::CopyTo(size_t x, size_t y, size_t z, T in)
+T* Array3D<T>::CopyTo(size_t x, size_t y, size_t z, T in)
 {
 	size_t pos = GetPos(x, y, z);
 	if (mData.at(pos) != nullptr)
@@ -21,14 +21,14 @@ void Array3D<T>::CopyTo(size_t x, size_t y, size_t z, T in)
 
 	// assign
 	mData.at(pos) = obj;
+	return obj;
 }
 
 
 // template specification
 template<>
-void Array3D<cv::Mat>::CopyTo(size_t x, size_t y, size_t z, cv::Mat in)
+cv::Mat* Array3D<cv::Mat>::CopyTo(size_t x, size_t y, size_t z, cv::Mat in)
 {
-
 	// assign
 	size_t pos = GetPos(x, y, z);
 	if (mData.at(pos) != nullptr)
@@ -46,6 +46,7 @@ void Array3D<cv::Mat>::CopyTo(size_t x, size_t y, size_t z, cv::Mat in)
 
 	// assign
 	mData.at(pos) = m;
+	return m;
 }
 
 template<>

@@ -79,7 +79,7 @@ namespace math {
 
 		// TODO: is this necessary? already got assignment operator
 		// copy
-		void CopyTo(size_t x, size_t y, size_t z, T in);
+		T* CopyTo(size_t x, size_t y, size_t z, T in);
 
 		// return by reference
 		T& operator()(size_t x, size_t y, size_t z) {
@@ -121,7 +121,6 @@ namespace math {
 			}
 		}
 
-	private:
 		size_t GetPos(size_t x, size_t y, size_t z) const
 		{
 			size_t index = x + y * mWidth + z * mWidth * mHeight;
