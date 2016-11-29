@@ -74,7 +74,6 @@ bool CSVParser<T>::IterateRows()
 	return false;
 }
 
-
 template <class T>
 T CSVParser<T>::GetVal(int col) {
 	return current_items_[col];
