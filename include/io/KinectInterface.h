@@ -85,6 +85,7 @@ namespace io
 		HRESULT ProcessBodyFrame(IBodyFrame* body_frame);
 		HRESULT ProcessFaceFrames(IFaceFrame* pFaceFrame[NR_USERS]);
 		HRESULT ProcessBodyIndexFrame(IBodyIndexFrame* index_frame, int& height, int& width, BYTE* & buffer, UINT& buffer_len);
+		bool IsValidFace(const FaceData &face) const;
 
 	public:
 		// output settings

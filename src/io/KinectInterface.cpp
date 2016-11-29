@@ -128,7 +128,9 @@ HRESULT KinectSensorMultiSource::Open(int timeout)
 	// define the face frame features
 	static const DWORD c_FaceFrameFeatures =
 		FaceFrameFeatures::FaceFrameFeatures_BoundingBoxInColorSpace
+		| FaceFrameFeatures::FaceFrameFeatures_BoundingBoxInInfraredSpace
 		| FaceFrameFeatures::FaceFrameFeatures_PointsInColorSpace
+		| FaceFrameFeatures::FaceFrameFeatures_PointsInInfraredSpace
 		| FaceFrameFeatures::FaceFrameFeatures_RotationOrientation
 		| FaceFrameFeatures::FaceFrameFeatures_Happy
 		| FaceFrameFeatures::FaceFrameFeatures_RightEyeClosed
@@ -392,6 +394,36 @@ HRESULT KinectSensorMultiSource::ProcessBodyIndexFrame(IBodyIndexFrame* index_fr
 	return hr;
 }
 
+bool KinectSensorMultiSource::IsValidFace(const FaceData &face) const
+{
+	bool valid = false;
+
+	if(
+		face.boundingBox.Right - face.boundingBox.Left > 0 &&
+		face.boundingBox.Bottom - face.boundingBox.Top  > 0 &&
+		face.boundingBoxIR.Right - face.boundingBoxIR.Left > 0 &&
+		face.boundingBoxIR.Bottom - face.boundingBoxIR.Top > 0
+	  )
+	{
+		if(face.Points != NULL)
+		{
+			// TODO: implement proper point check
+
+			for(size_t i=0;i<FacePointType::FacePointType_Count;i++)
+			{
+				if(face.Points[i].X == 0 || face.Points[i].Y == 0)
+				{
+					return false;
+				}
+			}
+
+			valid = true;
+		}
+	}
+
+	return valid;
+}
+
 HRESULT KinectSensorMultiSource::ProcessFaceFrames(IFaceFrame* face_frames[NR_USERS])
 {
 	HRESULT hr = E_FAIL;
@@ -448,7 +480,7 @@ HRESULT KinectSensorMultiSource::ProcessFaceFrames(IFaceFrame* face_frames[NR_US
 					}
 
 					// set tracking status
-					if (SUCCEEDED(hr)){
+					if (SUCCEEDED(hr) && IsValidFace(new_face)){
 						new_face.tracked = true;
 					}
 					
