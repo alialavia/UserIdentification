@@ -1,15 +1,24 @@
 #ifndef IO_NETWORKING_H_
 #define IO_NETWORKING_H_
 
-
-#include <winsock2.h>
 #include <cstdint>
-#include <windows.h>
 #include <vector>
 #include <iostream>
-
+#include <winsock.h>
 
 #define _DEBUG_NETWORKING
+
+// define macro ourselfes - dont use winsock2!
+#define _WS2_32_WINSOCK_SWAP_LONGLONG(l)            \
+            ( ( ((l) >> 56) & 0x00000000000000FFLL ) |       \
+              ( ((l) >> 40) & 0x000000000000FF00LL ) |       \
+              ( ((l) >> 24) & 0x0000000000FF0000LL ) |       \
+              ( ((l) >>  8) & 0x00000000FF000000LL ) |       \
+              ( ((l) <<  8) & 0x000000FF00000000LL ) |       \
+              ( ((l) << 24) & 0x0000FF0000000000LL ) |       \
+              ( ((l) << 40) & 0x00FF000000000000LL ) |       \
+              ( ((l) << 56) & 0xFF00000000000000LL ) )
+
 
 namespace cv {
 	class Mat;
@@ -102,7 +111,7 @@ namespace io
 			int msg_length = 8;
 			ReceiveMessage(mSocketID, (char*)&val, &msg_length);
 			T x;
-			val = ntohll(val);
+			val = _WS2_32_WINSOCK_SWAP_LONGLONG(val);
 			memcpy(&x, &val, sizeof(T));
 			return x;
 		}
@@ -128,7 +137,7 @@ namespace io
 		{
 			uint64_t x;
 			memcpy(&x, &d, sizeof(double));
-			return htonll(x);
+			return _WS2_32_WINSOCK_SWAP_LONGLONG(x);
 		}
 
 		// ------ deprecated
