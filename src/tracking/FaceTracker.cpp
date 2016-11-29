@@ -40,9 +40,24 @@ void RadialFaceGrid::DumpImageGrid(std::string img_basename, std::string log_nam
 	}
 }
 
-void RadialFaceGrid::DisplayFaceGridPitchYaw() {
+std::vector<cv::Mat*> RadialFaceGrid::ExtractGrid()
+{
+	std::vector <cv::Mat*> ptrs;
+	for (auto const& target : angles) {
+		ptrs.push_back(target.first);
+	}
+	return ptrs;
+}
 
-	int canvas_height = 900;
+void RadialFaceGrid::ResizeImages(int size)
+{
+	for (auto const& target : angles) {
+		cv::resize(*target.first, *target.first, cv::Size(size, size));
+	}
+}
+
+void RadialFaceGrid::GetFaceGridPitchYaw(cv::Mat &dst, int canvas_height){
+
 
 	int patch_size = (int)((float)canvas_height / image_grid.Size(1));
 	int canvas_width = patch_size * image_grid.Size(2);
@@ -85,10 +100,10 @@ void RadialFaceGrid::DisplayFaceGridPitchYaw() {
 			}
 		}
 	}
-	cv::imshow("Canvas", canvas);
-	cv::waitKey(3);
-}
 
+	// save
+	dst = canvas;
+}
 
 // ---------- FaceTracker
 

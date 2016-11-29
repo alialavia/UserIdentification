@@ -9,7 +9,6 @@
 #include "math/Math.h"
 
 #include "io/ImageHandler.h"
-#include <opencv2\imgproc.hpp>
 
 #define _DEBUG_FACETRACKER
 
@@ -43,7 +42,8 @@ namespace tracking
 		}
 
 		void DumpImageGrid(std::string filename = "capture", std::string log_name = "face_log.csv", std::string out_folder = "face_grid");
-		void DisplayFaceGridPitchYaw();
+		std::vector<cv::Mat*> ExtractGrid();
+		void GetFaceGridPitchYaw(cv::Mat &dst, int canvas_height=500);
 
 		bool IsFree(int roll, int pitch, int yaw) {
 			// check if we already got an image at this position
@@ -67,6 +67,14 @@ namespace tracking
 			// store rotation
 			angles[ptr] = ang;
 			return true;
+		}
+
+		void ResizeImages(int size);
+
+		void Clear()
+		{
+			image_grid.Reset();
+			angles.clear();
 		}
 
 		// ---------- index mapper
