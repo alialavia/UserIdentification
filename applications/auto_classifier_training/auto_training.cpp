@@ -208,6 +208,9 @@ int main(int argc, char** argv)
 
 							sendTrainingBatch(&c, batch);
 							grid.Clear();
+
+							MODE = Mode_none;
+							c.Close();
 						}else
 						{
 							std::cout << "Could not connect to server. Please try again" << std::endl;

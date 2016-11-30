@@ -87,8 +87,6 @@ void RadialFaceGrid::GetFaceGridPitchYaw(cv::Mat &dst, int canvas_height){
 						// resize
 						std::cout << "-------------------------------\n";
 						std::cout << "patch size: " << patch_size << " | " << extr.cols << " | " << extr.rows << std::endl;
-
-
 					}
 
 					// copy to left top

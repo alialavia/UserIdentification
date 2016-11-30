@@ -54,7 +54,8 @@ enum Mode
 	Mode_none = 0,
 	Mode_training = 1,
 	Mode_trigger_classifier_training = 2,
-	Mode_identification = 3,
+	Mode_embedding_calculation = 3,
+	Mode_identification = 4,
 };
 
 int main(int argc, char** argv)
@@ -72,7 +73,8 @@ int main(int argc, char** argv)
 				 "=====================================\n"
 				 "[1]: send training images - use [space] to collect face captures\n"
 				 "[2]: trigger classifier training\n"
-				 "[3]: identification mode - use [space] to send face capture\n"
+				 "[3]: direct embedding calculation - use [space] to take a picture\n"
+				 "[4]: identification mode - use [space] to send face capture\n"
 				 "[q]: Quit\n"
 				 "\n\n";
 
@@ -128,6 +130,11 @@ int main(int argc, char** argv)
 					std::cout << "--- Trigger identification mode...\n";
 				}
 				else if ((int)('3') == key)
+				{
+					MODE = Mode_embedding_calculation;
+					std::cout << "--- Starting identification mode...\n";
+				}
+				else if ((int)('4') == key)
 				{
 					MODE = Mode_identification;
 					std::cout << "--- Starting identification mode...\n";
@@ -215,6 +222,67 @@ int main(int argc, char** argv)
 
 				MODE = Mode_none;
 				c.Close();
+
+			}else if(MODE == Mode_embedding_calculation)
+			{
+				// extract skeleton data
+				IBody** bodies = k.GetBodyDataReference();
+				st.ExtractJoints(bodies);
+
+				// get face bounding boxes
+				std::vector<cv::Rect2f> bounding_boxes;
+				std::vector<int> user_scene_ids;
+				st.GetFaceBoundingBoxesRobust(bounding_boxes, base::ImageSpace_Color);
+				st.GetUserSceneIDs(user_scene_ids);
+
+				if (bounding_boxes.size() > 0)
+				{
+					// take first person
+					cv::Mat face = color_image(bounding_boxes[0]);
+
+					// show image
+					cv::imshow("Face", face);
+					int key = cv::waitKey(5);
+
+					if (key == 32)	// space = save
+					{
+						// resize
+						cv::resize(face, face, cv::Size(96, 96), 0, 0);
+
+						// connect to server
+						if (!c.Connect())
+						{
+							std::cout << "Could not connect to server" << std::endl;
+							MODE = Mode_none;
+							c.Close();
+							continue;
+						}
+
+						// send request ID to server
+						c.SendUChar(3);
+						// image size
+						c.SendUInt(face.size().width);
+						// send image
+						std::cout << "--- sent " << c.SendRGBImage(face) << " bytes to server\n";
+						cv::destroyWindow("Face");
+
+						// ----- receive
+						//int user_id = c.Receive32bit<int>();
+						//float confidence = c.Receive32bit<float>();
+						//std::cout << "=== DETECTED USER: " << user_id << " | confidence: " << confidence << std::endl;
+
+
+
+						// cleanup
+						cv::destroyWindow("Face");
+						MODE = Mode_none;
+						c.Close();
+					}
+
+					// draw bounding boxes
+					st.RenderFaceBoundingBoxes(color_image, base::ImageSpace_Color);
+				}
+
 
 			}else if(MODE == Mode_identification)
 			{

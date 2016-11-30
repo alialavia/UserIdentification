@@ -34,7 +34,6 @@ int main(int argc, char** argv)
 	}
 
 	tracking::FaceTracker ft(pSensor);
-
 	tracking::RadialFaceGrid grid;
 	cv::Mat face_snap;
 
@@ -44,7 +43,6 @@ int main(int argc, char** argv)
 	int cPMax = 0;
 	int cYMin = 0;
 	int cYMax = 0;
-
 
 	while (true) {
 
@@ -105,13 +103,14 @@ int main(int argc, char** argv)
 
 				//std::cout << "r: " << roll << " | p: " << pitch << " | y: " << yaw << std::endl;
 				// mirror yaw
-				yaw = -yaw;
+				//yaw = -yaw;
+
+
 				try
 				{
 					// add face if not yet capture from this angle
 					if (grid.IsFree(roll, pitch, yaw)) {
 						grid.StoreSnapshot(roll, pitch, yaw, face_snap);
-						grid.DisplayFaceGridPitchYaw();
 					}
 				}
 				catch (...)
@@ -119,18 +118,19 @@ int main(int argc, char** argv)
 
 
 				}
-
 			}
+
+			// get face capture grid
+			cv::Mat face_captures;
+			grid.GetFaceGridPitchYaw(face_captures);
 
 			// draw bounding boxes
 			ft.RenderFaceBoundingBoxes(color_image, base::ImageSpace_Color);
 			ft.RenderFaceFeatures(color_image, base::ImageSpace_Color);
 
-
 			// show image
-			cv::imshow("Color image", color_image);
+			cv::imshow("Faces", face_captures);
 			int key = cv::waitKey(3);
-
 			if (key == 32)	// space = save
 			{
 				break;
@@ -146,7 +146,6 @@ int main(int argc, char** argv)
 	std::cout << "R: " << cRMin << "° .. " << cRMax << "°" << std::endl;
 	std::cout << "P: " << cPMin << "° .. " << cPMax << "°" << std::endl;
 	std::cout << "Y: " << cYMin << "° .. " << cYMax << "°" << std::endl;
-
 
 	// dump faces
 	grid.DumpImageGrid();

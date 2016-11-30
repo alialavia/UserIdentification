@@ -3,14 +3,10 @@
 #include <opencv2\opencv.hpp>
 #include <gflags/gflags.h>
 #include <string>
-
 #include <io/Networking.h>
-
 #include <io/CSVHandling.h>
-
 #include <io/RequestTypes.h>
 #include <io/ResponseTypes.h>
-
 
 
 DEFINE_int32(port, 8080, "Server port");
