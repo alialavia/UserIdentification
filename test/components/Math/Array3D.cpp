@@ -74,8 +74,9 @@ void BundleTestFaceGrid() {
 	cv::circle(in, cv::Point(0, 0), 20, cv::Scalar(255, 255, 0), cv::LINE_4);
 
 	// draw
-	grid.DisplayFaceGridPitchYaw();
-
+	cv::Mat img;
+	grid.GetFaceGridPitchYaw(img);
+	cv::imshow("grid", img);
 	cv::waitKey(0);
 }
 
