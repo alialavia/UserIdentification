@@ -46,6 +46,14 @@ namespace tracking
 		void GetFaceGridPitchYaw(cv::Mat &dst, int canvas_height=500);
 
 		bool IsFree(int roll, int pitch, int yaw) {
+
+			// out of range
+			if (roll<cRMin || roll > cRMax ||
+				pitch<cPMin || pitch > cPMax ||
+				yaw<cYMin || yaw > cYMax) {
+				return false;
+			}
+
 			// check if we already got an image at this position
 			int iroll = iRoll(roll);
 			int	ipitch = iPitch(pitch);
@@ -114,6 +122,146 @@ namespace tracking
 		float a_y;
 		float b_y;
 	};
+
+
+	class RadialFaceGridLabeled : public RadialFaceGrid {
+
+	public:
+
+		enum ImgLabel
+		{
+			None = 0,
+			Blurred = 1,
+			Sharp = 2,
+			Unusable = 3,
+		};
+
+		RadialFaceGridLabeled(
+			size_t interv_r_ = 3,
+			size_t interv_p_ = 6,
+			size_t interv_y_ = 10
+		) : RadialFaceGrid(interv_r_, interv_p_, interv_y_)
+		{
+
+
+		}
+
+		// overload with grid index tracking
+		void GetFaceGridPitchYaw(cv::Mat &dst, int canvas_height) {
+
+			int patch_size = (int)((float)canvas_height / image_grid.Size(1));
+			int canvas_width = patch_size * image_grid.Size(2);
+
+			mCanvasWidth = canvas_width;
+			mPatchSize = patch_size;
+
+			// allocate image
+			cv::Mat canvas = cv::Mat(canvas_height, canvas_width, CV_8UC3, cv::Scalar(0, 0, 0));
+
+			for (auto const& target : angles) {
+
+				cv::Vec3d a = target.second;
+
+				// calculate grid index
+				int ir = iRoll(a[0]);
+				int ip = iPitch(a[1]);
+				int iy = iYaw(a[2]);
+
+				// get image
+				cv::Mat* im_ptr;
+				im_ptr = target.first;
+
+				// store grid index
+				mCanvasMapPY[std::make_pair(ip, iy)] = im_ptr;
+
+				// create copy for canvas
+				cv::Mat canvas_copy = (*im_ptr).clone();
+				cv::resize(canvas_copy, canvas_copy, cv::Size(patch_size, patch_size));
+
+				// render labels
+				if (mLabels[im_ptr] != None) {
+
+					cv::Scalar color = cv::Scalar(0, 0, 255);
+					
+					ImgLabel l = mLabels[im_ptr];
+					std::string text;
+
+					if (l == Blurred) {
+						text = "blurred";
+
+						cv::Mat overlay;
+						canvas_copy.copyTo(overlay);
+						cv::rectangle(overlay, cv::Rect(0, 0, canvas_copy.cols, canvas_copy.rows), cv::Scalar(0, 165, 255), -1);
+						double alpha = 0.3;
+						cv::addWeighted(overlay, alpha, canvas_copy, 1 - alpha, 0, canvas_copy);
+						color = cv::Scalar(255, 255, 255);
+					}
+					else if (l == Unusable) {
+						text = "ignore";
+
+						cv::Mat overlay;
+						canvas_copy.copyTo(overlay);
+						cv::rectangle(overlay, cv::Rect(0, 0, canvas_copy.cols, canvas_copy.rows), cv::Scalar(0, 0, 255), -1);
+						double alpha = 0.3;
+						cv::addWeighted(overlay, alpha, canvas_copy, 1 - alpha, 0, canvas_copy);
+						color = cv::Scalar(255, 255, 255);
+					}
+					else {
+						text = std::to_string(l);
+					}
+
+					int fontFace = cv::FONT_HERSHEY_SCRIPT_SIMPLEX;
+					double fontScale = 2;
+					int thickness = 3;
+					io::ImageHandler::DrawCenteredText(text, 0.6, cv::Point(canvas_copy.cols / 2, canvas_copy.rows / 2), canvas_copy, color);
+				}
+
+				// copy to left top
+				canvas_copy.copyTo(canvas(cv::Rect(ip*patch_size, iy*patch_size, canvas_copy.cols, canvas_copy.rows)));
+			}
+
+			dst = canvas;
+		}
+
+
+		void SetLabelFromCanvasCoords(int cx, int cy, ImgLabel label) {
+			int x = static_cast <int> (std::floor(cx / mPatchSize));
+			int y = static_cast <int> (std::floor(cy / mPatchSize));
+
+			// set label
+			mLabels[mCanvasMapPY[std::make_pair(x, y)]] = label;
+		}
+
+		void SetLabel(size_t index, ImgLabel label) {
+			//mLabels
+		}
+
+		void CallBackFunc(int event, int x, int y, int flags, void* userdata)
+		{
+			if (event == cv::EVENT_LBUTTONDOWN)
+			{
+				SetLabelFromCanvasCoords(x, y, Blurred);
+			}
+			else if (event == cv::EVENT_RBUTTONDOWN)
+			{
+				SetLabelFromCanvasCoords(x, y, None);
+			}
+			else if (event == cv::EVENT_MBUTTONDOWN)
+			{
+				SetLabelFromCanvasCoords(x, y, Unusable);
+			}
+		}
+
+	private:
+
+		std::map<std::pair<int, int>, cv::Mat*> mCanvasMapPY;
+		std::map<cv::Mat*, ImgLabel> mLabels;
+
+		// keep track of canvas properties
+		int mCanvasWidth = 0;
+		int mPatchSize = 0;
+	};
+
 
 
 	class Face

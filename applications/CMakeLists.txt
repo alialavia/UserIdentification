@@ -20,3 +20,4 @@ SET(TARGET_COMMON_LIBRARIES
 ADD_SUBDIRECTORY(face_captures)
 ADD_SUBDIRECTORY(auto_classifier_training)
 ADD_SUBDIRECTORY(embeddings_from_images)
+ADD_SUBDIRECTORY(blur_labeling)
