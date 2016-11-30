@@ -6,7 +6,7 @@
 #include "io/ImageHandler.h"
 #include <gflags/gflags.h>
 
-DEFINE_string(output, "output", "Output path");
+DEFINE_string(output, "labeled_focus_measures.csv", "Output path");
 
 tracking::RadialFaceGridLabeled* g_ptr;
 
@@ -18,7 +18,6 @@ void CallBackFunc(int event, int x, int y, int flags, void* userdata)
 int main(int argc, char** argv)
 {
 	io::KinectSensorMultiSource k;
-
 
 	HRESULT hr;
 	const char* cWindowLabel = "Label Selection";
@@ -44,7 +43,7 @@ int main(int argc, char** argv)
 	}
 
 	tracking::FaceTracker ft(pSensor);
-	tracking::RadialFaceGridLabeled grid(2,10,10);
+	tracking::RadialFaceGridLabeled grid(1,10,10);
 	g_ptr = &grid;	// set global ptr
 	cv::Mat face_snap;
 
@@ -89,7 +88,18 @@ int main(int argc, char** argv)
 				{
 					// add face if not yet capture from this angle
 					if (grid.IsFree(roll, pitch, yaw)) {
+
+						// convert to grayscale
+						cv::Mat greyMat;
+						cv::cvtColor(face_snap, greyMat, CV_BGR2GRAY);
+
 						grid.StoreSnapshot(roll, pitch, yaw, face_snap);
+
+						if (imgproc::FocusMeasure::LAPD(greyMat) > 4) {
+							
+						}
+
+					
 
 						//int iroll = grid.iRoll(roll);
 						//int	ipitch = grid.iPitch(pitch);
@@ -128,8 +138,9 @@ int main(int argc, char** argv)
 		}
 	}	// end while camera loop
 
+
 	// dump faces
-	//grid.DumpImageGrid();
+	grid.DumpFocusMeasuresWithLabels(FLAGS_output);
 
 	return 0;
 }
