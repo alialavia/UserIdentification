@@ -169,7 +169,17 @@ class TCPTestServer(TCPServerBlocking):
             print "Image could not be aligned"
 
     def handle_embedding_calculation(self, conn):
-        print "--- Direct Embeddings Calculation"
+
+        # receive image dimension
+        img_dim = self.receive_int(conn)
+        img = self.receive_rgb_image(conn, img_dim, img_dim)
+        embedding = self.classifier.get_embedding(img)
+
+        if embedding is None:
+            print "--- Could not calculate embedding"
+            return
+        print embedding
+        print type(embedding)
 
     def handle_image(self, conn):
         """receive image, draw and send back"""
