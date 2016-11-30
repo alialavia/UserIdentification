@@ -61,7 +61,16 @@ namespace math {
 		}
 		bool IsFree(size_t x, size_t y, size_t z) const
 		{
-			return (mData.at(GetPos(x, y, z)) == nullptr);
+			try
+			{
+				return (mData.at(GetPos(x, y, z)) == nullptr);
+			}
+			catch (...)
+			{
+
+
+				return false;
+			}
 		}
 
 		// assign pointer
@@ -72,6 +81,7 @@ namespace math {
 			{
 				// free old memory
 				delete(mData.at(pos));
+				mData.at(pos) = nullptr;
 			}
 			// assign
 			mData.at(pos) = in;
