@@ -9,6 +9,10 @@
 #include "math/Math.h"
 
 #include "io/ImageHandler.h"
+#include <io/CSVHandling.h>
+
+#include <imgproc\ImgProcessing.h>
+
 
 #define _DEBUG_FACETRACKER
 
@@ -146,6 +150,31 @@ namespace tracking
 
 		}
 
+		// throws exception if pose out of range
+		bool StoreSnapshot(int roll, int pitch, int yaw, const cv::Mat &face)
+		{
+			int iroll = iRoll(roll);
+			int	ipitch = iPitch(pitch);
+			int iyaw = iYaw(yaw);
+
+			// save image
+			cv::Mat * ptr = image_grid.CopyTo(iroll, ipitch, iyaw, face);
+			cv::Vec3d ang = cv::Vec3d(roll, pitch, yaw);
+
+			// store rotation
+			angles[ptr] = ang;
+
+			// convert to grayscale
+			cv::Mat greyMat;
+			cv::cvtColor(face, greyMat, CV_BGR2GRAY);
+
+			//if (imgproc::FocusMeasure::LAPD(greyMat) < 4) {
+			//	mLabels[ptr] = Blurred;
+			//}
+
+			return true;
+		}
+
 		// overload with grid index tracking
 		void GetFaceGridPitchYaw(cv::Mat &dst, int canvas_height) {
 
@@ -249,6 +278,37 @@ namespace tracking
 			else if (event == cv::EVENT_MBUTTONDOWN)
 			{
 				SetLabelFromCanvasCoords(x, y, Unusable);
+			}
+		}
+
+		void DumpFocusMeasuresWithLabels(std::string output) {
+
+			io::CSVWriter fh(output);
+
+			fh.addEntry("Label (1=Blurred | 0=Not),LAPV,LAPD,GLVN,MLAP,CEC");
+			fh.startNewRow();
+			for (auto const& target : angles) {
+				cv::Vec3d a = target.second;
+				// get image
+				cv::Mat* im_ptr;
+				im_ptr = target.first;
+
+				// label
+				ImgLabel l = mLabels[im_ptr];
+				fh.addEntry(l);
+
+				// convert to grayscale
+				cv::Mat greyMat;
+				cv::cvtColor(*im_ptr, greyMat, CV_BGR2GRAY);
+
+				// focus measures
+				fh.addEntry(imgproc::FocusMeasure::LAPV(greyMat));
+				fh.addEntry(imgproc::FocusMeasure::LAPD(greyMat));
+				//fh.addEntry(imgproc::FocusMeasure::TENG(greyMat));
+				fh.addEntry(imgproc::FocusMeasure::GLVN(greyMat));
+				fh.addEntry(imgproc::FocusMeasure::MLAP(greyMat));
+				fh.addEntry(imgproc::FocusMeasure::CEC(greyMat));
+				fh.startNewRow();
 			}
 		}
 
