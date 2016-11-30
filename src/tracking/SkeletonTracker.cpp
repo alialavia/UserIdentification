@@ -4,8 +4,11 @@
 using namespace tracking;
 
 SkeletonTracker::SkeletonTracker(IKinectSensor* sensor) :
+	mTrackVelocity(false),
 	m_pKinectSensor(sensor),
-	m_pCoordinateMapper(nullptr)
+	m_pCoordinateMapper(nullptr),
+	mCurrTime(0),
+	mPrevTime(0)
 {
 }
 
@@ -24,9 +27,22 @@ HRESULT SkeletonTracker::Init()
 	return hr;
 }
 
-HRESULT SkeletonTracker::ExtractJoints(IBody* ppBodies[NR_USERS])
+void SkeletonTracker::TrackVelocity(bool active) {
+	mTrackVelocity = active;
+}
+
+HRESULT SkeletonTracker::ExtractJoints(IBody* ppBodies[NR_USERS], INT64 timestamp)
 {
 	HRESULT hr = E_FAIL;
+
+	// copy to buffer
+	if (mTrackVelocity && timestamp > 0) {
+		mUserIDsBuffered = mUserIDs;
+		std::memcpy(mUserJointsBuffered, mUserJoints, NR_USERS * JointType_Count * sizeof(Joint));
+		mPrevTime = mCurrTime;
+		mCurrTime = timestamp;
+	}
+
 	// reset visible users
 	mUserIDs.clear();
 
@@ -58,10 +74,25 @@ HRESULT SkeletonTracker::ExtractJoints(IBody* ppBodies[NR_USERS])
 
 					// save skeleton
 					std::memcpy(mUserJoints[iUser], joints, JointType_Count * sizeof (Joint));
+
+					// calculate joint velocity
+					if (mTrackVelocity && mPrevTime > 0) {
+						if (std::find(mUserIDsBuffered.begin(), mUserIDsBuffered.end(), iUser) != mUserIDsBuffered.end()) {
+							for (int ijoint = 0; ijoint < JointType_Count; ijoint++) {
+								INT64 dT = mCurrTime - mPrevTime;
+								double vx = (mUserJoints[iUser][ijoint].Position.X - mUserJointsBuffered[iUser][ijoint].Position.X) / (double)dT;
+								double vy = (mUserJoints[iUser][ijoint].Position.Y - mUserJointsBuffered[iUser][ijoint].Position.Y) / (double)dT;
+								double vz = (mUserJoints[iUser][ijoint].Position.Z - mUserJointsBuffered[iUser][ijoint].Position.Z) / (double)dT;
+								mJointVelocities[iUser][ijoint] = cv::Vec3d(vx,vy,vz);
+							}
+						}
+					}
+
 				}
 			}
 		}
 	}
+
 
 	return hr;
 }
@@ -279,6 +310,31 @@ HRESULT SkeletonTracker::RenderFaceBoundingBoxes(cv::Mat &target, base::ImageSpa
 			cv::circle(target, user_joints[i][j], 4, cv::Scalar(0, 255, 0), cv::LINE_4);
 		}
 	}
+
+	// draw velocities
+	if (mTrackVelocity && mPrevTime > 0) {
+		int nr_users = 0;
+		int rect_height = 5;
+		for (size_t i = 0; i < mUserIDs.size();i++) {
+			nr_users++;
+			// head velocity in m/s
+			double vel = cv::norm(mJointVelocities[mUserIDs[i]][base::JointType_Head])* 10000000.;
+			// draw velocit
+			double min = 0.;
+			double max = 3.;
+			double px = 0.;
+			px = (double)target.cols / max *vel;
+			if (vel>max) {
+				px = target.cols;
+			}
+			if (vel<min) {
+				px = 0.;
+			}
+			//draw
+			cv::rectangle(target, cv::Point(0, (nr_users - 1)* rect_height), cv::Point(px, nr_users * rect_height), cv::Scalar(0,0,255),3);
+		}
+	}
+
 
 	// get face bounding boxes
 	std::vector<cv::Rect2f> bounding_boxes;

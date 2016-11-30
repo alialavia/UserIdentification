@@ -10,20 +10,23 @@
 
 namespace tracking
 {
+
 	class SkeletonTracker
 	{
 	public:
 		SkeletonTracker(IKinectSensor* sensor);
 		~SkeletonTracker();
 
-		HRESULT Init();		
+		HRESULT Init();	
+
+		void TrackVelocity(bool active);
 		
 		/// <summary>
 		/// Extract joints from a IBody container (received from KinectInterface)
 		/// </summary>
 		/// <param name="ppBodies">Thebodies.</param>
 		/// <returns>HRESULT.</returns>
-		HRESULT ExtractJoints(IBody* ppBodies[NR_USERS]);
+		HRESULT ExtractJoints(IBody* ppBodies[NR_USERS], INT64 timestamp = 0);
 
 		// --------------- data access
 
@@ -65,10 +68,9 @@ namespace tracking
 
 		void ExtractFacesPatches(cv::Mat img, int patch_size, std::vector<cv::Mat> &patches, std::vector<int> &user_ids) const;
 
-
 	private:
 		void reset();
-
+		
 		IKinectSensor* m_pKinectSensor;
 		ICoordinateMapper* m_pCoordinateMapper;
 		// user data
@@ -77,6 +79,13 @@ namespace tracking
 		std::vector<int> mUserIDs;
 		// raw joint data of the users
 		Joint mUserJoints[NR_USERS][JointType_Count]; // joints in body space
+
+		bool mTrackVelocity;
+		INT64 mCurrTime;
+		INT64 mPrevTime;
+		std::vector<int> mUserIDsBuffered;
+		Joint mUserJointsBuffered[NR_USERS][JointType_Count]; // joints in body space - from last frame
+		cv::Vec3d mJointVelocities[NR_USERS][JointType_Count];
 	};
 
 

@@ -79,6 +79,8 @@ namespace io
 		IBody** GetBodyDataReference();
 		FaceData* GetFaceDataReference();
 
+		TIMESPAN GetBodyTimeStamp();
+
 	private:
 		HRESULT ProcessColorFrame(IColorFrame* color_frame, int& height, int& width, RGBQUAD* & buffer, UINT& buffer_len) const;
 		HRESULT ProcessDepthFrame(IDepthFrame* depth_frame, int& height, int& width, UINT16* & buffer, UINT& buffer_len) const;
@@ -120,10 +122,10 @@ namespace io
 		int DepthStreamWidth = 0;
 		// bodies
 		IBody* ppBodies[NR_USERS] = {0};
+		Vector4 mFloor = {0};
+		TIMESPAN mBodyTimeStamp;
 		// faces
 		FaceData mFaces[NR_USERS];
-
-
 		// body index
 		BYTE* pBodyIndexBuffer;
 		UINT mBodyIndexBufferLen = 0;

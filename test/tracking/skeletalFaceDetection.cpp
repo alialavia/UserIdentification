@@ -18,6 +18,9 @@ int main(int argc, char** argv)
 	cvNamedWindow("Face", CV_WINDOW_AUTOSIZE);
 
 	cv::Mat color_image;
+	INT64 timestamp = 0;
+	INT64 timestamp_old = 0;
+	INT64 dT = 0;
 
 	// initialize sensor
 	if (FAILED(k.Open())) {
@@ -35,6 +38,7 @@ int main(int argc, char** argv)
 	}
 
 	tracking::SkeletonTracker st(pSensor);
+	st.TrackVelocity(true);
 	st.Init();
 
 	while (true) {
@@ -50,7 +54,13 @@ int main(int argc, char** argv)
 
 			// extract skeleton data
 			IBody** bodies = k.GetBodyDataReference();
-			st.ExtractJoints(bodies);
+			timestamp_old = timestamp;
+			timestamp = k.GetBodyTimeStamp();
+			dT = timestamp - timestamp_old;
+
+			//std::cout << timestamp << std::endl;
+			//std::cout << "dT:" << dT/10000. << " ms"<< std::endl;
+			st.ExtractJoints(bodies, timestamp);
 
 			// get face bounding boxes
 			std::vector<cv::Rect2f> bounding_boxes;

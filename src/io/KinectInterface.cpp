@@ -529,7 +529,12 @@ HRESULT KinectSensorMultiSource::ProcessBodyFrame(IBodyFrame* body_frame)
 
 	if (SUCCEEDED(hr))
 	{
-		// do something
+		hr = body_frame->get_RelativeTime(&mBodyTimeStamp);
+	}
+
+	if (SUCCEEDED(hr))
+	{
+		hr = body_frame->get_FloorClipPlane(&mFloor);
 	}
 
 	return hr;
@@ -864,4 +869,8 @@ IBody** KinectSensorMultiSource::GetBodyDataReference()
 FaceData* KinectSensorMultiSource::GetFaceDataReference()
 {
 	return mFaces;
+}
+
+TIMESPAN KinectSensorMultiSource::GetBodyTimeStamp() {
+	return mBodyTimeStamp;
 }
