@@ -12,7 +12,9 @@ SET(TARGET_COMMON_LIBRARIES
     # yourAdditionalLib
 	IO
 	gflags
+	ImgProc
 )
 
 ADD_SUBDIRECTORY(IO)
 ADD_SUBDIRECTORY(Math)
+ADD_SUBDIRECTORY(ImgProc)
