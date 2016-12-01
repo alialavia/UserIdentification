@@ -1,11 +1,12 @@
 #!/usr/bin/python
 from src.config import *
+from src.response.Error import Error as ErrorResponse
+from src.response.Identification import Identification as IdentificationResponse
 
 
 class Identification:
 
     def __init__(self, server, conn):
-        print "Identification request"
 
         print "--- Identification"
 
@@ -13,25 +14,28 @@ class Identification:
         img_size = server.receive_uint(conn)
         # receive image
         user_face = server.receive_rgb_image(conn, img_size, img_size)
-        # identify
-        user_id, nice_name, confidence = server.classifier.identify_user(user_face)
 
-        if (user_id is None):
-            print "--- Identification Error"
-            # send back error response
-            server.send_int(conn, 99)
+        # generate embedding
+        embedding = server.embedding_gen.get_embedding(user_face)
+
+        if embedding is None:
+            ErrorResponse(server, conn, "Could not generate face embedding.")
             return
 
-        print "--- User ID: " + str(user_id) + " | confidence: " + str(confidence)
+        # predict user id
+        user_id = server.classifier.predict_label(embedding)
 
-        # send back response type
-        server.send_int(conn, 1)
+        if user_id is None:
+            ErrorResponse(server, conn, "Label could not be predict - Classifier might not be trained.")
+            return
 
-        # send back user id
-        server.send_int(conn, int(user_id))
+        # TODO: handle unknown detection
 
-        # send back nice name
-        server.send_string(conn, nice_name)
+        # get user nice name
+        user_name = server.user_db.get_name_from_id(user_id)
+        if user_name is None:
+            user_name = "unnamed"
 
-        # send back confidence
-        server.send_float(conn, float(confidence))
+        print "--- User ID: " + str(user_id) + " | name: " + user_name
+
+        IdentificationResponse(server, conn, int(user_id), user_name)
