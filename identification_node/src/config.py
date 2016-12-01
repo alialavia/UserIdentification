@@ -21,10 +21,14 @@ CONFIG = {
         },
         "RESPONSE": {
             "ID": {
-                "error": 999,
+                "Identification": 1,
+                "GetEmbedding": 1,
+                "Error": 999
             },
             "NAME": {
-                999: "error",
+                1: "Identification",
+                2: "GetEmbedding",
+                999: "Error"
             }
         }
     },
