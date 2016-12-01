@@ -2,13 +2,13 @@
 from src.config import *
 
 
-class Error:
+class OK:
 
-    def __init__(self, server, conn, error_msg="An error occurred during processing of the request"):
+    def __init__(self, server, conn, msg="Request successfully processed"):
 
         # send back reponse identifier
         resp_id = CONFIG['ROUTING']['RESPONSE']['ID'][self.__class__.__name__]
         server.send_int(conn, int(resp_id))
 
-        # send back error message
-        server.send_string(conn, error_msg)
+        # send back message
+        server.send_string(conn, msg)
