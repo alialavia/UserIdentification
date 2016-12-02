@@ -1,7 +1,8 @@
 #!/usr/bin/env python2
 import argparse
-from src.config import *    # server configuration
 import importlib            # msg routing imports
+from src.config import *    # server configuration
+
 from src.lib.UserDB import UserDB   # user database
 from src.lib.EmbeddingGen import EmbeddingGen   # CNN embedding generator
 from src.lib.SVM import SVM     # SVM classifier
@@ -37,15 +38,26 @@ class IdentificationServer(TCPServerBlocking):
 
         if request_id in req_lookup:
             req_type = req_lookup[request_id]
-            try:
-                req_module = getattr(M_REQUESTS, req_type)
-                req = getattr(req_module, req_type)
-                # handle request
-                req(self, conn)
-            except AttributeError:
-                print "Request model is not yet implemented."
+            print("=== Incomming request: "+req_type)
+
+
+            req_module = getattr(M_REQUESTS, req_type)
+            req = getattr(req_module, req_type)
+            # handle request
+            req(self, conn)
+
+            # try:
+            #     req_module = getattr(M_REQUESTS, req_type)
+            #     req = getattr(req_module, req_type)
+            #     # handle request
+            #     req(self, conn)
+            # except AttributeError:
+            #     print ("--- Request model '"+req_type+"' is not yet implemented.")
+
+
+
         else:
-            print "Unsupported request type: " + str(request_id)
+            print "--- Unsupported request type: " + str(request_id)
 
         # communication finished - close connection
         conn.close()
