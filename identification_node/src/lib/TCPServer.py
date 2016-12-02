@@ -127,6 +127,74 @@ class TCPServer:
 
         #  ----------- BINARY DATA HANDLERS
 
+    def receive_image_batch_squared_same_size(self, client_socket):
+
+        # receive batch size
+        nr_images = self.receive_uint(client_socket)
+
+        # receive image dimension
+        img_dim = self.receive_uint(client_socket)
+
+        # receive image batch
+        images = []
+        for x in range(0, nr_images):
+            # receive image
+            new_img = self.receive_rgb_image(client_socket, img_dim, img_dim)
+            images.append(new_img)
+
+        return images
+
+    def receive_image_batch_squared(self, client_socket):
+
+        # receive batch size
+        nr_images = self.receive_uint(client_socket)
+
+        # receive image batch
+        images = []
+        for x in range(0, nr_images):
+            # receive image dimension
+            img_dim = self.receive_uint(client_socket)
+            # receive image
+            new_img = self.receive_rgb_image(client_socket, img_dim, img_dim)
+            images.append(new_img)
+
+        return images
+
+    def receive_image_batch_same_size(self, client_socket):
+
+        # receive batch size
+        nr_images = self.receive_uint(client_socket)
+
+        # image dimensions
+        w = self.receive_uint(client_socket)
+        h = self.receive_uint(client_socket)
+
+        # receive image batch
+        images = []
+        for x in range(0, nr_images):
+            # receive image
+            new_img = self.receive_rgb_image(client_socket, w, h)
+            images.append(new_img)
+
+        return images
+
+    def receive_image_batch(self, client_socket):
+
+        # receive batch size
+        nr_images = self.receive_uint(client_socket)
+
+        # receive image batch
+        images = []
+        for x in range(0, nr_images):
+            # image dimensions
+            w = self.receive_uint(client_socket)
+            h = self.receive_uint(client_socket)
+            # receive image
+            new_img = self.receive_rgb_image(client_socket, w, h)
+            images.append(new_img)
+
+        return images
+
     #  ----------- RECEIVE PRIMITIVES
     def receive_string(self, client_socket):
         # get message size
