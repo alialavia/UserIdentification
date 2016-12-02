@@ -40,21 +40,13 @@ class IdentificationServer(TCPServerBlocking):
             req_type = req_lookup[request_id]
             print("=== Incomming request: "+req_type)
 
-
-            req_module = getattr(M_REQUESTS, req_type)
-            req = getattr(req_module, req_type)
-            # handle request
-            req(self, conn)
-
-            # try:
-            #     req_module = getattr(M_REQUESTS, req_type)
-            #     req = getattr(req_module, req_type)
-            #     # handle request
-            #     req(self, conn)
-            # except AttributeError:
-            #     print ("--- Request model '"+req_type+"' is not yet implemented.")
-
-
+            try:
+                req_module = getattr(M_REQUESTS, req_type)
+                req = getattr(req_module, req_type)
+                # handle request
+                req(self, conn)
+            except AttributeError:
+                print ("--- Request model '"+req_type+"' is not yet implemented.")
 
         else:
             print "--- Unsupported request type: " + str(request_id)
