@@ -1,10 +1,9 @@
 #!/usr/bin/python
-from src.config import *
 from src.response.Error import Error as ErrorResponse
 from src.response.Identification import Identification as IdentificationResponse
 
 
-class Identification:
+class ImageIdentification:
 
     def __init__(self, server, conn):
 
