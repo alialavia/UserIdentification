@@ -1,6 +1,6 @@
 #include "io/ResponseTypes.h"
 #include <stdexcept>
-#include <io/Networking.h>
+
 
 using namespace io;
 
@@ -11,35 +11,35 @@ std::type_index ResponseFactory::AllocateAndLoad(NetworkResponseType type_id, io
 
 	// TODO: cleanup/auto type detection
 
-	if (type_id == NetworkResponse_ErrorResponse)
+	if (type_id == NetworkResponse_Error)
 	{
 		ErrorResponse* resp = nullptr;
 		resp = new ErrorResponse(conn);
-		resp->Load();
+		resp->GetPayload();
 		ptr = resp;
 		return typeid(ErrorResponse);
 
 	}
-	else if(type_id == NetworkResponse_OKResponse)
+	else if(type_id == NetworkResponse_OK)
 	{
 		OKResponse* resp = nullptr;
 		resp = new OKResponse(conn);
-		resp->Load();
+		resp->GetPayload();
 		ptr = resp;
 		return typeid(OKResponse);
 
-	}else if (type_id == NetworkResponse_IdentificationResponse)
+	}else if (type_id == NetworkResponse_Identification)
 	{
 		IdentificationResponse* resp = nullptr;
 		resp = new IdentificationResponse(conn);
-		resp->Load();
+		resp->GetPayload();
 		ptr = resp;
 		return typeid(IdentificationResponse);
 
-	}else if(type_id == NetworkResponse_EmbeddingResponse){
+	}else if(type_id == NetworkResponse_Embedding){
 		EmbeddingResponse* resp = nullptr;
 		resp = new EmbeddingResponse(conn);
-		resp->Load();
+		resp->GetPayload();
 		ptr = resp;
 		return typeid(EmbeddingResponse);
 	}else
@@ -52,34 +52,3 @@ std::type_index ResponseFactory::AllocateAndLoad(NetworkResponseType type_id, io
 	}
 
 }
-
-// ------------ RESPONSE DEFINITIONS
-
-
-void ErrorResponse::Load()
-{
-	mMessage = pConn->ReceiveStringWithVarLength();
-}
-
-void OKResponse::Load()
-{
-	mMessage = pConn->ReceiveStringWithVarLength();
-}
-
-void IdentificationResponse::Load()
-{
-	// load specific data
-	mUserID = pConn->Receive32bit<int>();
-	mUserNiceName = pConn->ReceiveStringWithVarLength();
-	mProbability = pConn->Receive32bit<float>();
-}
-
-void EmbeddingResponse::Load()
-{
-	// load 128 dimensional vector
-	for(size_t i=0;i<cNrEmbeddings;i++)
-	{
-		mEmbedding[i] = pConn->Receive64bit<double>();
-	}
-}
-

@@ -107,10 +107,10 @@ void UserManager::ApplyUserIdentification()
 		}
 	}
 
-
 	// handle erronomous requests
 	io::ErrorResponse err_response;
-	while (pRequestHandler->PopResponse(&err_response, request))
+	io::NetworkRequestType req_type;
+	while (pRequestHandler->PopResponse(&err_response, request, &req_type))
 	{
 		// display response
 		std::cout << "--- Error response: " << err_response.mMessage << std::endl;
@@ -118,19 +118,22 @@ void UserManager::ApplyUserIdentification()
 		// locate user for which request was sent
 		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request);
 
+#ifdef _DEBUG_USERMANAGER
+		std::cout << "--- RequestID (type): " << req_type << std::endl;
+#endif
+
 		if (it != mRequestToUser.end()) {
 			// extract user
 			User* target_user = it->second;
+
+			if (req_type == io::NetworkRequest_ImageIdentification) {
+				target_user->SetIDStatus(user::IDStatus_Unknown);
+			}
+
 			// remove request mapping
 			RemovePointerMapping(it->second);
 			// reset user identification status if it was an identification request
 
-#ifdef _DEBUG_USERMANAGER
-			std::cout << "--- RequestID (type): " << request->cRequestType << std::endl;
-#endif
-			if (request->cRequestType == io::NetworkRequest_SingleImageIdentification) {
-				target_user->SetIDStatus(user::IDStatus_Unknown);
-			}
 		}
 		else {
 			// user corresponding to request not found (may have left scene) - drop response
@@ -147,14 +150,17 @@ void UserManager::RequestUserIdentification(cv::Mat scene_rgb)
 	{
 		if (it->second->GetIDStatus() == IDStatus_Unknown)
 		{
+			std::vector<cv::Mat> faces;
 			// extract face patch
 			cv::Mat face = scene_rgb(it->second->GetFaceBoundingBox());
+			
+			faces.push_back(face);
 
 			//cv::imshow("face", face);
 			//cv::waitKey(3);
 
 			// make new identification request
-			IDReq* new_request = new IDReq(pServerConn, face);
+			IDReq* new_request = new IDReq(pServerConn, faces);
 			pRequestHandler->addRequest(new_request);
 
 			// update linking

@@ -48,6 +48,14 @@ int inputUserID() {
 	return myNumber;
 };
 
+std::string inputUserName() {
+	std::string user_name;
+	std::cout << "Please enter a user name: ";
+	std::getline(std::cin, user_name);
+	return user_name;
+}
+
+
 enum Mode
 {
 	Mode_none = 0,
@@ -63,6 +71,7 @@ int main(int argc, char** argv)
 	io::KinectSensorMultiSource k;
 	HRESULT hr;
 	cv::Mat color_image;
+	cv::Mat face_captures;
 	enum Mode MODE = Mode_none;
 
 	// print instructions
@@ -139,10 +148,9 @@ int main(int argc, char** argv)
 				}
 			}
 
-
-			if (MODE == Mode_training)
+			// face grid
+			if (MODE == Mode_training || MODE == Mode_identification)
 			{
-
 				// extract raw face data
 				FaceData* face_data_raw = k.GetFaceDataReference();
 
@@ -178,20 +186,22 @@ int main(int argc, char** argv)
 				}
 
 				// get face capture grid
-				cv::Mat face_captures;
 				grid.GetFaceGridPitchYaw(face_captures);
 
 				// draw bounding boxes
 				ft.RenderFaceBoundingBoxes(color_image, base::ImageSpace_Color);
 				ft.RenderFaceFeatures(color_image, base::ImageSpace_Color);
 
-				
+			}
+
+
+			if (MODE == Mode_training)
+			{
 				// show image
 				cv::imshow("Face Grid", face_captures);
 				int key = cv::waitKey(3);
 				if (key == 32)	// space = send training batch to server
 				{
-
 					grid.ResizeImages(100);
 					std::vector<cv::Mat*> batch = grid.ExtractGrid();
 
@@ -200,56 +210,22 @@ int main(int argc, char** argv)
 						// connect to server
 						if (c.Connect())
 						{
-							
-							
-							
-							
-							
-							
-							// send request ID to server
-							// 2: send training images
-							c.SendUChar(2);
-							// send user id
-							std::cout << "Please enter a user name: ";
-							c.SendKeyboard();
-
-							sendTrainingBatch(&c, batch);
-							// -----------------------------
+							// input user name
+							std::string name = inputUserName();
 
 							// generate request
-							io::EmbeddingCalculationSingleImage req(&c, image);
+							io::EmbeddingCollectionByName req(&c, batch, name);
 							req.SubmitRequest();
 
-							//allocate response
-							int response_identifier = c.Receive32bit<int>();
-							io::NetworkResponse* response_ptr = nullptr;
-							std::type_index response_type_id = io::ResponseFactory::AllocateAndLoad((io::NetworkResponseType)response_identifier, &server_conn, response_ptr);
-
-
 							// get reponse
-							if ((io::NetworkResponseType)response_identifier == io::NetworkResponse_EmbeddingResponse)
-							{
-								io::EmbeddingResponse resp;
-								// convert
-								memcpy(&resp, response_ptr, sizeof(io::EmbeddingResponse));
-
+							io::OKResponse response(&c);
+							if (!response.Load()) {
+								std::cout << "--- An error occurred during submission of the trainig data\n";
 							}
-							else
-							{
-								// invalid response/error - drop
-								std::cout << "Got invalid network response\n";
-							}
-
-							// cleanup
-							delete(response_ptr);
-
-
-							// -----------------------------
-
-
 
 							grid.Clear();
 							MODE = Mode_none;
+							cv::destroyAllWindows();
 							c.Close();
 						}else
 						{
@@ -262,7 +238,6 @@ int main(int argc, char** argv)
 					}
 				}
 		
-
 			}
 			else if (MODE == Mode_trigger_classifier_training)
 			{
@@ -274,8 +249,15 @@ int main(int argc, char** argv)
 					return -1;
 				}
 
-				// send request ID to server
-				c.SendUChar(4);
+				// generate request
+				io::ClassifierTraining req(&c);
+				req.SubmitRequest();
+
+				// get reponse
+				io::OKResponse response(&c);
+				if (!response.Load()) {
+					std::cout << "--- An error occurred during the classifier training\n";
+				}
 
 				MODE = Mode_none;
 				c.Close();
@@ -283,8 +265,50 @@ int main(int argc, char** argv)
 			}
 			else if (MODE == Mode_identification)
 			{
-			
-	
+				// show image
+				cv::imshow("Face Grid", face_captures);
+				int key = cv::waitKey(3);
+				if (key == 32)	// space = send identification batch to server
+				{
+					grid.ResizeImages(100);
+					std::vector<cv::Mat*> batch = grid.ExtractGrid();
+
+					if (batch.size()>0)
+					{
+						// connect to server
+						if (c.Connect())
+						{
+
+							// generate request
+							io::ImageIdentification req(&c, batch);
+							req.SubmitRequest();
+
+							// get reponse
+							io::IdentificationResponse response(&c);
+							if (!response.Load()) {
+								std::cout << "--- An error occurred during identification\n";
+							}
+							else {
+								std::cout << "--- DETECTED USER: " << response.mUserNiceName << std::endl;
+							}
+							
+
+							grid.Clear();
+							MODE = Mode_none;
+							cv::destroyAllWindows();
+							c.Close();
+						}
+						else
+						{
+							std::cout << "Could not connect to server. Please try again" << std::endl;
+						}
+
+					}
+					else
+					{
+						std::cout << "Please wait till more snapshots are collected.";
+					}
+				}
 
 			}
 

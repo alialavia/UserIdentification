@@ -3,6 +3,7 @@
 
 #include <typeindex>
 #include <string>
+#include <io/Networking.h>
 
 namespace io {
 	class NetworkResponse;
@@ -11,10 +12,10 @@ namespace io {
 	// response IDs: received from server
 	enum NetworkResponseType
 	{
-		NetworkResponse_IdentificationResponse = 1,
-		NetworkResponse_EmbeddingResponse = 2,
-		NetworkResponse_ErrorResponse = 999,
-		NetworkResponse_OKResponse = 111,
+		NetworkResponse_Identification = 1,
+		NetworkResponse_Embedding = 2,
+		NetworkResponse_Error = 999,
+		NetworkResponse_OK = 111,
 	};
 
 
@@ -25,6 +26,7 @@ namespace io {
 	{
 	public:		
 		static std::type_index AllocateAndLoad(NetworkResponseType type_id, io::TCPClient* conn, NetworkResponse* &ptr);
+
 	};
 
 	// ------------ RESPONSE DEFINITIONS
@@ -32,17 +34,24 @@ namespace io {
 	// response interface
 	class Response {
 	public:
-		virtual void Load() = 0;
+		virtual void GetPayload() = 0;
 	};
 
 	// networking
 	class NetworkResponse: public Response
 	{
 	public:
-		NetworkResponse(io::TCPClient* conn): pConn(conn)
-		{
+		NetworkResponse(io::TCPClient* conn, NetworkResponseType type): pConn(conn), cTypeID(type){}
+		bool Load() {
+			int identifier = pConn->Receive32bit<int>();
+			bool succ = (identifier == cTypeID);
+			if (succ) {
+				GetPayload();	// load response data
+			}
+			return succ;
 		}
 		io::TCPClient* pConn;
+		NetworkResponseType cTypeID;
 	};
 
 
@@ -56,38 +65,48 @@ namespace io {
 	class ErrorResponse : public NetworkResponse
 	{
 	public:
-		ErrorResponse(io::TCPClient* conn = nullptr) :NetworkResponse(conn){}
-		void Load();
+		ErrorResponse(io::TCPClient* conn = nullptr) :NetworkResponse(conn, NetworkResponse_Error){}
+		void GetPayload() { mMessage = pConn->ReceiveStringWithVarLength(); }
 		std::string mMessage = "Invalid response";
+
 	};
 
 	class OKResponse : public NetworkResponse
 	{
 	public:
-		OKResponse(io::TCPClient* conn = nullptr) :NetworkResponse(conn){}
-		void Load();
+		OKResponse(io::TCPClient* conn = nullptr) :NetworkResponse(conn, NetworkResponse_OK){}
+		void GetPayload() { mMessage = pConn->ReceiveStringWithVarLength(); };
 		std::string mMessage = "Request processed successfully";
 	};
 
 	class IdentificationResponse : public NetworkResponse
 	{
 	public:
-		IdentificationResponse(io::TCPClient* conn = nullptr):NetworkResponse(conn)
+		IdentificationResponse(io::TCPClient* conn = nullptr):NetworkResponse(conn, NetworkResponse_Identification)
 		{
 		}
-		void Load(); // receive response specific data from server
+		void GetPayload() {
+			mUserID = pConn->Receive32bit<int>();
+			mUserNiceName = pConn->ReceiveStringWithVarLength();
+		};
 		int mUserID = -1;
 		std::string mUserNiceName = "";
-		float mProbability = 0.0f;
+		float mProbability = 0.0f;	// todo:  implement in classifier
 	};
 
 	class EmbeddingResponse : public NetworkResponse
 	{
 	public:
-		EmbeddingResponse(io::TCPClient* conn = nullptr):NetworkResponse(conn)
+		EmbeddingResponse(io::TCPClient* conn = nullptr):NetworkResponse(conn, NetworkResponse_Embedding)
 		{
 		}
-		void Load(); // receive response specific data from server
+		void GetPayload() {
+			// load 128 dimensional vector
+			for (size_t i = 0; i<cNrEmbeddings; i++)
+			{
+				mEmbedding[i] = pConn->Receive64bit<double>();
+			}
+		}; // receive response specific data from server
 		static const int cNrEmbeddings = 128;
 		double mEmbedding[cNrEmbeddings];
 	};

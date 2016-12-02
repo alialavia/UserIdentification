@@ -44,122 +44,6 @@ namespace io {
 		const NetworkRequestType cRequestType;
 	protected:
 		io::TCPClient* pServerConn;
-		void SendImageBatchSquaredSameSize(const std::vector<cv::Mat> &images) const
-		{
-#ifdef _DEBUG
-			// check image dimensions
-			int img_size = images[0].size().width;
-			for (size_t i = 0; i<images.size(); i++)
-			{
-				if (images[i].size().width != img_size || images[i].size().height != img_size) {
-					throw std::invalid_argument("Invalid image dimensions - Image must be quadratic!");
-				}
-			}
-#endif
-			if (images.size() == 0)
-			{
-				throw std::invalid_argument("No data to send.");
-			}
-
-			// send nr images
-			pServerConn->SendInt(images.size());
-
-			// send image dimension
-			pServerConn->SendUInt(images[0].size().width);
-
-			// send images
-			for (size_t i = 0; i<images.size(); i++)
-			{
-				pServerConn->SendRGBImage(images[i]);
-			}
-		}
-
-		void SendImageBatchSameSize(const std::vector<cv::Mat> &images) const
-		{
-#ifdef _DEBUG
-			// check image dimensions
-			int img_width = images[0].size().width;
-			int img_height = images[0].size().height;
-			for (size_t i = 0; i<images.size(); i++)
-			{
-				if (images[i].size().width != img_width || images[i].size().height != img_height) {
-					throw std::invalid_argument("Invalid image dimensions - Image must be quadratic!");
-				}
-			}
-#endif
-			if (images.size() == 0)
-			{
-				throw std::invalid_argument("No data to send.");
-			}
-
-			// send nr images
-			pServerConn->SendInt(images.size());
-
-			// send image dimension
-			pServerConn->SendUInt(images[0].size().height);
-			pServerConn->SendUInt(images[0].size().width);
-
-			// send images
-			for (size_t i = 0; i<images.size(); i++)
-			{
-				pServerConn->SendRGBImage(images[i]);
-			}
-		}
-
-		void SendImageBatchSquared(const std::vector<cv::Mat> &images) const
-		{
-#ifdef _DEBUG
-			// check image dimensions
-			for (size_t i = 0; i<images.size(); i++)
-			{
-				if (images[i].size().width != images[i].size().height) {
-					throw std::invalid_argument("Invalid image dimensions - Image must be quadratic!");
-				}
-			}
-#endif
-			if (images.size() == 0)
-			{
-				throw std::invalid_argument("No data to send.");
-			}
-
-			// send nr images
-			pServerConn->SendInt(images.size());
-
-			// send images
-			for (size_t i = 0; i<images.size(); i++)
-			{
-				// send image dimension
-				pServerConn->SendUInt(images[i].size().width);
-
-				// send image
-				pServerConn->SendRGBImage(images[i]);
-			}
-		}
-
-		void SendImageBatch(const std::vector<cv::Mat> &images) const
-		{
-			if (images.size() == 0)
-			{
-				throw std::invalid_argument("No data to send.");
-			}
-
-			// send nr images
-			pServerConn->SendInt(images.size());
-
-			// send images
-			for (size_t i = 0; i<images.size(); i++)
-			{
-				// send image width
-				pServerConn->SendUInt(images[i].size().width);
-
-				// send image height
-				pServerConn->SendUInt(images[i].size().height);
-
-				// send image
-				pServerConn->SendRGBImage(images[i]);
-			}
-		}
-
 	protected:
 		// submit specific payload (data size and data)
 		virtual void SubmitPayload() = 0;
@@ -172,26 +56,35 @@ namespace io {
 	// - add NetworkRequestType
 	// - add Generation in Factory
 
-	class ImageIdentificationRequest: public NetworkRequest
+	class ImageIdentification: public NetworkRequest
 	{
 	public:
-		ImageIdentificationRequest(
+		ImageIdentification(
 			io::TCPClient* server_conn,
 			std::vector<cv::Mat> images
 		) :
-			NetworkRequest(server_conn, NetworkRequest_ImageIdentification),
-			mImages(images)
+			NetworkRequest(server_conn, NetworkRequest_ImageIdentification), mImages(images){}
+
+		ImageIdentification(
+			io::TCPClient* server_conn,
+			std::vector<cv::Mat*> images
+		) :
+			NetworkRequest(server_conn, NetworkRequest_ImageIdentification)
 		{
+			// make deep copy of images
+			for (size_t i = 0; i < images.size(); i++) {
+				mImages.push_back((*images[i]).clone());
+			}
 		}
 
 	protected:
 
 		// submit specific payload
 		void SubmitPayload() {
-			SendImageBatchSquaredSameSize(mImages);
+			pServerConn->SendImageBatchSquaredSameSize(mImages);
 		}
 
-		// payload: quadratic(!) image
+		// payload: quadratic(!) images of same size
 		std::vector<cv::Mat> mImages;
 
 	};
@@ -215,7 +108,7 @@ namespace io {
 		// submit specific payload
 		void SubmitPayload() {
 			pServerConn->SendUInt(mUserID);
-			SendImageBatchSquaredSameSize(mImages);
+			pServerConn->SendImageBatchSquaredSameSize(mImages);
 		}
 
 		// payload: quadratic(!) images of same size
@@ -236,13 +129,26 @@ namespace io {
 			mUserName(user_name)
 		{
 		}
+		EmbeddingCollectionByName(
+			io::TCPClient* server_conn,
+			std::vector<cv::Mat*> images,
+			std::string user_name
+		) :
+			NetworkRequest(server_conn, NetworkRequest_EmbeddingCollectionByName),
+			mUserName(user_name)
+		{
+			// make deep copy of images
+			for (size_t i = 0; i < images.size();i++) {
+				mImages.push_back((*images[i]).clone());
+			}
+		}
 
 	protected:
 
 		// submit specific payload
 		void SubmitPayload() {
 			pServerConn->SendString(mUserName);
-			SendImageBatchSquaredSameSize(mImages);
+			pServerConn->SendImageBatchSquaredSameSize(mImages);
 		}
 
 		// payload: quadratic(!) images of same size
@@ -250,6 +156,38 @@ namespace io {
 		std::string mUserName;
 	};
 
+
+	class EmbeddingCallculation : public NetworkRequest
+	{
+	public:
+		EmbeddingCallculation(
+			io::TCPClient* server_conn,
+			cv::Mat img
+		) :
+			NetworkRequest(server_conn, NetworkRequest_EmbeddingCalculation), mImage(img){}
+
+	protected:
+		// submit specific payload
+		void SubmitPayload() {
+			// send image size
+			pServerConn->SendUInt(mImage.size().width);
+			// send image
+			pServerConn->SendRGBImage(mImage);
+		}
+
+		// payload: quadratic(!) image
+		cv::Mat mImage;
+		int mUserID;
+	};
+
+	class ClassifierTraining : public NetworkRequest
+	{
+	public:
+		ClassifierTraining(io::TCPClient* server_conn) :
+			NetworkRequest(server_conn, NetworkRequest_ClassifierTraining){}
+	protected:
+		void SubmitPayload() {}
+	};
 
 }
 

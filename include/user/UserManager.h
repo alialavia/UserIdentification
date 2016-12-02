@@ -10,14 +10,14 @@
 namespace io{
 class TCPClient;
 class NetworkRequestHandler;
-class IdentificationRequestSingleImage;
+class ImageIdentification;
 class NetworkRequest;
 }
 
 namespace user
 {
 
-	typedef io::IdentificationRequestSingleImage IDReq;
+	typedef io::ImageIdentification IDReq;
 
 	class User;
 

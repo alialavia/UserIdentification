@@ -13,10 +13,10 @@
 
 namespace io {
 
-	class NetworkRequest;
-
 	// forward declarations
 	class TCPClient;
+	class NetworkRequest;
+	enum NetworkRequestType;
 
 	enum RequestHandlerStatus
 	{
@@ -62,7 +62,7 @@ namespace io {
 		void addRequest(io::NetworkRequest* request);
 
 		template<class T>
-		bool PopResponse(T *response_container, NetworkRequest* &request_ref)
+		bool PopResponse(T *response_container, NetworkRequest* &req_ptr_val, NetworkRequestType* request_type = nullptr)
 		{
 			bool status = false;
 			mRespondsLock.lock();
@@ -88,7 +88,14 @@ namespace io {
 				mMappingLock.lock();
 				// delete corresponding request and mapping
 				std::map<NetworkResponse*, NetworkRequest*>::iterator it1 = mResponseToRequest.find(response);
-				request_ref = it1->second;		// share request pointer
+
+				// ------ returns
+				req_ptr_val = it1->second; // share request pointer
+				if (request_type != nullptr) {
+					*request_type = it1->second->cRequestType;	// share request type
+				}
+
+				// ------ cleanup
 				delete(it1->second);			// delete request
 				mResponseToRequest.erase(it1);	// delete map item
 				mMappingLock.unlock();
