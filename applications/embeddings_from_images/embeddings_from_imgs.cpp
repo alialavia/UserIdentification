@@ -8,7 +8,6 @@
 #include <io/RequestTypes.h>
 #include <io/ResponseTypes.h>
 
-
 DEFINE_int32(port, 8080, "Server port");
 DEFINE_string(filelist, "", "List of the images");
 DEFINE_string(output, "embeddings.csv", "Embeddings output");
@@ -45,41 +44,28 @@ int main(int argc, char** argv)
 			continue;
 		}
 
-
 		server_conn.Connect();
 
 		// generate request
-		io::EmbeddingCalculationSingleImage req(&server_conn, image);
+		io::EmbeddingCallculation req(&server_conn, image);
 		req.SubmitRequest();
 
-		//allocate response
-		int response_identifier = server_conn.Receive32bit<int>();
-		io::NetworkResponse* response_ptr = nullptr;
-		std::type_index response_type_id = io::ResponseFactory::AllocateAndLoad((io::NetworkResponseType)response_identifier, &server_conn, response_ptr);
-
-
 		// get reponse
-		if((io::NetworkResponseType)response_identifier == io::NetworkResponse_EmbeddingResponse)
-		{
-			io::EmbeddingResponse resp;
-			// convert
-			memcpy(&resp, response_ptr, sizeof(io::EmbeddingResponse));
-
-			// save to file
-			csv_out.addEntry(img_name);
-			for(size_t i = 0; i<resp.cNrEmbeddings;i++)
-			{
-				csv_out.addEntry(resp.mEmbedding[i]);
-			}
-			csv_out.startNewRow();
-		}else
-		{
-			// invalid response/error - drop
-			std::cout << "Got invalid network response\n";
+		io::EmbeddingResponse response(&server_conn);
+		if (!response.Load()) {
+			std::cout << "--- An error occurred during identification\n";
+		}
+		else {
+			//std::cout << "--- DETECTED USER: " << response.mUserNiceName << std::endl;
 		}
 
-		// cleanup
-		delete(response_ptr);
+		//// save to file
+		//csv_out.addEntry(img_name);
+		//for (size_t i = 0; i<resp.cNrEmbeddings; i++)
+		//{
+		//	csv_out.addEntry(resp.mEmbedding[i]);
+		//}
+		//csv_out.startNewRow();
 
 	}
 
