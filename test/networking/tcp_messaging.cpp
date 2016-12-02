@@ -30,6 +30,9 @@ int main(int argc, char** argv)
 			c.SendChar(2);
 
 			// ----- send
+
+			// string
+			c.SendString("Hi there! I'm a Client.");
 			// char
 			c.SendChar(100);
 			// unsigned char

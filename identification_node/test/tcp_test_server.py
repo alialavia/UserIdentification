@@ -42,6 +42,7 @@ class TCPTestServer(TCPServerBlocking):
 
     def handle_primitive_values(self, conn):
         # receive
+        print "--- string: " + str(self.receive_string(conn))
         print "--- char: " + str(self.receive_char(conn))
         print "--- uchar: " + str(self.receive_uchar(conn))
         print "--- short: " + str(self.receive_short(conn))

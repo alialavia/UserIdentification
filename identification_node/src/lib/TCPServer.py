@@ -128,6 +128,11 @@ class TCPServer:
         #  ----------- BINARY DATA HANDLERS
 
     #  ----------- RECEIVE PRIMITIVES
+    def receive_string(self, client_socket):
+        # get message size
+        msg_size = self.receive_uint(client_socket)
+        msg = self.receive_message(client_socket, msg_size)
+        return msg
 
     def receive_char(self, client_socket):
         """1 byte - unsigned: 0 .. 255"""

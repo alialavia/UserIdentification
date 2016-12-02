@@ -415,6 +415,21 @@ void TCPClient::SendRGBTestImage(int size)
 	printf("Sent bytes: %d\n", bytecount);
 }
 
+
+int TCPClient::SendString(std::string val) {
+
+	// buffer size
+	SendInt(val.size());
+
+	// send cstring
+	int bytecount;
+	if ((bytecount = send(mSocketID, val.c_str(), val.size(), 0)) == SOCKET_ERROR) {
+		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
+		return 0;
+	}
+	return bytecount;
+}
+
 bool TCPClient::SendKeyboard()
 {
 	char buffer[1024];
@@ -431,7 +446,7 @@ bool TCPClient::SendKeyboard()
 	}
 
 	// buffer size
-	SendInt(strlen(buffer));
+	SendUInt(strlen(buffer));
 
 	// send char array
 	if ((bytecount = send(mSocketID, buffer, strlen(buffer), 0)) == SOCKET_ERROR) {
