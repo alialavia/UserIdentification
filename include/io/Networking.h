@@ -6,7 +6,7 @@
 #include <iostream>
 #include <winsock.h>
 
-#define _DEBUG_NETWORKING
+// #define _DEBUG_NETWORKING
 
 // define macro ourselfes - dont use winsock2!
 #define _WS2_32_WINSOCK_SWAP_LONGLONG(l)            \
@@ -41,32 +41,39 @@ namespace io
 		/// </summary>
 		/// <param name="img">The img.</param>
 		/// <returns>Number of bytes sent</returns>
-		int SendRGBImage(const cv::Mat &img);
-		void SendRGBTestImage(int size = 100);
+		int SendRGBImage(const cv::Mat &img) const;
+		void SendRGBTestImage(int size = 100) const;
 
-		// ----- send
+		// ----- send primitives
 
-		bool SendKeyboard();
-		int SendString(std::string val);
+		bool SendKeyboard() const;
+		int SendString(std::string val) const;
 		// range: -127 .. 127
-		int SendChar(char id);
+		int SendChar(char id) const;
 		// range:  .. 255
-		int SendUChar(unsigned char val);
+		int SendUChar(unsigned char val) const;
 		// range: –32,768 .. 32,767
-		int SendShort(short val);
+		int SendShort(short val) const;
 		// range: 0 .. 65535
-		int SendUShort(unsigned short ushort);
+		int SendUShort(unsigned short ushort) const;
 		// range: –2,147,483,648 .. 2,147,483,647
-		int SendInt(int val);
+		int SendInt(int val) const;
 		// range: 0 .. 4,294,967,295
-		int SendUInt(uint32_t size);
+		int SendUInt(uint32_t size) const;
 		// range: false .. true
-		int SendBool(bool val);
+		int SendBool(bool val) const;
 		// range: 3.4E +/- 38 (7 digits)
-		int SendFloat(float val);
+		int SendFloat(float val) const;
 		// range: +/- 1.7e +/- 308
 		// TODO: fix
-		int SendDouble(double val);
+		int SendDouble(double val) const;
+
+		// ----- send custom types
+
+		void SendImageBatchSquaredSameSize(const std::vector<cv::Mat> &images) const;
+		void SendImageBatchSameSize(const std::vector<cv::Mat> &images) const;
+		void SendImageBatchSquared(const std::vector<cv::Mat> &images) const;
+		void SendImageBatch(const std::vector<cv::Mat> &images) const;
 
 		// ------ receive
 
@@ -119,14 +126,14 @@ namespace io
 
 		// ------ Floating point Endianness conversion
 
-		uint32_t htonf(float f)
+		uint32_t htonf(float f) const
 		{
 			uint32_t x;
 			memcpy(&x, &f, sizeof(float));
 			return htonl(x);
 		}
 
-		float ntohf(uint32_t nf)
+		float ntohf(uint32_t nf) const
 		{
 			float x;
 			nf = ntohl(nf);
@@ -134,16 +141,12 @@ namespace io
 			return x;
 		}
 
-		uint64_t htond(double d)
+		uint64_t htond(double d) const
 		{
 			uint64_t x;
 			memcpy(&x, &d, sizeof(double));
 			return _WS2_32_WINSOCK_SWAP_LONGLONG(x);
 		}
-
-		// ------ deprecated
-		int SendImageWithLength(const cv::Mat &img);
-		int SendImageBatchWithLength(const std::vector<cv::Mat> &images);
 
 	private:
 		bool OpenSocket();

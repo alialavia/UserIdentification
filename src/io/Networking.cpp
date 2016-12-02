@@ -40,7 +40,7 @@ bool TCPClient::Connect()
 bool TCPClient::Connect(char* host_name, int host_port)
 {
 
-#ifdef _DEBUG
+#ifdef _DEBUG_NETWORKING
 	std::cout << "=== Connecting to server: " << host_name << ":" << host_port << std::endl;
 #endif
 
@@ -181,7 +181,7 @@ int TCPClient::ReceiveRGBImage(cv::Mat &output, int img_dim)
 
 // ------ send
 
-int TCPClient::SendChar(char id)
+int TCPClient::SendChar(char id) const
 {
 	int bytecount;
 	// send 1 byte identifier = char
@@ -195,7 +195,7 @@ int TCPClient::SendChar(char id)
 	return bytecount;
 }
 
-int TCPClient::SendUInt(uint32_t size)
+int TCPClient::SendUInt(uint32_t size) const
 {
 	uint32_t network_byte_order = htonl(size);
 	int bytecount;
@@ -210,7 +210,7 @@ int TCPClient::SendUInt(uint32_t size)
 	return bytecount;
 }
 
-int TCPClient::SendInt(int size)
+int TCPClient::SendInt(int size) const
 {
 	uint32_t network_byte_order = htonl(size);
 	int bytecount;
@@ -225,7 +225,7 @@ int TCPClient::SendInt(int size)
 	return bytecount;
 }
 
-int TCPClient::SendShort(short val)
+int TCPClient::SendShort(short val) const
 {
 	unsigned short network_byte_order = htons(val);
 	int bytecount;
@@ -240,7 +240,7 @@ int TCPClient::SendShort(short val)
 	return bytecount;
 }
 
-int TCPClient::SendUShort(unsigned short ushort)
+int TCPClient::SendUShort(unsigned short ushort) const
 {
 	unsigned short network_byte_order = htons(ushort);
 	int bytecount;
@@ -255,7 +255,7 @@ int TCPClient::SendUShort(unsigned short ushort)
 	return bytecount;
 }
 
-int TCPClient::SendBool(bool val)
+int TCPClient::SendBool(bool val) const
 {
 	int bytecount;
 	// send 1 byte identifier = char
@@ -269,7 +269,7 @@ int TCPClient::SendBool(bool val)
 	return bytecount;
 }
 
-int TCPClient::SendDouble(double val)
+int TCPClient::SendDouble(double val) const
 {
 	int bytecount;
 	uint64_t network_byte_order = htond(val);
@@ -285,7 +285,7 @@ int TCPClient::SendDouble(double val)
 	return bytecount;
 }
 
-int TCPClient::SendFloat(float val)
+int TCPClient::SendFloat(float val) const
 {
 	int bytecount;
 	unsigned int network_byte_order = htonf(val);
@@ -301,7 +301,7 @@ int TCPClient::SendFloat(float val)
 	return bytecount;
 }
 
-int TCPClient::SendUChar(unsigned char val)
+int TCPClient::SendUChar(unsigned char val) const
 {
 	int bytecount;
 	// send 1 byte identifier = char
@@ -315,56 +315,10 @@ int TCPClient::SendUChar(unsigned char val)
 	return bytecount;
 }
 
-int TCPClient::SendImageWithLength(const cv::Mat &img)
+int TCPClient::SendRGBImage(const cv::Mat &img) const
 {
-	//cv::Mat frame = cv::Mat::zeros(size, size, CV_8UC3);
-	cv::Mat flattend= (img.reshape(0, 1)); // to make it continuous
-	const int imgSize = flattend.total()*flattend.elemSize();
 
-	// first send message size
-	SendUInt(imgSize);
-
-	// then send flattened image
-	int bytecount;
-	if ((bytecount = send(mSocketID, (const char *)flattend.data, imgSize, 0)) == SOCKET_ERROR) {
-		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
-		return 0;
-	}
 #ifdef _DEBUG_NETWORKING
-	std::cout << "--- SendImageWithLength sent " << bytecount << "bytes\n";
-#endif
-	return bytecount;
-}
-
-int TCPClient::SendImageBatchWithLength(const std::vector<cv::Mat> &images)
-{
-	// send number of images
-	SendChar(images.size());
-
-	// send image size
-	const int imgSize = images[0].cols * images[0].rows * images[0].elemSize();
-	SendUInt(imgSize);
-
-	// send images
-	int bytecount = 0, totalbytecount = 0;
-	for(int i = 0; i<images.size();i++)
-	{
-		cv::Mat flattend = (images[i].reshape(0, 1));
-		// send data
-		if ((bytecount = send(mSocketID, (const char *)flattend.data, imgSize, 0)) == SOCKET_ERROR) {
-			fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
-			return totalbytecount;
-		}
-		totalbytecount += bytecount;
-	}
-
-	return totalbytecount;
-}
-
-int TCPClient::SendRGBImage(const cv::Mat &img)
-{
-
-#ifdef _DEBUG
 	if (img.rows == 0 || img.cols == 0) {
 		std::cout << "Could not empty image.";
 		return 0;
@@ -396,7 +350,7 @@ int TCPClient::SendRGBImage(const cv::Mat &img)
 	return bytecount;
 }
 
-void TCPClient::SendRGBTestImage(int size)
+void TCPClient::SendRGBTestImage(int size) const
 {
 	cv::Mat frame = cv::Mat::zeros(size, size, CV_8UC3);
 	frame = (frame.reshape(0, 1)); // to make it continuous
@@ -415,11 +369,11 @@ void TCPClient::SendRGBTestImage(int size)
 	printf("Sent bytes: %d\n", bytecount);
 }
 
-
-int TCPClient::SendString(std::string val) {
+int TCPClient::SendString(std::string val) const
+{
 
 	// buffer size
-	SendInt(val.size());
+	SendUInt(val.size());
 
 	// send cstring
 	int bytecount;
@@ -430,7 +384,7 @@ int TCPClient::SendString(std::string val) {
 	return bytecount;
 }
 
-bool TCPClient::SendKeyboard()
+bool TCPClient::SendKeyboard() const
 {
 	char buffer[1024];
 	int buffer_len = 1024;
@@ -457,3 +411,118 @@ bool TCPClient::SendKeyboard()
 	return true;
 }
 
+void TCPClient::SendImageBatchSquaredSameSize(const std::vector<cv::Mat> &images) const
+{
+#ifdef _DEBUG_NETWORKING
+	// check image dimensions
+	int img_size = images[0].size().width;
+	for (size_t i = 0; i<images.size(); i++)
+	{
+		if (images[i].size().width != img_size || images[i].size().height != img_size) {
+			throw std::invalid_argument("Invalid image dimensions - Image must be quadratic!");
+		}
+	}
+#endif
+	if (images.size() == 0)
+	{
+		throw std::invalid_argument("No data to send.");
+	}
+
+	// send nr images
+	SendUInt(images.size());
+
+	// send image dimension
+	SendUInt(images[0].size().width);
+
+	// send images
+	for (size_t i = 0; i<images.size(); i++)
+	{
+		SendRGBImage(images[i]);
+	}
+}
+
+void TCPClient::SendImageBatchSameSize(const std::vector<cv::Mat> &images) const
+{
+#ifdef _DEBUG_NETWORKING
+	// check image dimensions
+	int img_width = images[0].size().width;
+	int img_height = images[0].size().height;
+	for (size_t i = 0; i<images.size(); i++)
+	{
+		if (images[i].size().width != img_width || images[i].size().height != img_height) {
+			throw std::invalid_argument("Invalid image dimensions - Image must be quadratic!");
+		}
+	}
+#endif
+	if (images.size() == 0)
+	{
+		throw std::invalid_argument("No data to send.");
+	}
+
+	// send nr images
+	SendUInt(images.size());
+
+	// send image dimension
+	SendUInt(images[0].size().width);
+	SendUInt(images[0].size().height);
+
+	// send images
+	for (size_t i = 0; i<images.size(); i++)
+	{
+		SendRGBImage(images[i]);
+	}
+}
+
+void TCPClient::SendImageBatchSquared(const std::vector<cv::Mat> &images) const
+{
+#ifdef _DEBUG_NETWORKING
+	// check image dimensions
+	for (size_t i = 0; i<images.size(); i++)
+	{
+		if (images[i].size().width != images[i].size().height) {
+			throw std::invalid_argument("Invalid image dimensions - Image must be quadratic!");
+		}
+	}
+#endif
+	if (images.size() == 0)
+	{
+		throw std::invalid_argument("No data to send.");
+	}
+
+	// send nr images
+	SendUInt(images.size());
+
+	// send images
+	for (size_t i = 0; i<images.size(); i++)
+	{
+		// send image dimension
+		SendUInt(images[i].size().width);
+
+		// send image
+		SendRGBImage(images[i]);
+	}
+}
+
+void TCPClient::SendImageBatch(const std::vector<cv::Mat> &images) const
+{
+	if (images.size() == 0)
+	{
+		throw std::invalid_argument("No data to send.");
+	}
+
+	// send nr images
+	SendInt(images.size());
+
+	// send images
+	for (size_t i = 0; i<images.size(); i++)
+	{
+		// send image width
+		SendUInt(images[i].size().width);
+
+		// send image height
+		SendUInt(images[i].size().height);
+
+		// send image
+		SendRGBImage(images[i]);
+	}
+}
