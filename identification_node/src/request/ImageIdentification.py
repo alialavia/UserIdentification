@@ -7,22 +7,18 @@ class ImageIdentification:
 
     def __init__(self, server, conn):
 
-        print "--- Identification"
-
-        # receive image size
-        img_size = server.receive_uint(conn)
-        # receive image
-        user_face = server.receive_rgb_image(conn, img_size, img_size)
+        # receive images
+        images = server.receive_image_batch_squared_same_size(conn)
 
         # generate embedding
-        embedding = server.embedding_gen.get_embedding(user_face)
+        embeddings = server.embedding_gen.get_embeddings(images)
 
-        if embedding is None:
-            ErrorResponse(server, conn, "Could not generate face embedding.")
+        if not embeddings:
+            ErrorResponse(server, conn, "Could not generate face embeddings.")
             return
 
         # predict user id
-        user_id = server.classifier.predict_label(embedding)
+        user_id = server.classifier.predict_label_multi(embeddings)
 
         if user_id is None:
             ErrorResponse(server, conn, "Label could not be predict - Classifier might not be trained.")
@@ -32,6 +28,9 @@ class ImageIdentification:
 
         # get user nice name
         user_name = server.user_db.get_name_from_id(user_id)
+
+        server.user_db.print_users()
+
         if user_name is None:
             user_name = "unnamed"
 

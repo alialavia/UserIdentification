@@ -7,26 +7,11 @@ class CollectEmbeddingsByName:
 
     def __init__(self, server, conn):
 
-        # receive user name size
-        user_name_bytes = server.receive_int(conn)
-
         # receive user nice name
-        user_nice_name = server.receive_message(conn, user_name_bytes)
+        user_nice_name = server.receive_string(conn)
 
-        # receive image dimension
-        img_dim = server.receive_int(conn)
-
-        # receive batch size
-        nr_images = server.receive_char(conn)
-
-        print "--- Image batch received: size: " + str(nr_images) + " | image dimension: " + str(img_dim)
-
-        # receive image batch
-        images = []
-        for x in range(0, nr_images):
-            # receive image
-            new_img = server.receive_rgb_image(conn, img_dim, img_dim)
-            images.append(new_img)
+        # receive images
+        images = server.receive_image_batch_squared_same_size(conn)
 
         # ASSUME USER NAME IS UNIQUE! Picks first user with this name!
         user_id = server.user_db.get_id_from_name(user_nice_name)
