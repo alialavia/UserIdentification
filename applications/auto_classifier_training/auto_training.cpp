@@ -6,6 +6,7 @@
 #include <gflags/gflags.h>
 #include "io/Networking.h"
 #include "tracking/FaceTracker.h"
+#include "io/RequestTypes.h"
 
 DEFINE_int32(port, 8080, "Server port");
 
@@ -199,6 +200,12 @@ int main(int argc, char** argv)
 						// connect to server
 						if (c.Connect())
 						{
+							
+							
+							
+							
+							
+							
 							// send request ID to server
 							// 2: send training images
 							c.SendUChar(2);
@@ -207,8 +214,41 @@ int main(int argc, char** argv)
 							c.SendKeyboard();
 
 							sendTrainingBatch(&c, batch);
-							grid.Clear();
+							// -----------------------------
 
+							// generate request
+							io::EmbeddingCalculationSingleImage req(&c, image);
+							req.SubmitRequest();
+
+							//allocate response
+							int response_identifier = c.Receive32bit<int>();
+							io::NetworkResponse* response_ptr = nullptr;
+							std::type_index response_type_id = io::ResponseFactory::AllocateAndLoad((io::NetworkResponseType)response_identifier, &server_conn, response_ptr);
+
+
+							// get reponse
+							if ((io::NetworkResponseType)response_identifier == io::NetworkResponse_EmbeddingResponse)
+							{
+								io::EmbeddingResponse resp;
+								// convert
+								memcpy(&resp, response_ptr, sizeof(io::EmbeddingResponse));
+
+							}
+							else
+							{
+								// invalid response/error - drop
+								std::cout << "Got invalid network response\n";
+							}
+
+							// cleanup
+							delete(response_ptr);
+
+
+							// -----------------------------
+
+
+
+							grid.Clear();
 							MODE = Mode_none;
 							c.Close();
 						}else

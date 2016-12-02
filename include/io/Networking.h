@@ -47,6 +47,7 @@ namespace io
 		// ----- send
 
 		bool SendKeyboard();
+		int SendString(std::string val);
 		// range: -127 .. 127
 		int SendChar(char id);
 		// range:  .. 255
