@@ -18,7 +18,6 @@ NetworkRequest::NetworkRequest(io::TCPClient* server_conn, NetworkRequestType re
 
 bool NetworkRequest::SubmitRequest()
 {
-
 	// send request id to server as uchar (0-255)
 	int bytecount;
 	bytecount = pServerConn->SendUChar(cRequestType);

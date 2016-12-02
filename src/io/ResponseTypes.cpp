@@ -10,7 +10,25 @@ std::type_index ResponseFactory::AllocateAndLoad(NetworkResponseType type_id, io
 	void* response = nullptr;
 
 	// TODO: cleanup/auto type detection
-	if (type_id == NetworkResponse_IdentificationResponse)
+
+	if (type_id == NetworkResponse_ErrorResponse)
+	{
+		ErrorResponse* resp = nullptr;
+		resp = new ErrorResponse(conn);
+		resp->Load();
+		ptr = resp;
+		return typeid(ErrorResponse);
+
+	}
+	else if(type_id == NetworkResponse_OKResponse)
+	{
+		OKResponse* resp = nullptr;
+		resp = new OKResponse(conn);
+		resp->Load();
+		ptr = resp;
+		return typeid(OKResponse);
+
+	}else if (type_id == NetworkResponse_IdentificationResponse)
 	{
 		IdentificationResponse* resp = nullptr;
 		resp = new IdentificationResponse(conn);
@@ -29,7 +47,6 @@ std::type_index ResponseFactory::AllocateAndLoad(NetworkResponseType type_id, io
 		ErrorResponse* resp = nullptr;
 		resp = new ErrorResponse(conn);
 		resp->mMessage = "Invalid response type id";
-		resp->Load();
 		ptr = resp;
 		return typeid(ErrorResponse);
 	}
@@ -37,6 +54,17 @@ std::type_index ResponseFactory::AllocateAndLoad(NetworkResponseType type_id, io
 }
 
 // ------------ RESPONSE DEFINITIONS
+
+
+void ErrorResponse::Load()
+{
+	mMessage = pConn->ReceiveStringWithVarLength();
+}
+
+void OKResponse::Load()
+{
+	mMessage = pConn->ReceiveStringWithVarLength();
+}
 
 void IdentificationResponse::Load()
 {
@@ -54,5 +82,4 @@ void EmbeddingResponse::Load()
 		mEmbedding[i] = pConn->Receive64bit<double>();
 	}
 }
-
 

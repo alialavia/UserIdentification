@@ -12,7 +12,9 @@ namespace io {
 	enum NetworkResponseType
 	{
 		NetworkResponse_IdentificationResponse = 1,
-		NetworkResponse_EmbeddingResponse = 2
+		NetworkResponse_EmbeddingResponse = 2,
+		NetworkResponse_ErrorResponse = 999,
+		NetworkResponse_OKResponse = 111,
 	};
 
 
@@ -51,6 +53,22 @@ namespace io {
 	// - add Generation in Factory
 
 	// specific response types
+	class ErrorResponse : public NetworkResponse
+	{
+	public:
+		ErrorResponse(io::TCPClient* conn = nullptr) :NetworkResponse(conn){}
+		void Load();
+		std::string mMessage = "Invalid response";
+	};
+
+	class OKResponse : public NetworkResponse
+	{
+	public:
+		OKResponse(io::TCPClient* conn = nullptr) :NetworkResponse(conn){}
+		void Load();
+		std::string mMessage = "Request processed successfully";
+	};
+
 	class IdentificationResponse : public NetworkResponse
 	{
 	public:
@@ -61,16 +79,6 @@ namespace io {
 		int mUserID = -1;
 		std::string mUserNiceName = "";
 		float mProbability = 0.0f;
-	};
-
-	class ErrorResponse : public NetworkResponse
-	{
-	public:
-		ErrorResponse(io::TCPClient* conn = nullptr) :NetworkResponse(conn)
-		{
-		}
-		void Load() {};
-		std::string mMessage = "Invalid response";
 	};
 
 	class EmbeddingResponse : public NetworkResponse
