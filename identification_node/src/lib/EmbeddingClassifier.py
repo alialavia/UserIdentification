@@ -4,6 +4,7 @@ import os
 import time
 import pickle
 from abc import abstractmethod
+import numpy as np
 # classifiers
 from sklearn.preprocessing import LabelEncoder
 
@@ -28,11 +29,10 @@ class EmbeddingClassifier:
     def __init__(self, user_db_):
 
         # link database
-        __p_user_db = user_db_
+        self.__p_user_db = user_db_
 
         start = time.time()
         print "--- loading models..."
-
         # initialize classifier
         self.define_classifier()
         if self.classifier is None or self.classifier_tag is None:
@@ -48,7 +48,7 @@ class EmbeddingClassifier:
         # e.g.  self.classifier = SVC(C=1, kernel='linear', probability=True)
         raise NotImplementedError( "The initialization method for the classifier must be implemented." )
 
-    def predict_label(self, user_embedding):
+    def predict_label(self, user_embedding, verbose = True):
         if self.training_status is False:
             return None
 
@@ -56,16 +56,34 @@ class EmbeddingClassifier:
         start = time.time()
         label_encoded = self.classifier.predict(user_embedding)
         label_predicted = self.label_encoder.inverse_transform(label_encoded)
-        print("--- Identification took {} seconds.".format(time.time() - start))
-        return label_predicted
+        if verbose is True:
+            print("--- Identification took {} seconds.".format(time.time() - start))
+        return label_predicted[0]   # extract element from array
+
+    def predict_label_multi(self, user_embeddings):
+
+        if self.training_status is False:
+            return None
+
+        predictions = []
+        start = time.time()
+        for emb in user_embeddings:
+            pred = self.predict_label(emb, False)
+            if pred is not None:
+                predictions.append(pred)
+
+        # take the most predicted label
+        counts = np.bincount(predictions)
+        print("--- Identification took {} ms.".format((time.time() - start)/1000))
+        return np.argmax(counts)
 
     #  ----------- UTILITIES
 
     def load_classifier(self):
-        filename = "{}/"+self.classifier_tag+"_classifier.pkl".format(classifierModelDir)
+        filename = "{}/{}_classifier.pkl".format(classifierModelDir, self.classifier_tag)
         if os.path.isfile(filename):
             with open(filename, 'r') as f:
-                (self.id_increment, self.user_list, self.user_embeddings, self.label_encoder, self.classifier) = pickle.load(f)
+                (self.label_encoder, self.classifier) = pickle.load(f)
             return True
         return False
 
@@ -73,11 +91,10 @@ class EmbeddingClassifier:
         if self.training_status is False:
             print("--- Classifier is not trained yet")
             return
-
-        filename = "{}/"+self.classifier_tag+"_classifier.pkl".format(classifierModelDir)
+        filename = "{}/{}_classifier.pkl".format(classifierModelDir, self.classifier_tag)
         print("--- Saving classifier to '{}'".format(filename))
         with open(filename, 'wb') as f:
-            pickle.dump((self.id_increment, self.user_list, self.user_embeddings, self.label_encoder, self.classifier), f)
+            pickle.dump((self.label_encoder, self.classifier), f)
 
     def trigger_training(self):
         """triggers the detector training from the collected faces"""

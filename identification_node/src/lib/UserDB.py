@@ -29,17 +29,12 @@ class UserDB:
     #  ----------- DESCRIPTOR TOOLS
     def add_embeddings(self, user_id, new_embeddings):
         """embeddings: array of embeddings"""
-        # check if user is initiated
-        if user_id not in user_id:
-            print "--- ERROR: user id is not valid - user must be created declared"
-            return False
-
         if user_id not in self.user_embeddings:
-            # append
-            self.user_embeddings[user_id] = np.concatenate((self.user_embeddings[user_id], new_embeddings))
-        else:
             # initialize
             self.user_embeddings[user_id] = new_embeddings
+        else:
+            # append
+            self.user_embeddings[user_id] = np.concatenate((self.user_embeddings[user_id], new_embeddings))
 
     def get_labeled_embeddings(self):
         embeddings_accumulated = np.array([])
@@ -73,7 +68,7 @@ class UserDB:
 
     # ----------- STORAGE
     def load(self):
-        filename = "{}/userdb_"+self.version_name+".pkl".format(DBDir)
+        filename = "{}/userdb_{}.pkl".format(DBDir, self.version_name)
         if os.path.isfile(filename):
             with open(filename, 'r') as f:
                 (
@@ -86,7 +81,7 @@ class UserDB:
         return False
 
     def save(self):
-        filename = "{}/userdb_"+self.version_name+".pkl".format(DBDir)
+        filename = "{}/userdb_{}.pkl".format(DBDir, self.version_name)
         print("--- Saving database to '{}'".format(filename))
         with open(filename, 'wb') as f:
             pickle.dump((
@@ -98,6 +93,9 @@ class UserDB:
 
     # ----------- DISPLAY
     def print_users(self):
+        if len(self.user_list) == 0:
+            print "--- No users found in the database"
+
         print "--- Current users:"
         for user_id, name in self.user_list.iteritems():
             print "     User: ID(" + str(user_id) + "): " + name

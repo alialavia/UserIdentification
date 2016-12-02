@@ -28,12 +28,12 @@ class EmbeddingGen:
 
     def __init__(self):
         start = time.time()
-        print "--- loading models..."
+        print "--- EmbeddingGen: loading models..."
         # load neural net
         self.neural_net = openface.TorchNeuralNet(self.networkModel, imgDim=self.size, cuda=self.cuda)
         # load dlib model
         self.dlib_aligner = openface.AlignDlib(dlibModelDir + "/" + self.dlibFacePredictor)
-        print("--- model loading took {} seconds".format(time.time() - start))
+        print("--- EmbeddingGen: model loading took {} seconds".format(time.time() - start))
 
     #  ----------- EMBEDDING GENERATION
     def get_embeddings(self, input_images):
@@ -53,20 +53,20 @@ class EmbeddingGen:
         # print status
         if self.verbose is True:
             if len(images_normalized) > 0:
-                print("--- Alignment took {} seconds - " + str(len(images_normalized)) + "/" +
-                      str(len(input_images)) + " images suitable".format(time.time() - start))
+                print("--- Alignment took {} seconds - {}/{} images suitable".format(time.time() - start, len(images_normalized), len(input_images)))
             else:
                 print "--- No suitable images (no faces detected)"
         else:
             return embeddings
 
         # generate embeddings
+        start = time.time()
         for img in images_normalized:
-            start = time.time()
             rep = self.neural_net.forward(img)
-            if self.verbose:
-                print("--- = Neural network forward pass took {} seconds.".format(time.time() - start))
             embeddings.append(rep)
+
+        if self.verbose:
+            print("--- Neural network forward pass took {} seconds.".format(time.time() - start))
 
         return embeddings
 
@@ -97,7 +97,6 @@ class EmbeddingGen:
         outRgb = self.dlib_aligner.align(output_size, image,
                              landmarkIndices=landmarkIndices,
                              skipMulti=skip_multi)
-        if outRgb is None:
-            print("--- Unable to align.")
 
+        # out Rgb might be none
         return outRgb

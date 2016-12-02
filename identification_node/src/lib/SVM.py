@@ -8,7 +8,7 @@ from src.lib.EmbeddingClassifier import EmbeddingClassifier
 class SVM(EmbeddingClassifier):
 
     def __init__(self, user_db_):
-        EmbeddingClassifier.__init__(user_db_)    # superclass init
+        EmbeddingClassifier.__init__(self, user_db_)    # superclass init
 
     def define_classifier(self):
         self.classifier_tag = 'Linear_SVM'
