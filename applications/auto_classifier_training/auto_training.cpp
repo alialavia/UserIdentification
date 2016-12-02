@@ -10,24 +10,6 @@
 
 DEFINE_int32(port, 8080, "Server port");
 
-void sendTrainingBatch(io::TCPClient *c, const std::vector<cv::Mat*> &image_batch)
-{
-	std::cout << "--- Sending " << image_batch.size() << " images to server" << std::endl;
-
-	// --- send image dimension
-	std::cout << "--- " << c->SendUInt((*image_batch[0]).size().width) << " bytes sent (image size)" << std::endl;
-
-	// --- send number of images
-	std::cout << "--- " << c->SendUChar(image_batch.size()) << " bytes sent (nr images)" << std::endl;
-
-	// -- send images
-	for (int i = 0; i < image_batch.size(); i++) {
-		std::cout << "sent " << c->SendRGBImage(*image_batch[i]) << " bytes to server\n";
-	}
-
-	std::cout << "--- Image batch has been sent" << std::endl;
-};
-
 int inputUserID() {
 	// How to get a number.
 	int myNumber = 0;
@@ -134,7 +116,7 @@ int main(int argc, char** argv)
 				else if ((int)('2') == key)
 				{
 					MODE = Mode_trigger_classifier_training;
-					std::cout << "--- Trigger identification mode...\n";
+					std::cout << "--- Trigger classifier training...\n";
 				}
 				else if ((int)('3') == key)
 				{
@@ -222,6 +204,9 @@ int main(int argc, char** argv)
 							if (!response.Load()) {
 								std::cout << "--- An error occurred during submission of the trainig data\n";
 							}
+							else {
+								std::cout << "--- Embedding collection successfull" << std::endl;
+							}
 
 							grid.Clear();
 							MODE = Mode_none;
@@ -234,7 +219,7 @@ int main(int argc, char** argv)
 
 					}else
 					{
-						std::cout << "Please wait till more snapshots are collected.";
+						std::cout << "Please wait till more snapshots are collected." << std::endl;
 					}
 				}
 		
@@ -256,7 +241,7 @@ int main(int argc, char** argv)
 				// get reponse
 				io::OKResponse response(&c);
 				if (!response.Load()) {
-					std::cout << "--- An error occurred during the classifier training\n";
+					std::cout << "--- An error occurred during the classifier training" << std::endl;
 				}
 
 				MODE = Mode_none;
@@ -286,7 +271,7 @@ int main(int argc, char** argv)
 							// get reponse
 							io::IdentificationResponse response(&c);
 							if (!response.Load()) {
-								std::cout << "--- An error occurred during identification\n";
+								std::cout << "--- An error occurred during identification" << std::endl;
 							}
 							else {
 								std::cout << "--- DETECTED USER: " << response.mUserNiceName << std::endl;
@@ -306,7 +291,7 @@ int main(int argc, char** argv)
 					}
 					else
 					{
-						std::cout << "Please wait till more snapshots are collected.";
+						std::cout << "Please wait till more snapshots are collected." << std::endl;
 					}
 				}
 
