@@ -90,6 +90,7 @@ class UserDB:
                 self.user_list,
                 self.user_embeddings
             ), f)
+            f.close()
 
     # ----------- DISPLAY
     def print_users(self):
