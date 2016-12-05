@@ -95,6 +95,7 @@ class EmbeddingClassifier:
         print("--- Saving classifier to '{}'".format(filename))
         with open(filename, 'wb') as f:
             pickle.dump((self.label_encoder, self.classifier), f)
+            f.close()
 
     def trigger_training(self):
         """triggers the detector training from the collected faces"""
