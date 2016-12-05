@@ -137,16 +137,7 @@ class CNN:
 
 if __name__ == '__main__':
 
-    # ----------- generate data
 
-    np.random.seed(0)
-
-    batch_size = 45
-    centers = [[1, 1], [-1, -1], [1, -1]]
-    n_clusters = len(centers)
-    X, labels_true = make_blobs(n_samples=3000, centers=centers, cluster_std=0.7)
-
-    # -------------
     start = time.time()
     X = np.array([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
     labels = np.array([1, 3, 1, 3, 3, 3])
@@ -161,6 +152,15 @@ if __name__ == '__main__':
     print "--- Prediction took {} seconds".format(time.time()-start)
 
 
+    # ----------- generate data
+    np.random.seed(0)
+    batch_size = 45
+    centers = [[2, 1], [-1, -1], [1, -1]]
+    n_clusters = len(centers)
+    X, labels_true = make_blobs(n_samples=1000, centers=centers, cluster_std=0.3)
+    # -------------
+
+
     # ------------------
 
     fig = plt.figure(figsize=(8, 3))
@@ -168,16 +168,15 @@ if __name__ == '__main__':
     colors = ['#4EACC5', '#FF9C34', '#4E9A06', '#FF9C34', '#4E9A06']
 
     # KMeans
-    ax = fig.add_subplot(1, 1, 1)
+    ax = fig.add_subplot(1, 2, 1)
     for k, col in zip(range(4), colors):
-        my_members = labels == k
-        print my_members
+        my_members = labels_true == k
         #cluster_center = k_means_cluster_centers[k]
         ax.plot(X[my_members, 0], X[my_members, 1], 'w',
                 markerfacecolor=col, marker='o')
         #ax.plot(cluster_center[0], cluster_center[1], 'o', markerfacecolor=col,
         #        markeredgecolor='k', markersize=6)
-    ax.set_title('KMeans')
+    ax.set_title('Original data')
     ax.set_xticks(())
     ax.set_yticks(())
     #plt.text(-3.5, 1.8, 'train time: %.2fs\ninertia: %f' % (
