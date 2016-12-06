@@ -40,14 +40,18 @@ class Cluster:
 class CNN:
     shrink_threshold_ = False
 
+    # initialization data
     init_data_ = None
     init_labels_ = None
 
+    # labels
     label_encoder_ = None    # classifier label encoder
-    labels_numeric_ = None     # original label: classes_[labels_numeric_[0]]
 
+
+    # centroids
     centroids_ = None
-    classes_ = None # list of original classes
+    nr_centroid_points_ = []
+    classes_ = None  # list of original classes
 
     # status
     initialized_ = False
@@ -55,6 +59,13 @@ class CNN:
 
     # settings
     metric_ = 'mahalanobis'
+
+    def update_centroid_single(self, point, cent_class):
+        icl = self.label_encoder_.transform(cent_class)
+        nr_pts = self.nr_centroid_points_[icl]
+        old_cent = self.nr_centroid_points_[icl]
+        self.nr_centroid_points_[icl] = (point+nr_pts*old_cent)/(nr_pts+1)
+        self.nr_centroid_points_[icl] = nr_pts + 1
 
     def __init__(self, init_data, init_labels):
         self.init_data_ = init_data
@@ -64,7 +75,8 @@ class CNN:
 
         # initialize label encoder
         self.label_encoder_ = LabelEncoder()
-        self.labels_numeric_ = self.label_encoder_.fit_transform(init_labels)
+        labels_numeric_ = self.label_encoder_.fit_transform(init_labels)
+
 
         # get original classes
         self.classes_ = self.label_encoder_.classes_
@@ -84,7 +96,7 @@ class CNN:
         # print nk
 
         for cur_class in range(n_classes):
-            center_mask = self.labels_numeric_ == cur_class
+            center_mask = labels_numeric_ == cur_class
 
             # calculate number of points in each class
             nk[cur_class] = np.sum(center_mask)
@@ -125,7 +137,6 @@ class CNN:
         distances = pairwise_distances( feature, self.centroids_, metric=self.metric_)
         min_dist = distances.argmin(axis=1)
 
-
         print self.classes_
 
         #print self.centroids_
@@ -133,11 +144,7 @@ class CNN:
         return self.classes_[min_dist]
 
 
-
-
-
 if __name__ == '__main__':
-
 
     # ----------- generate data
     np.random.seed(0)
@@ -145,6 +152,8 @@ if __name__ == '__main__':
     centers = [[2, 1], [-1, -1], [1, -1]]
     n_clusters = len(centers)
     X, labels_true = make_blobs(n_samples=1000, centers=centers, cluster_std=0.3)
+
+    labels_true[labels_true==1] = 3
     # -------------
 
     start = time.time()
@@ -154,7 +163,7 @@ if __name__ == '__main__':
 
     fig = plt.figure(figsize=(8, 3))
     fig.subplots_adjust(left=0.02, right=0.98, bottom=0.05, top=0.9)
-    colors = ['#009933', '#ff9900', '#ff0066', '#ff0066', '#33cccc']
+    colors = ['#009933', '#ff9900', '#ff0066', '#EA5A0C', '#33cccc']
 
     # KMeans
     ax = fig.add_subplot(1, 2, 1)
