@@ -123,12 +123,13 @@ class CNN:
 
     def predict(self, feature):
         distances = pairwise_distances( feature, self.centroids_, metric=self.metric_)
-
-
         min_dist = distances.argmin(axis=1)
 
-        print self.centroids_
-        print min_dist
+
+        print self.classes_
+
+        #print self.centroids_
+        #print min_dist
         return self.classes_[min_dist]
 
 
@@ -136,20 +137,6 @@ class CNN:
 
 
 if __name__ == '__main__':
-
-
-    start = time.time()
-    X = np.array([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
-    labels = np.array([1, 3, 1, 3, 3, 3])
-    classifier = CNN(X,labels)
-    print "--- Initialization/training took {} seconds".format(time.time()-start)
-
-
-    start = time.time()
-    label = classifier.predict([[-2, -1.4]])
-    print label
-
-    print "--- Prediction took {} seconds".format(time.time()-start)
 
 
     # ----------- generate data
@@ -160,12 +147,14 @@ if __name__ == '__main__':
     X, labels_true = make_blobs(n_samples=1000, centers=centers, cluster_std=0.3)
     # -------------
 
-
+    start = time.time()
+    classifier = CNN(X,labels_true)
+    print "--- Initialization/training took {} seconds".format(time.time()-start)
     # ------------------
 
     fig = plt.figure(figsize=(8, 3))
     fig.subplots_adjust(left=0.02, right=0.98, bottom=0.05, top=0.9)
-    colors = ['#4EACC5', '#FF9C34', '#4E9A06', '#FF9C34', '#4E9A06']
+    colors = ['#009933', '#ff9900', '#ff0066', '#ff0066', '#33cccc']
 
     # KMeans
     ax = fig.add_subplot(1, 2, 1)
@@ -176,9 +165,35 @@ if __name__ == '__main__':
                 markerfacecolor=col, marker='o')
         #ax.plot(cluster_center[0], cluster_center[1], 'o', markerfacecolor=col,
         #        markeredgecolor='k', markersize=6)
+
+    #plt.text(-3.5, 1.8, 'train time: %.2fs\ninertia: %f' % (
+    #t_batch, k_means.inertia_))
+
     ax.set_title('Original data')
     ax.set_xticks(())
     ax.set_yticks(())
-    #plt.text(-3.5, 1.8, 'train time: %.2fs\ninertia: %f' % (
-    #t_batch, k_means.inertia_))
+
+    # predict
+    points = [[-0.8, -1], [1,-0.9], [0.001, -1], [-0.001, -1], [0.1, -1], [0.2, -1], [0.4, -1]]
+
+
+    points.append([2,0.9])
+    ax = fig.add_subplot(1, 2, 2)
+
+    for k, col in zip(range(4), colors):
+        my_members = labels_true == k
+        #cluster_center = k_means_cluster_centers[k]
+        ax.plot(X[my_members, 0], X[my_members, 1], 'w',
+                markerfacecolor='#D3D3D3', marker='o')
+
+    for i, pt in zip(range(len(points)), points):
+        label = classifier.predict([pt])
+        ax.plot(pt[0], pt[1], 'w',
+                markerfacecolor=colors[label], marker='o')
+
+
+    ax.set_title('New Points')
+    ax.set_xticks(())
+    ax.set_yticks(())
+
     plt.show()
