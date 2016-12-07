@@ -21,11 +21,12 @@ def calc_embeddings(in_folder, gen, cleanup=False):
 
     tot_files = len(os.listdir(path_in))
     removed = 0
+    file_nr = 1
+    embeddings = []
 
-    for file in os.listdir(path_in):
+    for index, file in enumerate(os.listdir(path_in)):
         if file.endswith(".jpg") or file.endswith(".png"):
-            print file
-            print path_in
+            print "--- Processing file {}/{}".format(index+1, tot_files)
             image = misc.imread(path_in+file)
             embedding = gen.get_embedding(image)
             if embedding is None:
@@ -34,6 +35,8 @@ def calc_embeddings(in_folder, gen, cleanup=False):
                     os.remove(path_in+file)
                 removed = removed + 1
                 continue
+            else:
+                embeddings.append(embedding)
         else:
             continue
     print "--- useable: {}/{} images".format(tot_files-removed, tot_files)
@@ -45,21 +48,23 @@ def calc_embeddings(in_folder, gen, cleanup=False):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input', help="Image folder.", default="faces")
-    parser.add_argument('--clean', help="Image folder.", default="faces")
+    parser.add_argument('--img_folder', help="Image folder.", default="faces")
     parser.add_argument('--output', help="Image folder.", default="face_embeddings")
+    parser.add_argument('--clean', dest='clean', action='store_true')
+    parser.add_argument('--no-clean', dest='clean', action='store_false')
     parser.add_argument('--save_emb', dest='save_embeddings', action='store_true')
     parser.add_argument('--no-save_em', dest='save_embeddings', action='store_false')
     parser.set_defaults(save_embeddings=False)
+    parser.set_defaults(clean=False)
 
     # parse arguments
     args = parser.parse_args()
     emb_gen = EmbeddingGen()
 
     # do calculations
-    embeddings = calc_embeddings(args.input, emb_gen, args.clean)
+    embeddings = calc_embeddings(args.img_folder, emb_gen, args.clean)
     if args.save_embeddings is True:
-        filename = "{}.pkl".format(args.face_embeddings)
+        filename = "{}.pkl".format(args.output)
         print("--- Saving face embeddings to '{}'".format(filename))
         with open(filename, 'wb') as f:
             pickle.dump(embeddings,f)
