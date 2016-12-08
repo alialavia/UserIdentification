@@ -1,5 +1,7 @@
 #include <tracking/FaceTracker.h>
 #include "io/CSVHandling.h"
+#include <ctime>
+
 
 using namespace tracking;
 
@@ -9,7 +11,16 @@ using namespace tracking;
 
 void RadialFaceGrid::DumpImageGrid(std::string img_basename, std::string log_name, std::string out_folder) {
 
-	io::CSVWriter o_h(log_name);
+	time_t t = std::time(0);
+	long int now = static_cast<long int> (t);
+
+	char ch = out_folder.back();
+	if(ch != '/')
+	{
+		out_folder += "/";
+	}
+
+	io::CSVWriter o_h(out_folder+std::to_string(now)+"_"+log_name);
 
 	// iterate over 3d array
 	for (int r = 0; r < image_grid.Size(0); r++) {
@@ -19,7 +30,7 @@ void RadialFaceGrid::DumpImageGrid(std::string img_basename, std::string log_nam
 					cv::Mat img = image_grid(r, p, y);
 
 					// write blur
-					std::string filename = img_basename + "_" + std::to_string(r) + "_" + std::to_string(p) + "_" + std::to_string(y) + ".png";
+					std::string filename = img_basename + "_" + std::to_string(r) + "_" + std::to_string(p) + "_" + std::to_string(y) + "_" + std::to_string(now) + ".png";
 
 					// save image
 					io::ImageHandler::SaveImage(img, out_folder, filename);
