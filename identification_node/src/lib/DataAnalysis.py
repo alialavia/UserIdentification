@@ -2,9 +2,11 @@
 import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.utils.extmath import fast_dot
+from sklearn.metrics import *
 
 # ================================= #
 #              Data Analysis
+
 
 def ExtractSubspace(data, explained_variance):
     """"""
@@ -29,9 +31,7 @@ def ProjectOntoSubspace(data, mean, basis):
     """Applie simension reduction"""
     reduced = data - mean
     reduced = fast_dot(reduced, basis)
-
     reduced = reduced + fast_dot(mean, basis)
-
     return reduced
 
 
@@ -43,7 +43,13 @@ def CalcComponentVariance(v):
 
 
 def ExtractInverseSubspace(data, explained_variance):
-    """"""
+    """ Extract subspace that explains 1-explained_variance % of the Variance
+
+    Parameters
+    ----------
+    data : feature vectors
+    explained_variance: percent of variance to crop
+    """
     pca = PCA(n_components=np.size(data, 1))
     pca.fit(data)
     var_listing = pca.explained_variance_ratio_
@@ -60,3 +66,79 @@ def ExtractInverseSubspace(data, explained_variance):
     basis = pca.components_.T[:, (index+1):np.size(data, 1)]
     return basis, pca.mean_
 
+# ================================= #
+#   Cluster Validity Indices (CVI)
+
+
+def silhouette_index(cluster_list, metric='euclidean'):
+
+    # The Silhouette Index measure the distance between each data point, the centroid of the cluster
+    # it was assigned to and the closest centroid belonging to another cluster
+    # - normalized, close to 1 = good
+
+    # generate labels
+    labels = []
+    data = []
+    for i in range(len(cluster_list)):
+        labels = np.concatenate((labels, np.repeat(i, np.size(cluster_list[i],0))))
+        if i == 0:
+            data = cluster_list[i]
+        else:
+            np.concatenate((data, cluster_list[i]), axis=0)
+    return silhouette_score(data, labels, metric=metric)
+
+
+def dunn_index(cluster_list, metric='euclidean'):
+    """ Dunn index
+    - the higher the better
+    - normalized
+
+    Parameters
+    ----------
+    cluster_list : list of np.arrays, each containing feature vectors containing to the same cluster
+    """
+    deltas = np.ones([len(cluster_list), len(cluster_list)]) * 1000000
+    big_deltas = np.zeros([len(cluster_list), 1])
+    l_range = list(range(0, len(cluster_list)))
+
+    for k in l_range:
+        for l in (l_range[0:k] + l_range[k + 1:]):
+            deltas[k, l] = np.min(pairwise_distances(cluster_list[k], cluster_list[l], metric))
+
+        big_deltas[k] = np.max(pairwise_distances(cluster_list[k], metric=metric))
+
+    di = np.min(deltas) / np.max(big_deltas)
+    return di
+
+
+def daviesbouldin_index(cluster_list, cluster_centers, metric='euclidean'):
+    """ Davis Bouldin Index
+    - the smaller the better
+    - Davies-Bouldin Index evaluates intra-cluster similarity and inter-cluster differences
+    - not normalized, difficult to compare 2 values from different data sets
+
+    Parameters
+    ----------
+    cluster_list : list of np.arrays, each containing feature vectors containing to the same cluster
+    cluster_centers : np.array, center of the clusters, same order as cluster_list
+    """
+
+    nr_clusters = len(cluster_list)
+    rel_intra_class_sep = np.zeros([nr_clusters], dtype=np.float64)
+    db = 0
+
+    for k in range(nr_clusters):
+        rel_intra_class_sep[k] = np.sum(pairwise_distances(cluster_list[k], cluster_centers[k], metric=metric)) / len(cluster_list[k])
+
+    c_separations = pairwise_distances(cluster_centers, metric=metric)
+
+    for k in range(nr_clusters):
+        values = np.zeros([nr_clusters - 1], dtype=np.float64)
+        for l in range(0, k):
+            values[l] = (rel_intra_class_sep[k] + rel_intra_class_sep[l]) / c_separations[k, l]
+        for l in range(k + 1, nr_clusters):
+            values[l - 1] = (rel_intra_class_sep[k] + rel_intra_class_sep[l]) / c_separations[k, l]
+
+        db += np.max(values)
+    res = db / nr_clusters
+    return res
