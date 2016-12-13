@@ -50,7 +50,7 @@ def calc_embeddings_recursive(in_folder, gen, output, batch_size = 100, cleanup 
 
             # save batch
             if len(embeddings) == batch_size:
-                out = output + "_{}.pkl".format(batch_id)
+                out = "{}_{}.pkl".format(output, batch_id)
                 print("--- Saving face embeddings to '{}'".format(out))
                 with open(out, 'wb') as f:
                     pickle.dump(embeddings, f)
@@ -59,9 +59,9 @@ def calc_embeddings_recursive(in_folder, gen, output, batch_size = 100, cleanup 
                     embeddings[:] = []
                     f.close()
 
-    if batch_id is 1:
+    if len(embeddings) > 0:
         # save as one file
-        out = output + "_{}.pkl".format(batch_id)
+        out = "{}_{}.pkl".format(output, batch_id)
         print("--- Saving face embeddings to '{}'".format(out))
         with open(out, 'wb') as f:
             pickle.dump(embeddings, f)
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     parser.add_argument('--clean', dest='clean', action='store_true')
     parser.add_argument('--no-clean', dest='clean', action='store_false')
     parser.add_argument('--save_emb', dest='save_embeddings', action='store_true')
-    parser.add_argument('--no-save_em', dest='save_embeddings', action='store_false')
+    parser.add_argument('--no-save_emb', dest='save_embeddings', action='store_false')
     parser.add_argument('--recursive', dest='recursive', action='store_true')
     parser.add_argument('--no-recursive', dest='recursive', action='store_false')
     parser.set_defaults(save_embeddings=False)
@@ -128,6 +128,7 @@ if __name__ == '__main__':
 
     # parse arguments
     args = parser.parse_args()
+
     emb_gen = EmbeddingGen()
 
     # do calculations
