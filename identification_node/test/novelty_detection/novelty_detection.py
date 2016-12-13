@@ -22,7 +22,7 @@ def load_embeddings(filename):
     return None
 
 
-def train_and_classify(class_data, random_data, clf):
+def train_on_single_ds_and_classify(class_data, random_data, clf):
 
     print "=====================================================\n"
     print "        EVALUATE CLASSIFIER\n"
@@ -44,15 +44,22 @@ def train_and_classify(class_data, random_data, clf):
     print "{}/{} inliers have been detected".format((label_pred_1 > 0).sum(), len(class_data))
 
 
+
+
+
 # ================================= #
 #              Main
 
 if __name__ == '__main__':
 
-    filename = "embeddings_elias.pkl"
-    emb1 = load_embeddings(filename)
-    filename = "embeddings_lfw.pkl"
-    emb2 = load_embeddings(filename)
+    emb1 = load_embeddings("embeddings_elias.pkl")
+    emb2 = load_embeddings("embeddings_matthias.pkl")
+    emb3 = load_embeddings("embeddings_laia.pkl")
+    emb_lfw = load_embeddings("embeddings_lfw.pkl")
+
+    emb1 = np.concatenate((emb1,emb2,emb3,emb1,emb3))
+
+    print np.shape(emb1)
 
     rng = np.random.RandomState(42)
 
@@ -60,7 +67,7 @@ if __name__ == '__main__':
     ocsvm = svm.OneClassSVM(nu=0.1, kernel="linear", gamma=0.1)
     ocsvm2 = svm.OneClassSVM(nu=0.1, kernel="rbf", gamma=0.1)
 
-    train_and_classify(emb1, emb2, rf)
-    train_and_classify(emb1, emb2, ocsvm)
-    train_and_classify(emb1, emb2, ocsvm2)
+    train_on_single_ds_and_classify(emb1, emb2, rf)
+    train_on_single_ds_and_classify(emb1, emb2, ocsvm)
+    train_on_single_ds_and_classify(emb1, emb2, ocsvm2)
 
