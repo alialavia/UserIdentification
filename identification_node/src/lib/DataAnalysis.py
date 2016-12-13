@@ -3,10 +3,74 @@ import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.utils.extmath import fast_dot
 from sklearn.metrics import *
+import matplotlib.pyplot as plt
+from sklearn.metrics.pairwise import *
+
+# ================================= #
+#              Plotting
+
+def plot_ds_separations(ds1, ds2, metric='euclidean'):
+
+    # Cosine distance is defined as 1.0 minus the cosine similarity.
+
+    if metric == 'cosine_similarity':
+        sep = cosine_similarity(ds1, ds2)
+    else:
+        sep = pairwise_distances(ds1, ds2, metric=metric)
+
+    max_out = np.amax(sep)
+    min_out = np.amin(sep)
+    print "--- min: {}, max: {}".format(min_out, max_out)
+
+    fig = plt.figure()
+    n, bins, patches = plt.hist(np.transpose(sep), 50, normed=1, facecolor='green', alpha=0.75)
+    plt.title('Inter-Class separation: {}-distance'.format(metric))
+    plt.ylabel('Number of samples')
+    plt.xlabel('Sample separation')
+    plt.show()
+
+def plot_separation_dist(ds1, metric='euclidean'):
+
+    print "=====================================================\n"
+    print "  INTRA-CLASS SEPARATION IN {} DISTANCE\n".format(metric)
+    print "=====================================================\n"
+
+    if metric == 'cosine_similarity':
+        sep = cosine_similarity(ds1)
+    else:
+        sep = pairwise_distances(ds1, metric=metric)
+
+    fig = plt.figure()
+    n, bins, patches = plt.hist(np.transpose(sep), 50, normed=1, facecolor='green', alpha=0.75)
+    plt.title('Intra-Class separation: {}-distance'.format(metric))
+    plt.ylabel('Number of samples')
+    plt.xlabel('Sample separation')
+
+    # extract 99.9% subspace
+    basis, mean = ExtractInverseSubspace(ds1, 1 - 0.1)
+    print "--- reduced dimension to: {}".format(np.size(basis, 1))
+
+    # project data onto subspace
+    ds1_sub = ProjectOntoSubspace(ds1, mean, basis)
+
+    # add mean
+
+    if metric == 'cosine_similarity':
+        sep = cosine_similarity(ds1)
+    else:
+        sep = pairwise_distances(ds1, metric=metric)
+
+
+    fig = plt.figure()
+    n, bins, patches = plt.hist(np.transpose(ds1_sub), 50, normed=1, facecolor='green', alpha=0.75)
+    plt.title('Intra-Class separation on 0.2 Var subspace: {}-distance'.format(metric))
+    plt.ylabel('Number of samples')
+    plt.xlabel('Sample separation')
+    plt.show()
+
 
 # ================================= #
 #              Data Analysis
-
 
 def ExtractSubspace(data, explained_variance):
     """"""
@@ -92,11 +156,13 @@ def dunn_index(cluster_list, metric='euclidean'):
     """ Dunn index
     - the higher the better
     - normalized
+    - not robust - instable to outliers!
 
     Parameters
     ----------
     cluster_list : list of np.arrays, each containing feature vectors containing to the same cluster
     """
+
     deltas = np.ones([len(cluster_list), len(cluster_list)]) * 1000000
     big_deltas = np.zeros([len(cluster_list), 1])
     l_range = list(range(0, len(cluster_list)))
@@ -106,6 +172,8 @@ def dunn_index(cluster_list, metric='euclidean'):
             deltas[k, l] = np.min(pairwise_distances(cluster_list[k], cluster_list[l], metric))
 
         big_deltas[k] = np.max(pairwise_distances(cluster_list[k], metric=metric))
+
+    print "--- up: {}, down: {}".format(np.min(deltas), np.max(big_deltas))
 
     di = np.min(deltas) / np.max(big_deltas)
     return di
@@ -122,6 +190,8 @@ def daviesbouldin_index(cluster_list, cluster_centers, metric='euclidean'):
     cluster_list : list of np.arrays, each containing feature vectors containing to the same cluster
     cluster_centers : np.array, center of the clusters, same order as cluster_list
     """
+
+
 
     nr_clusters = len(cluster_list)
     rel_intra_class_sep = np.zeros([nr_clusters], dtype=np.float64)
