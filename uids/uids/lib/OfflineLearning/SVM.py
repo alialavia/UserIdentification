@@ -2,7 +2,7 @@
 # specific classifier
 from sklearn.svm import SVC as sk_SVM
 # classifier superclass
-from src.lib.OfflineLearning.OfflineClassifierBase import OfflineClassifierBase
+from uids.lib.OfflineLearning.OfflineClassifierBase import OfflineClassifierBase
 
 
 class SVM(OfflineClassifierBase):

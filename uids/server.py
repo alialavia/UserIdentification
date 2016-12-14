@@ -1,14 +1,14 @@
 #!/usr/bin/env python2
 import argparse
 import importlib            # msg routing imports
-from src.config import *    # server configuration
+from uids.config import *    # server configuration
 
-from src.lib.UserDB import UserDB   # user database
-from src.lib.EmbeddingGen import EmbeddingGen   # CNN embedding generator
-from src.lib.OfflineLearning.SVM import SVM     # SVM classifier
-from src.lib.TCPServer import TCPServerBlocking # tcp networking
+from uids.lib.UserDB import UserDB   # user database
+from uids.lib.EmbeddingGen import EmbeddingGen   # CNN embedding generator
+from uids.lib.OfflineLearning.SVM import SVM     # SVM classifier
+from uids.lib.TCPServer import TCPServerBlocking # tcp networking
 # import request types
-M_REQUESTS = importlib.import_module("src.request")
+M_REQUESTS = importlib.import_module("uids.request")
 
 
 class IdentificationServer(TCPServerBlocking):

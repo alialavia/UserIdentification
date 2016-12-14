@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from src.response.OK import OK as OKResponse
+from uids.response.OK import OK as OKResponse
 
 
 class TrainClassifier:

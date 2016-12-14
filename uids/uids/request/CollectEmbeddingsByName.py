@@ -1,6 +1,6 @@
 #!/usr/bin/python
-from src.response.Error import Error as ErrorResponse
-from src.response.OK import OK as OKResponse
+from uids.response.Error import Error as ErrorResponse
+from uids.response.OK import OK as OKResponse
 
 
 class CollectEmbeddingsByName:

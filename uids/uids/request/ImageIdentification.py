@@ -1,6 +1,6 @@
 #!/usr/bin/python
-from src.response.Error import Error as ErrorResponse
-from src.response.Identification import Identification as IdentificationResponse
+from uids.response.Error import Error as ErrorResponse
+from uids.response.Identification import Identification as IdentificationResponse
 
 
 class ImageIdentification:

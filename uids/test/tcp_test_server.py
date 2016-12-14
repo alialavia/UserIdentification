@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 # import TCP server interface
-from src.lib.TCPServer import TCPServerBlocking
+from uids.lib.TCPServer import TCPServerBlocking
 import cv2
 from time import sleep
 

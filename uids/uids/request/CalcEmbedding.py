@@ -1,6 +1,6 @@
 #!/usr/bin/python
-from src.response.Error import Error as ErrorResponse
-from src.response.Embedding import Embedding as EmbeddingResponse
+from uids.response.Error import Error as ErrorResponse
+from uids.response.Embedding import Embedding as EmbeddingResponse
 
 
 class CalcEmbedding:

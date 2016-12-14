@@ -3,7 +3,7 @@
 from sklearn.ensemble.forest import RandomForestClassifier as RF
 import numpy as np
 # classifier superclass
-from src.lib.OfflineLearning.OfflineClassifierBase import OfflineClassifierBase
+from uids.lib.OfflineLearning.OfflineClassifierBase import OfflineClassifierBase
 
 class RandomForest(OfflineClassifierBase):
 

@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from src.config import *
+from uids.config import *
 
 
 class Identification:
