@@ -16,7 +16,7 @@ ADD . /uids
 ENV PYTHONPATH $PYTHONPATH:/uids
 
 # install requirements
-RUN cd /root/user_identification && \
+RUN cd /uids && \
 	pip2 install -r requirements.txt
 	
 # inform about port listening (use -p when you start the container)
