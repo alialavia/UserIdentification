@@ -22,6 +22,18 @@ $ winpty docker run -p 80:80 -ti matbloch/user_identification_node //bin/bash
 
 ## Demos/Tests
 
+### Share Local Installation with dockermachine
+Allows you to quickly make adjustments to the server code on any host.
+
+1. Share Local Ressource to VM
+	- Open VirtualBox Manager, Go to Boot2Docker VM Settings > Shared Folders
+	- Add target folder under the name "/User". "/User" and some other (predefineds) folders automatically mapped to the docker VM
+2. Start docker image and share "/Users" under a custom name using the parameter `-v`: 
+	- `winpty docker run -v //Users:/mycustomdir -ti matbloch/user_identification_node //bin/bash`
+
+![Virtual Box Settings](doc/img/vm_settings_shared_ressource.png)
+
+
 ### `test/tcp_connection` Test TCP Connection: Host > boot2docker > Container
 
 1. Start docker container and expose port 80
