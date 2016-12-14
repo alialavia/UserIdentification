@@ -13,6 +13,7 @@ from threading import Thread, Lock
 fileDir = os.path.dirname(os.path.realpath(__file__))
 modelDir = os.path.join(fileDir, '..', 'models', 'embedding_samples')	# path to the model directory
 
+
 def load_embeddings(filename):
     filename = "{}/{}".format(modelDir, filename)
 
@@ -54,7 +55,13 @@ class OneClassDetectorTree:
     - Classify only using target class classifier (does not block training)
     - Classify only on currently not used classes
     - Classify using all classes (current)
+    ---------------
+    Extensions:
+    - Switch to more efficient classifier when dealing with lots of samples (OCSVM>Random Forest)
     """
+
+    __CLASSIFIER = 'OCSVM'
+    __VALID_CLASSIFIERS = {'OCSVM', 'OCSVM_RBF', 'RF'}
 
     __classifiers = {}
     __classifier_states = {}
@@ -81,12 +88,19 @@ class OneClassDetectorTree:
     __num_threads = 3
     __training_lock = Lock()
 
-
-    def __init__(self):
+    def __init__(self, classifier='OCSVM'):
+        if classifier not in self.__VALID_CLASSIFIERS:
+            raise ValueError('Invalid Classifier. You can choose between: '+str(list(self.__VALID_CLASSIFIERS)))
         # perform classifier training in tasks
         self.__deploy_classifier_trainers()
 
     def init_classifier(self, class_id, class_samples):
+        """
+        Initialise a One-Class-Classifier with sample data
+        :param class_id: new class id
+        :param class_samples: samples belonging to the class
+        :return: True/False - success
+        """
         if class_id in self.__classifiers:
             return False
         self.__classifiers[class_id] = self.__generate_classifier()
@@ -96,7 +110,6 @@ class OneClassDetectorTree:
         # collect the samples
         self.__collect_samples(class_id, class_samples)
         # train the classifier
-
         return self.__retrain(class_id)
 
     def predict_class(self, samples):
@@ -139,6 +152,11 @@ class OneClassDetectorTree:
             return None
 
     def predict_proba(self, samples):
+        """
+        Predict class probabilites from samples
+        :param samples: list of samples
+        :return: (np.array, np.array) probabilities (positive samples/total samples per class), class ids
+        """
         predictions = self.__predict(samples)
         # analyze
         class_ids = []
@@ -149,7 +167,13 @@ class OneClassDetectorTree:
         return np.array(probabilities), np.array(class_ids)
 
     def process_labeled_stream_data(self, class_id, samples):
-
+        """
+        Incorporate labeled data into the classifiers
+        (retraining is done once the samples can't be explained by the model anymore)
+        :param class_id: class id
+        :param samples: class samples
+        :return: -
+        """
         self.__collect_samples(class_id, samples)
         # check if incoming data explains the current model
         predictions = self.__predict(samples)
@@ -163,7 +187,6 @@ class OneClassDetectorTree:
     # ------- Utilities
 
     def __collect_samples(self, class_id, samples):
-        # store data
         if class_id not in self.__training_data:
             self.__training_data[class_id] = samples
         else:
@@ -209,7 +232,14 @@ class OneClassDetectorTree:
 
     def __generate_classifier(self):
         """Generate classifier instance"""
-        return svm.OneClassSVM(nu=0.1, kernel="linear", gamma=0.1)
+        if self.__CLASSIFIER == 'OCSVM':
+            return svm.OneClassSVM(nu=0.1, kernel="linear", gamma=0.1)
+        elif self.__CLASSIFIER == 'OCSVM_RBF':
+            return svm.OneClassSVM(nu=0.1, kernel="rbf", gamma=0.1)
+        elif self.__CLASSIFIER == 'RF':
+            return IsolationForest(random_state=np.random.RandomState(42))
+
+    IsolationForest(random_state=np.random.RandomState(42))
 
     # -------- threaded classifier training
 
@@ -253,7 +283,7 @@ if __name__ == '__main__':
     emb3 = load_embeddings("embeddings_laia.pkl")
     emb_lfw = load_embeddings("embeddings_lfw.pkl")
 
-    clf = OneClassDetectorTree()
+    clf = OneClassDetectorTree('OCSVM')
 
     np.random.shuffle(emb1)
     np.random.shuffle(emb2)
@@ -278,8 +308,6 @@ if __name__ == '__main__':
             if not clf.init_classifier(2, training_2[i]):
                 print "--- initialization failed"
         else:
-
-
             print "----PREDICTION: SET 1----------"
             print clf.predict_class(test_1[i])
             print "-------------------------------"
@@ -293,8 +321,6 @@ if __name__ == '__main__':
             print "----PREDICTION: SET 2----------"
             print clf.predict_class(test_2[i])
             print "-------------------------------"
-
-
 
     while True:
         pass

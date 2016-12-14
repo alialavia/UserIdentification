@@ -10,13 +10,13 @@ from sklearn.preprocessing import LabelEncoder
 
 # path managing
 fileDir = os.path.dirname(os.path.realpath(__file__))
-modelDir = os.path.join(fileDir, '../..', 'models')	# path to the model directory
+modelDir = os.path.join(fileDir, '../../..', 'models')	# path to the model directory
 dlibModelDir = os.path.join(modelDir, 'dlib')		# dlib face detector model
 openfaceModelDir = os.path.join(modelDir, 'openface')
 classifierModelDir = os.path.join(modelDir, 'classification')
 
 
-class EmbeddingClassifier:
+class OfflineClassifierBase:
 
     # link to user database
     __p_user_db = None

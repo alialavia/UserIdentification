@@ -2,13 +2,13 @@
 # specific classifier
 from sklearn.svm import SVC as sk_SVM
 # classifier superclass
-from src.lib.EmbeddingClassifier import EmbeddingClassifier
+from src.lib.OfflineLearning.OfflineClassifierBase import OfflineClassifierBase
 
 
-class SVM(EmbeddingClassifier):
+class SVM(OfflineClassifierBase):
 
     def __init__(self, user_db_):
-        EmbeddingClassifier.__init__(self, user_db_)    # superclass init
+        OfflineClassifierBase.__init__(self, user_db_)    # superclass init
 
     def define_classifier(self):
         self.classifier_tag = 'Linear_SVM'

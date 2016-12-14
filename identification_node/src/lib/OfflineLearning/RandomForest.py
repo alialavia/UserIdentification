@@ -3,12 +3,12 @@
 from sklearn.ensemble.forest import RandomForestClassifier as RF
 import numpy as np
 # classifier superclass
-from src.lib.EmbeddingClassifier import EmbeddingClassifier
+from src.lib.OfflineLearning.OfflineClassifierBase import OfflineClassifierBase
 
-class RandomForest(EmbeddingClassifier):
+class RandomForest(OfflineClassifierBase):
 
     def __init__(self, user_db_):
-        EmbeddingClassifier.__init__(self, user_db_)    # superclass init
+        OfflineClassifierBase.__init__(self, user_db_)    # superclass init
 
     def define_classifier(self):
         self.classifier_tag = 'RandomForest'
