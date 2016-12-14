@@ -23,10 +23,10 @@ RUN cd /root/user_identification && \
 EXPOSE 8080
 
 # download detection models
-CMD /bin/bash -l -c '/root/user_identification/models/get-models.sh'
+CMD /bin/bash -l -c '/uids/models/get-models.sh'
 
 # Set the default directory where CMD will execute
-WORKDIR /root/user_identification/src
+WORKDIR /uids
 
 # Start server with custom port listening
 # CMD ["python", "start_detector.py", "-p 8080"]
