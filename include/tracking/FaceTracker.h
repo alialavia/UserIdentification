@@ -281,9 +281,9 @@ namespace tracking
 			}
 		}
 
-		void DumpFocusMeasuresWithLabels(std::string output) {
+		void DumpFocusMeasuresWithLabels(std::string filename, std::string output_folder="") {
 
-			io::CSVWriter fh(output);
+			io::CSVWriter fh(output_folder+filename);
 
 			fh.addEntry("Label (1=Blurred | 0=Not),LAPV,LAPD,GLVN,MLAP,CEC");
 			fh.startNewRow();
