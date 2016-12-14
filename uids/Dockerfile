@@ -15,6 +15,9 @@ ADD . /uids
 
 ENV PYTHONPATH $PYTHONPATH:/uids
 
+# temporary development addin - remove upon deployment
+ENV PYTHONPATH $PYTHONPATH:/uids_tmp
+
 # install requirements
 RUN cd /uids && \
 	pip2 install -r requirements.txt
