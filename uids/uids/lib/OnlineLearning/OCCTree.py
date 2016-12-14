@@ -1,30 +1,9 @@
 import numpy as np
-
 from sklearn.ensemble import IsolationForest
 from sklearn import svm
-
 import time
-import pickle
-import os
 from Queue import Queue
 from threading import Thread, Lock
-
-# path managing
-fileDir = os.path.dirname(os.path.realpath(__file__))
-modelDir = os.path.join(fileDir, '..', 'models', 'embedding_samples')	# path to the model directory
-
-
-def load_embeddings(filename):
-    filename = "{}/{}".format(modelDir, filename)
-
-    print filename
-    if os.path.isfile(filename):
-        with open(filename, 'r') as f:
-            embeddings = pickle.load(f)
-            f.close()
-        return np.array(embeddings)
-    return None
-
 
 class DataManager:
     __data = {}
@@ -70,7 +49,7 @@ class OneClassDetectorTree:
     __status = 1
     __nr_classes = 0
     __max_model_outliers = 1    # after x number of outlier features (per class), classifiers are retrained
-    __verbose = False
+    __verbose = True
 
     STATUS_CLEAN = {
         0: 'shutdown',
@@ -79,7 +58,7 @@ class OneClassDetectorTree:
 
     # ---- class prediction threshold
     # TODO: tune these parameters according to comparison with LFW - maybe adaptive threshold
-    __class_thresh = 0.8      # known person above thresh
+    __class_thresh = 0.75       # X% of samples must be identified positively to identify person
     __confusion_thresh = 0.01   # 1% confusion chance
     __novelty_thresh = 0.01     # 1% novelty misdetection
 
@@ -137,6 +116,8 @@ class OneClassDetectorTree:
             # class detected
             if nr_classes > 1:
                 # multiple classes detected
+                if self.__verbose:
+                    print "--- Multiple classes detected: {}".format(nr_classes)
                 return -1
 
             # count if any element, except for class is above confusion ratio
@@ -147,6 +128,7 @@ class OneClassDetectorTree:
 
         else:
             if len(proba[proba > self.__novelty_thresh]) > 0:
+                print "--- no classes detected but novelty threshold exceeded: {}".format(proba)
                 return -1
 
             return None
@@ -271,56 +253,4 @@ class OneClassDetectorTree:
         pass
 
     def load_samples(self, class_id):
-        pass
-
-# ================================= #
-#              Main
-
-if __name__ == '__main__':
-
-    emb1 = load_embeddings("embeddings_elias.pkl")
-    emb2 = load_embeddings("embeddings_matthias.pkl")
-    emb3 = load_embeddings("embeddings_laia.pkl")
-    emb_lfw = load_embeddings("embeddings_lfw.pkl")
-
-    clf = OneClassDetectorTree('OCSVM')
-
-    np.random.shuffle(emb1)
-    np.random.shuffle(emb2)
-    np.random.shuffle(emb3)
-    np.random.shuffle(emb_lfw)
-
-    split_set = np.array_split(emb1, 6)
-    training_1 = split_set[0:3]
-    test_1 = split_set[3:6]
-
-    split_set = np.array_split(emb2, 6)
-    training_2 = split_set[0:3]
-    test_2 = split_set[3:6]
-
-    split_lfw = np.array_split(emb_lfw, 6)
-
-    for i in range(3):
-        if i==0:
-            # add test class
-            if not clf.init_classifier(1, training_1[i]):
-                print "--- initialization failed"
-            if not clf.init_classifier(2, training_2[i]):
-                print "--- initialization failed"
-        else:
-            print "----PREDICTION: SET 1----------"
-            print clf.predict_class(test_1[i])
-            print "-------------------------------"
-
-            clf.process_labeled_stream_data(1, training_1[i])
-            clf.process_labeled_stream_data(2, training_2[i])
-
-            print "----PREDICTION: SET 1----------"
-            print clf.predict_class(test_1[i])
-            print "-------------------------------"
-            print "----PREDICTION: SET 2----------"
-            print clf.predict_class(test_2[i])
-            print "-------------------------------"
-
-    while True:
         pass
