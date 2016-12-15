@@ -9,6 +9,8 @@
 
 #include <opencv2/highgui/highgui.hpp>
 
+#include <tracking\FaceTracker.h>
+
 using namespace  user;
 
 bool UserManager::Init(io::TCPClient* connection, io::NetworkRequestHandler* handler)
@@ -24,7 +26,11 @@ bool UserManager::Init(io::TCPClient* connection, io::NetworkRequestHandler* han
 
 
 // refresh tracked users: scene_id, bounding boxes
-void UserManager::RefreshTrackedUsers(const std::vector<int> &user_scene_ids, std::vector<cv::Rect2f> bounding_boxes)
+void UserManager::RefreshTrackedUsers(
+	const std::vector<int> &user_scene_ids, 
+	std::vector<cv::Rect2f> bounding_boxes, 
+	std::vector<tracking::Face> faces
+)
 {
 
 	// add new user for all scene ids that are new
@@ -34,7 +40,21 @@ void UserManager::RefreshTrackedUsers(const std::vector<int> &user_scene_ids, st
 		// user not tracked yet - initiate new user model
 		if (mFrameIDToUser.count(scene_id) == 0)
 		{
-			mFrameIDToUser[scene_id] = new User();
+			User* u = new User();
+
+
+			// TODO: DEBUG
+
+			IdentificationStatus id_status = IDStatus_Unknown;
+			ActionStatus action = ActionStatus_Idle;
+			u->GetStatus(id_status, action);
+			//std::cout << "----- user init: " << static_cast<int>(id_status) << " | action: " << action << std::endl;
+			throw 20;
+
+
+			mFrameIDToUser[scene_id] = u;
+
+
 		}
 	}
 
@@ -48,7 +68,12 @@ void UserManager::RefreshTrackedUsers(const std::vector<int> &user_scene_ids, st
 		{
 			// user is in scene - update scene data (bounding box, position etc.)
 			it->second->SetFaceBoundingBox(bounding_boxes[user_index]);
+			// update face data
+			it->second->SetFaceData(faces[user_index]);
 			++it;
+#ifdef _DEBUG_USERMANAGER
+			std::cout << "=== update user " << std::endl;
+#endif
 		}
 		// remove user if he has left scene
 		else
@@ -100,6 +125,7 @@ void UserManager::ApplyUserIdentification()
 
 			// apply user identification
 			target_user->SetUserID(response.mUserID, response.mUserNiceName);
+			target_user->SetActionStatus(ActionStatus_Idle);
 		}
 		else {
 			// user corresponding to request not found (may have left scene) - drop response
@@ -128,6 +154,7 @@ void UserManager::ApplyUserIdentification()
 
 			if (req_type == io::NetworkRequest_ImageIdentification) {
 				target_user->SetIDStatus(user::IDStatus_Unknown);
+				target_user->SetActionStatus(ActionStatus_Idle);
 			}
 
 			// remove request mapping
@@ -144,34 +171,94 @@ void UserManager::ApplyUserIdentification()
 }
 
 // send identification requests for all unknown users
-void UserManager::RequestUserIdentification(cv::Mat scene_rgb)
+void UserManager::GenerateRequests(cv::Mat scene_rgb)
 {
 	for (auto it = mFrameIDToUser.begin(); it != mFrameIDToUser.end(); ++it)
 	{
-		if (it->second->GetIDStatus() == IDStatus_Unknown)
+		IdentificationStatus id_status;
+		ActionStatus action;
+		it->second->GetStatus(id_status, action);
+
+		std::cout << "--- id_Status: "<< id_status << " | action: "<< action << std::endl;
+
+		// request user identification
+		if (id_status == IDStatus_Unknown)
 		{
-			std::vector<cv::Mat> faces;
-			// extract face patch
-			cv::Mat face = scene_rgb(it->second->GetFaceBoundingBox());
-			
-			faces.push_back(face);
+
+			std::cout << "--- ¨1INITIALZATION. ID status: " << id_status << " - action: "<< action << std::endl;
+
+			// new user in scene
+			if (action == ActionStatus_Idle) {
+				it->second->SetActionStatus(ActionStatus_Initialization);
+				action = ActionStatus_Initialization;
+				std::cout << "--- .INITIALZATION" << std::endl;
+			}
+
+			// collect images for identification
+			if (action == ActionStatus_Initialization) {
+
+				std::cout << "--- INITIALZATION" << std::endl;
+				// collect another image
+				cv::Mat face_snap = scene_rgb(it->second->GetFaceBoundingBox());
+
+#ifdef FACEGRID_RECORDING
+				// check if face should be recorded
+				tracking::Face face = it->second->GetFaceData();
+				int roll, pitch, yaw;
+				face.GetEulerAngles(roll, pitch, yaw);
+				try
+				{
+					// add face if not yet capture from this angle
+					if (it->second->pGrid->IsFree(roll, pitch, yaw)) {
+						it->second->pGrid->StoreSnapshot(roll, pitch, yaw, face_snap);
+						
+					}
+				}
+				catch (...)
+				{
+				}
+
+				// if enough images, request identification
+				if (it->second->pGrid->nr_images() > 5) {
+
+					// extract images
+					std::vector<cv::Mat*> face_patches = it->second->pGrid->ExtractGrid();
+
+					// make new identification request
+					IDReq* new_request = new IDReq(pServerConn, face_patches);
+					pRequestHandler->addRequest(new_request);
+
+					// update linking
+					mRequestToUser[new_request] = it->second;
+					mUserToRequest[it->second] = new_request;
+
+					// set user action status
+					it->second->SetActionStatus(ActionStatus_IDPending);
+				}
+#endif
+
+			}			
+			// wait for identification response
+			else if (action == ActionStatus_IDPending) {
+				// do nothing
+			}
+
 
 			//cv::imshow("face", face);
 			//cv::waitKey(3);
 
-			// make new identification request
-			IDReq* new_request = new IDReq(pServerConn, faces);
-			pRequestHandler->addRequest(new_request);
-
-			// update linking
-			mRequestToUser[new_request] = it->second;
-			mUserToRequest[it->second] = new_request;
-
-			// set user status
-			it->second->SetIDStatus(IDStatus_Pending);
 		}
+		else if (id_status == IDStatus_Identified) {
+			// send model updates
+
+
+
+		}
+		
 	}
+
 }
+
 
 // ----------------- helper functions
 
@@ -186,23 +273,34 @@ void UserManager::DrawUsers(cv::Mat &img)
 
 		// draw identification status
 		float font_size = 0.5;
-		std::string text;
-		enum IdentificationStatus status = it->second->GetIDStatus();
-		if (status == IDStatus_Identified)
+		std::string text1, text2;
+
+		IdentificationStatus id_status;
+		ActionStatus action;
+		it->second->GetStatus(id_status, action);
+
+		if (id_status == IDStatus_Identified)
 		{
 			int user_id = 0;
 			std::string nice_name = "";
 			it->second->GetUserID(user_id, nice_name);
-			text = "Status: " + nice_name + " - ID" + std::to_string(user_id);
-		}
-		else if (status == IDStatus_Pending)
-		{
-			text = "Status: pending";
+			text1 = "Status: " + nice_name + " - ID" + std::to_string(user_id);
 		}
 		else
 		{
-			text = "Status: unknown";
+			text1 = "Status: unknown";
+			if (action == ActionStatus_Initialization) {
+				text2 = "Initialization";
+			}
+			else if (action == ActionStatus_IDPending) {
+				text2 = "ID pending";
+			}
+			else if (action == ActionStatus_Idle) {
+				text2 = "Idle";
+			}
+			
 		}
-		cv::putText(img, text, cv::Point(bb.x+10, bb.y+20), cv::FONT_HERSHEY_SIMPLEX, font_size, cv::Scalar(0, 0, 255), 1, 8);
+		cv::putText(img, text1, cv::Point(bb.x+10, bb.y+20), cv::FONT_HERSHEY_SIMPLEX, font_size, cv::Scalar(0, 0, 255), 1, 8);
+		cv::putText(img, text2, cv::Point(bb.x+10, bb.y+40), cv::FONT_HERSHEY_SIMPLEX, font_size, cv::Scalar(0, 0, 255), 1, 8);
 	}
 }

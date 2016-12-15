@@ -1,6 +1,8 @@
 #ifndef USER_USER_H_
 #define USER_USER_H_
 #include <string>
+#include <tracking\FaceTracker.h>
+#include <opencv2/core.hpp>
 
 namespace user
 {
@@ -9,31 +11,63 @@ namespace user
 	{
 		IDStatus_Unknown = 0,
 		IDStatus_Identified = 1,
-		IDStatus_Pending = 2
+		IDStatus_WOOOOO = 16
+	};
+
+	enum ActionStatus
+	{
+		ActionStatus_Idle = 0,
+		ActionStatus_IDPending = 1,
+		ActionStatus_Initialization = 2,
+		ActionStatus_UpdatePending = 3
 	};
 
 	class User {
 
 	public:
-		User() : mUserID(-1), mUserNiceName(""), mIDStatus(IDStatus_Unknown)
+		User() : mUserID(-1), mUserNiceName(""), mIDStatus(IDStatus_WOOOOO), mActionStatus(ActionStatus_Idle)
 		{
+#ifdef FACEGRID_RECORDING
+			pGrid = new tracking::RadialFaceGrid(2, 10, 10);
+#endif
+			std::cout << "----- USER CREATED: " << mIDStatus << " | action: " << mActionStatus << std::endl;
 
+			//mIDStatus = IDStatus_Unknown;
+			//mActionStatus = ActionStatus_Idle;
 		}
-
-		~User();
+		~User()
+		{
+#ifdef FACEGRID_RECORDING
+			delete(pGrid);
+#endif
+		}
 		void SetUserID(int id, std::string nice_name);
-		void SetIDStatus(enum IdentificationStatus status);
+		void SetIDStatus(IdentificationStatus status);
+		void SetActionStatus(ActionStatus status);
 		void SetFaceBoundingBox(cv::Rect2f bb);
-		enum IdentificationStatus GetIDStatus();
+		void SetFaceData(tracking::Face f);
+		void GetStatus(IdentificationStatus &s1, ActionStatus &s2);
 		void GetUserID(int& id, std::string& nice_name) const;
 		cv::Rect2f GetFaceBoundingBox();
+		tracking::Face GetFaceData();
+
+#ifdef FACEGRID_RECORDING
+		tracking::RadialFaceGrid* pGrid;
+#else
+		// store image vector directly
+#endif
 
 	private:
 		int mUserID;
 		std::string mUserNiceName;
-		enum IdentificationStatus mIDStatus;
-		cv::Rect2f mFaceBoundingBox;
 
+		// status
+		IdentificationStatus mIDStatus;
+		ActionStatus mActionStatus;
+
+		// current user data
+		cv::Rect2f mFaceBoundingBox;
+		tracking::Face mFaceData;
 	};
 
 

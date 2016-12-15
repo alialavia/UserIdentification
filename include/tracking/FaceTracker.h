@@ -89,6 +89,10 @@ namespace tracking
 			angles.clear();
 		}
 
+		int nr_images() {
+			return angles.size();
+		}
+
 		// ---------- index mapper
 		int iRoll(int roll) {
 			return floor(a_r*roll +b_r);

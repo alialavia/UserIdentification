@@ -5,4 +5,4 @@ SET(TARGET_H
     # header.h
 )
 
-SETUP_APPLICATION(face_captures Applications)
+SETUP_APPLICATION(capture_face Applications)

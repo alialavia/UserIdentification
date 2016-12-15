@@ -1,5 +1,5 @@
 SET(TARGET_SRC
-    FaceProfiling.cpp 
+    offline_identification.cpp 
     # mainsource.cpp	# only this file contains the main() function!
 )
 SET(TARGET_H
@@ -11,4 +11,4 @@ SET(TARGET_EXTERNAL_LIBRARIES
 	User
 )
 
-SETUP_APPLICATION(face_profiling Tests)
+SETUP_APPLICATION(offline_id Applications)

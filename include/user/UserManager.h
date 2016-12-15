@@ -3,9 +3,13 @@
 
 #include <map>
 #include <vector>
+
+#include <tracking\FaceTracker.h>
 #include <opencv2/core.hpp>
 
 #define _DEBUG_USERMANAGER
+
+#define FACEGRID_RECORDING
 
 namespace io{
 class TCPClient;
@@ -37,9 +41,14 @@ namespace user
 
 		bool Init(io::TCPClient* connection, io::NetworkRequestHandler* handler);
 
-		void RefreshTrackedUsers(const std::vector<int> &user_scene_ids, std::vector<cv::Rect2f> bounding_boxes);
+		void RefreshTrackedUsers(
+			const std::vector<int> &user_scene_ids, 
+			std::vector<cv::Rect2f> bounding_boxes, 
+			std::vector<tracking::Face> faces
+		);
+
 		void ApplyUserIdentification();
-		void RequestUserIdentification(cv::Mat scene_rgb);
+		void GenerateRequests(cv::Mat scene_rgb);
 
 		// ----------------- helper functions
 		void DrawUsers(cv::Mat &img);

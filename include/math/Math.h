@@ -142,6 +142,12 @@ namespace math {
 
 			return index;
 		}
+
+		// TODO: implement methods to calc nonzero elements
+		size_t nr_elements() const {
+			throw std::invalid_argument("Not implemented yet.");
+			return mData.size();
+		}
 	};
 
 } // namespace

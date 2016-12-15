@@ -11,6 +11,7 @@
 #include <user\User.h>
 #include <io/Networking.h>
 #include <io/RequestHandler.h>
+#include <tracking/FaceTracker.h>
 
 DEFINE_int32(port, 8080, "Server port");
 
@@ -45,6 +46,9 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
+	// face tracker
+	tracking::FaceTracker ft(pSensor);
+
 	// config to server connection
 	io::TCPClient server_conn;
 	server_conn.Config("127.0.0.1", FLAGS_port);
@@ -77,17 +81,28 @@ int main(int argc, char** argv)
 			IBody** bodies = k.GetBodyDataReference();
 			st.ExtractJoints(bodies);
 
-			// get face bounding boxes
+			// extract raw face data
+			FaceData* face_data_raw = k.GetFaceDataReference();
+			ft.ExtractFacialData(face_data_raw);
+			std::vector<tracking::Face> faces = ft.GetFaces();
+
 			std::vector<cv::Rect2f> bounding_boxes;
 			std::vector<int> user_scene_ids;
-			st.GetFaceBoundingBoxesRobust(bounding_boxes, base::ImageSpace_Color);
-			st.GetUserSceneIDs(user_scene_ids);
+
+			// extract face bb from skeleton
+			//st.GetFaceBoundingBoxesRobust(bounding_boxes, base::ImageSpace_Color);
+			//st.GetUserSceneIDs(user_scene_ids);
+
+			// extract face bb from face tracker
+			// else, face data might not be available all the time
+			ft.GetFaceBoundingBoxesRobust(bounding_boxes, base::ImageSpace_Color);
+			ft.GetUserSceneIDs(user_scene_ids);
 
 			// if users in scene
 			if (user_scene_ids.size() > 0)
 			{
 				// refresh users
-				um.RefreshTrackedUsers(user_scene_ids, bounding_boxes);
+				um.RefreshTrackedUsers(user_scene_ids, bounding_boxes, faces);
 
 				// update user ids
 				um.ApplyUserIdentification();
@@ -96,7 +111,7 @@ int main(int argc, char** argv)
 				um.DrawUsers(color_image);
 
 				// request identification for unknown users
-				um.RequestUserIdentification(color_image);
+				um.GenerateRequests(color_image);
 			}
 
 			// display image

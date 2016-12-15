@@ -1,29 +1,36 @@
-#include <opencv2/core.hpp>
 #include <user/User.h>
 
 using namespace user;
 
-User::~User()
-{
 
-}
 void User::SetUserID(int id, std::string nice_name)
 {
 	mUserID = id;
 	mUserNiceName = nice_name;
 	mIDStatus = IDStatus_Identified;
 }
-void User::SetIDStatus(enum IdentificationStatus status)
+void User::SetIDStatus(IdentificationStatus status)
 {
+
 	mIDStatus = status;
+}
+void User::SetActionStatus(ActionStatus status) {
+	mActionStatus = status;
 }
 void User::SetFaceBoundingBox(cv::Rect2f bb)
 {
+
 	mFaceBoundingBox = bb;
 }
-enum IdentificationStatus User::GetIDStatus()
+void User::SetFaceData(tracking::Face f)
 {
-	return mIDStatus;
+	mFaceData = f;
+}
+void User::GetStatus(IdentificationStatus &s1, ActionStatus &s2)
+{
+	//std::cout << "----- set bounding box. idstatus: "  << " | "<<mIDStatus<<" | action: " << mActionStatus << std::endl;
+	//s1 = mIDStatus;
+	s2 = mActionStatus;
 }
 void User::GetUserID(int& id, std::string& nice_name) const
 {
@@ -33,4 +40,8 @@ void User::GetUserID(int& id, std::string& nice_name) const
 cv::Rect2f User::GetFaceBoundingBox()
 {
 	return mFaceBoundingBox;
+}
+tracking::Face User::GetFaceData()
+{
+	return mFaceData;
 }
