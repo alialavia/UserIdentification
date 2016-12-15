@@ -1,7 +1,7 @@
 #!/usr/bin/python
-from . import response_types as r
+import response_types as r
 # config
-from .config import ROUTING
+from config import ROUTING
 r.ROUTING = ROUTING
 
 

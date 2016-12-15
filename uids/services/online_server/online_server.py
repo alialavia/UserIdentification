@@ -1,13 +1,13 @@
 #!/usr/bin/env python2
 import argparse
 import importlib            # msg routing imports
-from .config import *    # server configuration
+from config import *    # server configuration
 from uids.UserDB import UserDB   # user database
 from uids.features.EmbeddingGen import EmbeddingGen   # CNN embedding generator
 from uids.networking.TCPServer import TCPServerBlocking # tcp networking
 from uids.online_learning.OCCTree import OneClassDetectorTree
 # import request types
-M_REQUESTS = importlib.import_module(".request_types")
+M_REQUESTS = importlib.import_module("request_types")
 
 
 class IdentificationServer(TCPServerBlocking):
