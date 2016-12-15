@@ -1,5 +1,4 @@
 #!/usr/bin/env python2
-import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.utils.extmath import fast_dot
 from sklearn.metrics import *
@@ -190,8 +189,6 @@ def daviesbouldin_index(cluster_list, cluster_centers, metric='euclidean'):
     cluster_list : list of np.arrays, each containing feature vectors containing to the same cluster
     cluster_centers : np.array, center of the clusters, same order as cluster_list
     """
-
-
 
     nr_clusters = len(cluster_list)
     rel_intra_class_sep = np.zeros([nr_clusters], dtype=np.float64)

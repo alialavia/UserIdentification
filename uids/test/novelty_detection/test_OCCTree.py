@@ -1,4 +1,4 @@
-from uids.lib.OnlineLearning.OCCTree import OneClassDetectorTree
+from uids.online_learning.OCCTree import OneClassDetectorTree
 import os
 import pickle
 import numpy as np
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     emb3 = load_embeddings("embeddings_laia.pkl")
     emb_lfw = load_embeddings("embeddings_lfw.pkl")
 
-    clf = OneClassDetectorTree('OCSVM')
+    clf = OneClassDetectorTree(classifier='OCSVM')
 
     np.random.shuffle(emb1)
     np.random.shuffle(emb2)
@@ -60,12 +60,14 @@ if __name__ == '__main__':
 
             clf.process_labeled_stream_data(1, training_1[i])
             clf.process_labeled_stream_data(2, training_2[i])
-
             print "----PREDICTION: SET 1----------"
             print clf.predict_class(test_1[i])
             print "-------------------------------"
             print "----PREDICTION: SET 2----------"
             print clf.predict_class(test_2[i])
+            print "-------------------------------"
+            print "----PREDICTION: SET LWF----------"
+            print clf.predict_class(split_lfw[i])
             print "-------------------------------"
 
     while True:

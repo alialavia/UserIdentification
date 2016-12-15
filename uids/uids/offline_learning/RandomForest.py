@@ -1,9 +1,8 @@
 #!/usr/bin/env python2
-# specific classifier
 from sklearn.ensemble.forest import RandomForestClassifier as RF
-import numpy as np
 # classifier superclass
-from uids.lib.OfflineLearning.OfflineClassifierBase import OfflineClassifierBase
+from uids.OfflineClassifierBase import OfflineClassifierBase
+
 
 class RandomForest(OfflineClassifierBase):
 

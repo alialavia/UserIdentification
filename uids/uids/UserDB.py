@@ -7,10 +7,15 @@ import numpy as np
 
 # path managing
 fileDir = os.path.dirname(os.path.realpath(__file__))
-DBDir = os.path.join(fileDir, '../..', 'db')  # path to the database directory
+DBDir = os.path.join(fileDir, '..', 'db')  # path to the database directory
 
 
 class UserDB:
+
+    # TODO: implement intelligent storage:
+    # -- save to hd if not used in a while (Memory-map files)
+    # -- define memory limit
+    # -- add data reduction method (clean out data set, time windows)
 
     version_name = "v1-0"
     id_increment = 1        # user id increment

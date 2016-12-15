@@ -6,6 +6,7 @@ import numpy as np
 from sklearn.decomposition import PCA
 from Queue import Queue
 
+
 def test_concat():
     a = []
     a.append([1,2,3])
@@ -98,23 +99,3 @@ def test_dict_reduct():
     # = nr elements =1 not greater than 1
     # or wrong class determined = not target class selected
 
-def test_queuing():
-
-    __tasks = Queue(maxsize=0)
-    __status = 1
-
-    __tasks.put(2)
-    __tasks.put(4)
-    __tasks.put(6)
-    __tasks.task_done()
-
-    while __status != 0:
-        if :
-            # slep
-        else:
-
-
-        training_id = self.__tasks.get()
-        self.__tasks.task_done()
-
-test_queuing()

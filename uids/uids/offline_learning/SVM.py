@@ -1,8 +1,7 @@
 #!/usr/bin/env python2
-# specific classifier
 from sklearn.svm import SVC as sk_SVM
 # classifier superclass
-from uids.lib.OfflineLearning.OfflineClassifierBase import OfflineClassifierBase
+from uids.OfflineClassifierBase import OfflineClassifierBase
 
 
 class SVM(OfflineClassifierBase):

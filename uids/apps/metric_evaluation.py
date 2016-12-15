@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from scipy.spatial.distance import *
 import math
 # analysis tools
-from lib.DataAnalysis import *
+from uids.utils.DataAnalysis import *
 from sklearn import metrics
 from sklearn.metrics.cluster import *
 from external.jqmcvi.base import *

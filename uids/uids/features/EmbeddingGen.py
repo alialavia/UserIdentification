@@ -13,6 +13,10 @@ openfaceModelDir = os.path.join(modelDir, 'openface')
 
 
 class EmbeddingGen:
+    """
+    TODO:
+    - implement embedding confidence (based on normalization measure)
+    """
 
     # settings
     dlibFacePredictor = "shape_predictor_68_face_landmarks.dat"

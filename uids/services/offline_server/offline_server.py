@@ -1,14 +1,14 @@
 #!/usr/bin/env python2
 import argparse
 import importlib            # msg routing imports
-from uids.config import *    # server configuration
+from .config import *    # server configuration
 
-from uids.lib.UserDB import UserDB   # user database
-from uids.lib.EmbeddingGen import EmbeddingGen   # CNN embedding generator
-from uids.lib.OfflineLearning.SVM import SVM     # SVM classifier
-from uids.lib.TCPServer import TCPServerBlocking # tcp networking
+from uids.UserDB import UserDB   # user database
+from uids.features.EmbeddingGen import EmbeddingGen   # CNN embedding generator
+from uids.offline_learning.SVM import SVM     # SVM classifier
+from uids.networking.TCPServer import TCPServerBlocking # tcp networking
 # import request types
-M_REQUESTS = importlib.import_module("uids.request")
+M_REQUESTS = importlib.import_module(".request_types")
 
 
 class IdentificationServer(TCPServerBlocking):
@@ -34,15 +34,14 @@ class IdentificationServer(TCPServerBlocking):
         request_id = self.receive_uchar(conn)
 
         # message routing
-        req_lookup = CONFIG['ROUTING']['REQUEST']['NAME']
+        req_lookup = ROUTING['REQUEST']['NAME']
 
         if request_id in req_lookup:
             req_type = req_lookup[request_id]
-            print("=== Incomming request: "+req_type)
+            print("=== Incomming request: " + req_type)
 
             try:
-                req_module = getattr(M_REQUESTS, req_type)
-                req = getattr(req_module, req_type)
+                req = getattr(M_REQUESTS, req_type)
                 # handle request
                 req(self, conn)
             except AttributeError:

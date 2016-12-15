@@ -1,4 +1,4 @@
-from lib.EmbeddingGen import EmbeddingGen   # CNN embedding generator
+from uids.features.EmbeddingGen import EmbeddingGen   # CNN embedding generator
 import argparse
 import os
 from scipy import misc
