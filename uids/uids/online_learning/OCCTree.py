@@ -245,7 +245,6 @@ class OneClassDBDetectorTree:
     __classifiers = {}
     __classifier_states = {}
     __retraining_counter = {}   # number of times classifier has been trained
-    __training_data = {}
     __status = 1
     __nr_classes = 0
     __max_model_outliers = 1    # after x number of outlier features (per class), classifiers are retrained
@@ -269,7 +268,6 @@ class OneClassDBDetectorTree:
 
     # ---- database
     __p_user_db = None
-    __label_encoder = None    # classifier label encoder
 
     def __init__(self, user_db_, classifier='OCSVM'):
         if classifier not in self.__VALID_CLASSIFIERS:
@@ -286,6 +284,7 @@ class OneClassDBDetectorTree:
         :param class_samples: samples belonging to the class
         :return: True/False - success
         """
+
         if class_id in self.__classifiers:
             return False
         self.__classifiers[class_id] = self.__generate_classifier()
@@ -293,7 +292,7 @@ class OneClassDBDetectorTree:
         self.__nr_classes += 1
         self.__classifier_states[class_id] = 0
         # collect the samples
-        self.__collect_samples(class_id, class_samples)
+        self.__p_user_db.add_samples(class_id, class_samples)
         # train the classifier
         return self.__retrain(class_id)
 
@@ -305,15 +304,14 @@ class OneClassDBDetectorTree:
         - Multiple classes are identified with small ratios Ys: Novelty
         - No classes identified: Novelty
         :param samples:
-        :return: Class ID, None (Novelty), -1 invalid dataset (multiple detections)
+        :return: Class ID, -1 (Novelty), None invalid dataset (multiple detections)
         """
         proba, class_ids = self.predict_proba(samples)
-
         mask_0 = proba > 0
 
         # no classes detected at all - novelty
         if len(proba[mask_0]) == 0:
-            return None
+            return -1
 
         mask_class = proba > self.__class_thresh
         nr_classes = len(proba[mask_class])
@@ -324,20 +322,21 @@ class OneClassDBDetectorTree:
                 # multiple classes detected
                 if self.__verbose:
                     print "--- Multiple classes detected: {}".format(nr_classes)
-                return -1
+                return None
 
             # count if any element, except for class is above confusion ratio
             if len(proba[(self.__confusion_thresh < proba) & (proba < self.__class_thresh)]) > 0:
-                return -1
+                return None
 
-            return class_ids[mask_class]
+            class_id = class_ids[mask_class]
+            return class_id
 
         else:
             if len(proba[proba > self.__novelty_thresh]) > 0:
                 print "--- no classes detected but novelty threshold exceeded: {}".format(proba)
-                return -1
+                return None
 
-            return None
+            return -1
 
     def predict_proba(self, samples):
         """
@@ -356,16 +355,14 @@ class OneClassDBDetectorTree:
 
     def process_labeled_stream_data(self, class_id, samples):
         """
-        Incorporate labeled data into the classifiers
+        Incorporate labeled data into the classifiers. Classifier for {class_id} must be initialized already
         (retraining is done once the samples can't be explained by the model anymore)
         :param class_id: class id
         :param samples: class samples
         :return: -
         """
-        self.__collect_samples(class_id, samples)
         # collect samples
-
-        self.__p_user_db.add_embeddings
+        self.__p_user_db.add_samples(class_id, samples)
 
         # check if incoming data explains the current model
         predictions = self.__predict(samples)
@@ -404,16 +401,23 @@ class OneClassDBDetectorTree:
     def __retrain(self, class_id):
         """Retrain One-Class Classifier"""
 
-        if class_id not in self.__classifiers\
-                or class_id not in self.__training_data:
+        if class_id not in self.__classifiers:
+            print "--- Cannot train class {} without initialized classifier".format(class_id)
+            return False
+
+        samples = self.__p_user_db.get_class_samples(class_id)
+        if not samples:
+            if self.__verbose:
+                print "--- Cannot train class {} without samples".format(class_id)
             return False
 
         start = time.time()
         with self.__training_lock:
-            self.__classifiers[class_id].fit(self.__training_data[class_id])
+            self.__classifiers[class_id].fit(samples)
             self.__retraining_counter[class_id] = 0
             self.__classifier_states[class_id] += 1
-        # print "fitting took {} seconds".format(time.time() - start)
+            if self.__verbose:
+                print "fitting took {} seconds".format(time.time() - start)
         return True
 
     def __generate_classifier(self):
@@ -448,14 +452,4 @@ class OneClassDBDetectorTree:
             t = Thread(target=self.__classifier_trainer)
             t.daemon = True  # terminate if main thread ends
             t.start()
-
-    # -------- Not implemented yet
-
-    def store_samples(self, class_id):
-        pass
-
-    def load_samples(self, class_id):
-        pass
-
-
 

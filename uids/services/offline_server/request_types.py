@@ -31,7 +31,7 @@ class CollectEmbeddingsByName:
             return
 
         # add to database
-        server.user_db.add_embeddings(user_id, embeddings)
+        server.user_db.add_samples(user_id, embeddings)
 
         r.OK(server, conn)
 

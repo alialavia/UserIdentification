@@ -22,7 +22,7 @@ class UserDB:
     user_list = {}          # user ids to nice name
 
     # user associated data
-    user_embeddings = {}    # raw CNN embeddings
+    class_samples = {}    # raw CNN embeddings
 
     def __init__(self):
         start = time.time()
@@ -32,20 +32,26 @@ class UserDB:
         print("--- database initialization took {} seconds".format(time.time() - start))
 
     #  ----------- DESCRIPTOR TOOLS
-    def add_embeddings(self, user_id, new_embeddings):
+    def add_samples(self, user_id, new_samples):
         """embeddings: array of embeddings"""
-        if user_id not in self.user_embeddings:
+        if user_id not in self.class_samples:
             # initialize
-            self.user_embeddings[user_id] = new_embeddings
+            self.class_samples[user_id] = new_samples
         else:
             # append
-            self.user_embeddings[user_id] = np.concatenate((self.user_embeddings[user_id], new_embeddings))
+            self.class_samples[user_id] = np.concatenate((self.class_samples[user_id], new_samples))
 
-    def get_labeled_embeddings(self):
+    def get_class_samples(self, class_id):
+        if class_id in self.class_samples:
+            return self.class_samples[class_id]
+        else:
+            return None
+
+    def get_labeled_samples(self):
         embeddings_accumulated = np.array([])
         labels = []
         # label encoder id: np.int64()
-        for user_id, user_embeddings in self.user_embeddings.iteritems():
+        for user_id, user_embeddings in self.class_samples.iteritems():
             labels = np.append(labels, np.repeat(user_id, len(user_embeddings)))
             embeddings_accumulated = np.concatenate((embeddings_accumulated, user_embeddings)) if embeddings_accumulated.size else np.array(user_embeddings)
         return embeddings_accumulated, labels
@@ -80,7 +86,7 @@ class UserDB:
                     self.version_name,
                     self.id_increment,
                     self.user_list,
-                    self.user_embeddings
+                    self.class_samples
                 ) = pickle.load(f)
             return True
         return False
@@ -93,7 +99,7 @@ class UserDB:
                 self.version_name,
                 self.id_increment,
                 self.user_list,
-                self.user_embeddings
+                self.class_samples
             ), f)
             f.close()
 
@@ -108,5 +114,5 @@ class UserDB:
 
     def print_embedding_status(self):
         print "--- Current embeddings:"
-        for user_id, embeddings in self.user_embeddings.iteritems():
+        for user_id, embeddings in self.class_samples.iteritems():
             print "     User" + str(user_id) + ": " + str(len(embeddings)) + " representations"

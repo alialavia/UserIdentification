@@ -5,7 +5,7 @@ from config import *    # server configuration
 from uids.UserDB import UserDB   # user database
 from uids.features.EmbeddingGen import EmbeddingGen   # CNN embedding generator
 from uids.networking.TCPServer import TCPServerBlocking # tcp networking
-from uids.online_learning.OCCTree import OneClassDetectorTree
+from uids.online_learning.OCCTree import OneClassDBDetectorTree
 # import request types
 M_REQUESTS = importlib.import_module("request_types")
 
@@ -26,7 +26,7 @@ class IdentificationServer(TCPServerBlocking):
         self.user_db = UserDB()
 
         # Classifier - linked to database
-        self.classifier = SVM(self.user_db)
+        self.classifier = OneClassDBDetectorTree(self.user_db)
 
     def handle_request(self, conn, addr):
         """general request handler"""

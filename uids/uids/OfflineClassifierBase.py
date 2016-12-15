@@ -111,7 +111,7 @@ class OfflineClassifierBase:
 
         start = time.time()
 
-        (embeddings, labels) = self.__p_user_db.get_labeled_embeddings()
+        (embeddings, labels) = self.__p_user_db.get_labeled_samples()
 
         # transform to numerical labels
         self.label_encoder = LabelEncoder().fit(labels)
