@@ -28,8 +28,7 @@ void User::SetFaceData(tracking::Face f)
 }
 void User::GetStatus(IdentificationStatus &s1, ActionStatus &s2)
 {
-	//std::cout << "----- set bounding box. idstatus: "  << " | "<<mIDStatus<<" | action: " << mActionStatus << std::endl;
-	//s1 = mIDStatus;
+	s1 = mIDStatus;
 	s2 = mActionStatus;
 }
 void User::GetUserID(int& id, std::string& nice_name) const

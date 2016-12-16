@@ -166,6 +166,8 @@ SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 #SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
 #SET(CMAKE_VERBOSE_MAKEFILE ON)
 
+add_definitions(-DFACEGRID_RECORDING)
+
 #-------------------------------------------------
 # Config Header
 #-------------------------------------------------

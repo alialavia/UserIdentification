@@ -9,7 +9,6 @@
 
 #define _DEBUG_USERMANAGER
 
-#define FACEGRID_RECORDING
 
 namespace io{
 class TCPClient;

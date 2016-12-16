@@ -10,8 +10,7 @@ namespace user
 	enum IdentificationStatus
 	{
 		IDStatus_Unknown = 0,
-		IDStatus_Identified = 1,
-		IDStatus_WOOOOO = 16
+		IDStatus_Identified = 1
 	};
 
 	enum ActionStatus
@@ -25,15 +24,11 @@ namespace user
 	class User {
 
 	public:
-		User() : mUserID(-1), mUserNiceName(""), mIDStatus(IDStatus_WOOOOO), mActionStatus(ActionStatus_Idle)
+		User() : mUserID(-1), mUserNiceName(""), mIDStatus(IDStatus_Unknown), mActionStatus(ActionStatus_Idle)
 		{
 #ifdef FACEGRID_RECORDING
 			pGrid = new tracking::RadialFaceGrid(2, 10, 10);
 #endif
-			std::cout << "----- USER CREATED: " << mIDStatus << " | action: " << mActionStatus << std::endl;
-
-			//mIDStatus = IDStatus_Unknown;
-			//mActionStatus = ActionStatus_Idle;
 		}
 		~User()
 		{
@@ -50,6 +45,11 @@ namespace user
 		void GetUserID(int& id, std::string& nice_name) const;
 		cv::Rect2f GetFaceBoundingBox();
 		tracking::Face GetFaceData();
+
+		void PrintStatus()
+		{
+			std::cout << "--- id_status: " << mIDStatus << " | action: " << mActionStatus << std::endl;
+		}
 
 #ifdef FACEGRID_RECORDING
 		tracking::RadialFaceGrid* pGrid;

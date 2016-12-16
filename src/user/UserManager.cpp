@@ -40,21 +40,8 @@ void UserManager::RefreshTrackedUsers(
 		// user not tracked yet - initiate new user model
 		if (mFrameIDToUser.count(scene_id) == 0)
 		{
-			User* u = new User();
-
-
-			// TODO: DEBUG
-
-			IdentificationStatus id_status = IDStatus_Unknown;
-			ActionStatus action = ActionStatus_Idle;
-			u->GetStatus(id_status, action);
-			//std::cout << "----- user init: " << static_cast<int>(id_status) << " | action: " << action << std::endl;
-			throw 20;
-
-
-			mFrameIDToUser[scene_id] = u;
-
-
+			// create new user
+			mFrameIDToUser[scene_id] = new User();
 		}
 	}
 
@@ -71,9 +58,6 @@ void UserManager::RefreshTrackedUsers(
 			// update face data
 			it->second->SetFaceData(faces[user_index]);
 			++it;
-#ifdef _DEBUG_USERMANAGER
-			std::cout << "=== update user " << std::endl;
-#endif
 		}
 		// remove user if he has left scene
 		else
@@ -179,27 +163,26 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 		ActionStatus action;
 		it->second->GetStatus(id_status, action);
 
-		std::cout << "--- id_Status: "<< id_status << " | action: "<< action << std::endl;
+		//std::cout << "--- id_Status: "<< id_status << " | action: "<< action << std::endl;
 
 		// request user identification
 		if (id_status == IDStatus_Unknown)
 		{
 
-			std::cout << "--- ¨1INITIALZATION. ID status: " << id_status << " - action: "<< action << std::endl;
-
 			// new user in scene
 			if (action == ActionStatus_Idle) {
 				it->second->SetActionStatus(ActionStatus_Initialization);
 				action = ActionStatus_Initialization;
-				std::cout << "--- .INITIALZATION" << std::endl;
 			}
 
 			// collect images for identification
 			if (action == ActionStatus_Initialization) {
 
-				std::cout << "--- INITIALZATION" << std::endl;
 				// collect another image
 				cv::Mat face_snap = scene_rgb(it->second->GetFaceBoundingBox());
+
+				// resize
+				cv::resize(face_snap, face_snap, cv::Size(100, 100));
 
 #ifdef FACEGRID_RECORDING
 				// check if face should be recorded
@@ -211,6 +194,7 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 					// add face if not yet capture from this angle
 					if (it->second->pGrid->IsFree(roll, pitch, yaw)) {
 						it->second->pGrid->StoreSnapshot(roll, pitch, yaw, face_snap);
+						std::cout << "-- take snapshot" << std::endl;
 						
 					}
 				}
@@ -219,7 +203,7 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 				}
 
 				// if enough images, request identification
-				if (it->second->pGrid->nr_images() > 5) {
+				if (it->second->pGrid->nr_images() > 10) {
 
 					// extract images
 					std::vector<cv::Mat*> face_patches = it->second->pGrid->ExtractGrid();
@@ -234,6 +218,8 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 
 					// set user action status
 					it->second->SetActionStatus(ActionStatus_IDPending);
+					it->second->pGrid->Clear();
+
 				}
 #endif
 
@@ -249,8 +235,8 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 
 		}
 		else if (id_status == IDStatus_Identified) {
-			// send model updates
-
+			// send model updates - reinforced learning
+			// TODO: implement
 
 
 		}
