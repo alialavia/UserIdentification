@@ -88,6 +88,7 @@ class UserDB:
                     self.user_list,
                     self.class_samples
                 ) = pickle.load(f)
+                f.close()
             return True
         return False
 

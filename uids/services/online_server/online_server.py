@@ -49,6 +49,7 @@ class IdentificationServer(TCPServerBlocking):
         else:
             print "--- Unsupported request type: " + str(request_id)
 
+        print "--------------------------------------------------------------"
         # communication finished - close connection
         conn.close()
 
