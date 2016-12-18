@@ -18,7 +18,8 @@ namespace user
 		ActionStatus_Idle = 0,
 		ActionStatus_IDPending = 1,
 		ActionStatus_Initialization = 2,
-		ActionStatus_UpdatePending = 3
+		ActionStatus_UpdatePending = 3,
+		ActionStatus_DataCollection = 4
 	};
 
 	class User {
@@ -42,7 +43,11 @@ namespace user
 		void SetFaceBoundingBox(cv::Rect2f bb);
 		void SetFaceData(tracking::Face f);
 		void GetStatus(IdentificationStatus &s1, ActionStatus &s2);
-		void GetUserID(int& id, std::string& nice_name) const;
+		void GetUserID(int& id, std::string& nice_name) const
+		{
+			id = mUserID;
+			nice_name = mUserNiceName;
+		}
 		cv::Rect2f GetFaceBoundingBox();
 		tracking::Face GetFaceData();
 

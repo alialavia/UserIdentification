@@ -79,17 +79,20 @@ int main(int argc, char** argv)
 			IBody** bodies = k.GetBodyDataReference();
 			st.ExtractJoints(bodies);
 
-			// extract raw face data
-			FaceData* face_data_raw = k.GetFaceDataReference();
-			ft.ExtractFacialData(face_data_raw);
-			std::vector<tracking::Face> faces = ft.GetFaces();
-
 			std::vector<cv::Rect2f> bounding_boxes;
 			std::vector<int> user_scene_ids;
 
 			// extract face bb from skeleton
 			st.GetFaceBoundingBoxesRobust(bounding_boxes, base::ImageSpace_Color);
 			st.GetUserSceneIDs(user_scene_ids);
+
+			// extract raw face data
+			FaceData* face_data_raw = k.GetFaceDataReference();
+			ft.ExtractFacialData(face_data_raw);
+
+			// get faces
+			std::map<int, tracking::Face> faces;
+			ft.GetFaces(faces);
 
 			// extract face bb from face tracker - more unstable
 			// else, face data might not be available all the time

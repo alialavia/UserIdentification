@@ -102,6 +102,21 @@ namespace io {
 			mUserID(user_id)
 		{
 		}
+		EmbeddingCollectionByID(
+			io::TCPClient* server_conn,
+			std::vector<cv::Mat*> images,
+			int user_id
+		) :
+			NetworkRequest(server_conn, NetworkRequest_EmbeddingCollectionByID),
+			mUserID(user_id)
+		{
+
+			std::cout << "      User id: " << mUserID << std::endl;
+			// make deep copy of images
+			for (size_t i = 0; i < images.size(); i++) {
+				mImages.push_back((*images[i]).clone());
+			}
+		}
 
 	protected:
 

@@ -31,11 +31,7 @@ void User::GetStatus(IdentificationStatus &s1, ActionStatus &s2)
 	s1 = mIDStatus;
 	s2 = mActionStatus;
 }
-void User::GetUserID(int& id, std::string& nice_name) const
-{
-	id = mUserID;
-	nice_name = mUserNiceName;
-}
+
 cv::Rect2f User::GetFaceBoundingBox()
 {
 	return mFaceBoundingBox;

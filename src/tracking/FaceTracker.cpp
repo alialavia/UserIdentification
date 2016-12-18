@@ -248,6 +248,15 @@ HRESULT FaceTracker::RenderFaceFeatures(cv::Mat &target, base::ImageSpace space)
 	return S_OK;
 }
 
-std::vector<Face> FaceTracker::GetFaces() {
-	return mFaces;
+void FaceTracker::GetFaces(std::vector<Face> &faces) {
+	faces = mFaces;
+}
+
+void FaceTracker::GetFaces(std::map<int, Face> &faces) {
+	std::map<int, Face> m;
+	for(size_t i=0;i< mUserIDs.size();i++)
+	{
+		m[mUserIDs[i]] = mFaces[i];
+	}
+	faces = m;
 }

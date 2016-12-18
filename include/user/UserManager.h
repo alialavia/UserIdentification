@@ -43,7 +43,7 @@ namespace user
 		void RefreshTrackedUsers(
 			const std::vector<int> &user_scene_ids, 
 			std::vector<cv::Rect2f> bounding_boxes, 
-			std::vector<tracking::Face> faces
+			std::map<int, tracking::Face> faces
 		);
 
 		void ApplyUserIdentification();

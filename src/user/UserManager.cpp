@@ -29,10 +29,9 @@ bool UserManager::Init(io::TCPClient* connection, io::NetworkRequestHandler* han
 void UserManager::RefreshTrackedUsers(
 	const std::vector<int> &user_scene_ids, 
 	std::vector<cv::Rect2f> bounding_boxes, 
-	std::vector<tracking::Face> faces
+	std::map<int, tracking::Face> faces
 )
 {
-
 	// add new user for all scene ids that are new
 	for (int i = 0; i<user_scene_ids.size(); i++)
 	{
@@ -55,8 +54,14 @@ void UserManager::RefreshTrackedUsers(
 		{
 			// user is in scene - update scene data (bounding box, position etc.)
 			it->second->SetFaceBoundingBox(bounding_boxes[user_index]);
+
+
 			// update face data
-			it->second->SetFaceData(faces[user_index]);
+			if(faces.count(it->first)>0)
+			{
+				it->second->SetFaceData(faces[it->first]);
+			}
+
 			++it;
 		}
 		// remove user if he has left scene
@@ -86,6 +91,7 @@ void UserManager::ApplyUserIdentification()
 	// handle all processed identification requests
 	io::IdentificationResponse response;
 	io::NetworkRequest* request = nullptr;
+	io::NetworkRequestType req_type;
 
 	while (pRequestHandler->PopResponse(&response, request))
 	{
@@ -107,6 +113,8 @@ void UserManager::ApplyUserIdentification()
 			// check if other user in scene has same id
 			// TODO: Handle Missdetection
 
+			std::cout << "......... assigning ID to user: " << response.mUserID << std::endl;
+
 			// apply user identification
 			target_user->SetUserID(response.mUserID, response.mUserNiceName);
 			target_user->SetActionStatus(ActionStatus_Idle);
@@ -117,9 +125,41 @@ void UserManager::ApplyUserIdentification()
 		}
 	}
 
+	// ok status
+	io::OKResponse ok_response;
+	while (pRequestHandler->PopResponse(&ok_response, request, &req_type))
+	{
+		// display response
+		std::cout << "--- Ok response: " << ok_response.mMessage << std::endl;
+
+		// locate user for which request was sent
+		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request);
+
+		if (it != mRequestToUser.end()) {
+			// extract user
+			User* target_user = it->second;
+
+			if (req_type == io::NetworkRequest_EmbeddingCollectionByID) {
+				target_user->SetActionStatus(ActionStatus_Idle);
+			}
+
+			// remove request mapping
+			RemovePointerMapping(it->second);
+
+			// reset status
+			target_user->SetUserID(response.mUserID, response.mUserNiceName);
+			target_user->SetActionStatus(ActionStatus_Idle);
+		}
+		else {
+			// user corresponding to request not found (may have left scene) - drop response
+
+		}
+	}
+
+
 	// handle erronomous requests
 	io::ErrorResponse err_response;
-	io::NetworkRequestType req_type;
+
 	while (pRequestHandler->PopResponse(&err_response, request, &req_type))
 	{
 		// display response
@@ -219,7 +259,6 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 					// set user action status
 					it->second->SetActionStatus(ActionStatus_IDPending);
 					it->second->pGrid->Clear();
-
 				}
 #endif
 
@@ -237,6 +276,72 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 		else if (id_status == IDStatus_Identified) {
 			// send model updates - reinforced learning
 			// TODO: implement
+			if (action == ActionStatus_Idle) {
+				it->second->SetActionStatus(ActionStatus_DataCollection);
+				action = ActionStatus_DataCollection;
+			}
+
+			if (action == ActionStatus_DataCollection) {
+
+				// collect another image
+				cv::Mat face_snap = scene_rgb(it->second->GetFaceBoundingBox());
+
+				// resize
+				cv::resize(face_snap, face_snap, cv::Size(100, 100));
+
+#ifdef FACEGRID_RECORDING
+				// check if face should be recorded
+				tracking::Face face = it->second->GetFaceData();
+				int roll, pitch, yaw;
+				face.GetEulerAngles(roll, pitch, yaw);
+				try
+				{
+					// add face if not yet capture from this angle
+					if (it->second->pGrid->IsFree(roll, pitch, yaw)) {
+						it->second->pGrid->StoreSnapshot(roll, pitch, yaw, face_snap);
+						std::cout << "-- take snapshot" << std::endl;
+
+					}
+				}
+				catch (...)
+				{
+				}
+
+				// if enough images, request identification
+				if (it->second->pGrid->nr_images() > 1) {
+
+					// extract images
+					std::vector<cv::Mat*> face_patches = it->second->pGrid->ExtractGrid();
+
+					int user_id; std::string user_name;
+
+
+
+					// TODO: DEBUG HERE
+					// ID -1
+					it->second->GetUserID(user_id, user_name);
+
+
+					std::cout << "GETTING USER IDDDDD: "<< user_id << std::endl;
+
+					// make new identification request
+					io::EmbeddingCollectionByID* new_request = new io::EmbeddingCollectionByID(pServerConn, face_patches, user_id);
+					pRequestHandler->addRequest(new_request);
+
+					// update linking
+					mRequestToUser[new_request] = it->second;
+					mUserToRequest[it->second] = new_request;
+
+					// set user action status
+					it->second->SetActionStatus(ActionStatus_UpdatePending);
+					it->second->pGrid->Clear();
+				}
+#endif
+
+			}
+			else if (action == ActionStatus_UpdatePending) {
+				// do nothing
+			}
 
 
 		}
@@ -254,11 +359,9 @@ void UserManager::DrawUsers(cv::Mat &img)
 	{
 		cv::Rect bb = it->second->GetFaceBoundingBox();
 
-		// draw face bounding box
-		cv::rectangle(img, bb, cv::Scalar(0, 0, 255), 2, cv::LINE_4);
-
 		// draw identification status
 		float font_size = 0.5;
+		cv::Scalar color = cv::Scalar(0, 0, 0);
 		std::string text1, text2;
 
 		IdentificationStatus id_status;
@@ -271,6 +374,7 @@ void UserManager::DrawUsers(cv::Mat &img)
 			std::string nice_name = "";
 			it->second->GetUserID(user_id, nice_name);
 			text1 = "Status: " + nice_name + " - ID" + std::to_string(user_id);
+			color = cv::Scalar(0, 255, 0);
 		}
 		else
 		{
@@ -284,9 +388,13 @@ void UserManager::DrawUsers(cv::Mat &img)
 			else if (action == ActionStatus_Idle) {
 				text2 = "Idle";
 			}
+			color = cv::Scalar(0, 0, 255);
 			
 		}
-		cv::putText(img, text1, cv::Point(bb.x+10, bb.y+20), cv::FONT_HERSHEY_SIMPLEX, font_size, cv::Scalar(0, 0, 255), 1, 8);
-		cv::putText(img, text2, cv::Point(bb.x+10, bb.y+40), cv::FONT_HERSHEY_SIMPLEX, font_size, cv::Scalar(0, 0, 255), 1, 8);
+		cv::putText(img, text1, cv::Point(bb.x+10, bb.y+20), cv::FONT_HERSHEY_SIMPLEX, font_size, color, 1, 8);
+		cv::putText(img, text2, cv::Point(bb.x+10, bb.y+40), cv::FONT_HERSHEY_SIMPLEX, font_size, color, 1, 8);
+
+		// draw face bounding box
+		cv::rectangle(img, bb, color, 2, cv::LINE_4);
 	}
 }

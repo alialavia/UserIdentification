@@ -83,7 +83,9 @@ void NetworkRequestHandler::processRequests()
 			// submit the request to the server
 			mRequestsLock.lock();
 #ifdef _DEBUG_REQUESTHANDLER
-			std::cout << "--- Processing request of type ID(" << mRequests.front()->cRequestType << ") | total: " << mRequests.size() << std::endl;
+			std::cout << "---------------PROCESSING REQUEST----------------" << std::endl;
+			std::cout << "Type ID(" << mRequests.front()->cRequestType << ") | total of this type: " << mRequests.size() << std::endl;
+			std::cout << "-------------------------------------------------" << std::endl;
 #endif
 			NetworkRequest* request_ptr = mRequests.front();
 			mRequests.pop();	// pop front
@@ -97,11 +99,6 @@ void NetworkRequestHandler::processRequests()
 
 			// submit
 			request_ptr->SubmitRequest();
-
-
-#ifdef _DEBUG_REQUESTHANDLER
-			std::cout << "--- Wait for response id" << std::endl;
-#endif
 
 			// wait for response from this socket - blocking
 			// response factory
