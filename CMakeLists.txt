@@ -76,6 +76,8 @@ FIND_PACKAGE(OpenCV 3.0 REQUIRED)
 FIND_PACKAGE(gflags 2.2 REQUIRED)
 include_directories(${GFLAGS_INCLUDE_DIR})
 
+FIND_PACKAGE(dlib REQUIRED)
+
 # Platform specific:
 IF(WIN32)
 ENDIF()
