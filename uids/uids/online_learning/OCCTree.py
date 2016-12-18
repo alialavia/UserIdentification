@@ -102,6 +102,7 @@ class OneClassDetectorTree:
 
             # count if any element, except for class is above confusion ratio
             if len(proba[(self.__confusion_thresh < proba) & (proba < self.__class_thresh)]) > 0:
+                print "--- Elements above confusion threshold"
                 return -1
 
             return class_ids[mask_class]
@@ -136,6 +137,10 @@ class OneClassDetectorTree:
         :param samples: class samples
         :return: -
         """
+        if class_id not in self.__retraining_counter:
+            print "--- Stream data processing on a non-existing class!"
+            return
+
         self.__collect_samples(class_id, samples)
         # check if incoming data explains the current model
         predictions = self.__predict(samples)
@@ -286,6 +291,7 @@ class OneClassDBDetectorTree:
         """
 
         if class_id in self.__classifiers:
+            print "====================== ILLEGAL RETRAINING"
             return False
         self.__classifiers[class_id] = self.__generate_classifier()
         self.__retraining_counter[class_id] = 0
@@ -361,6 +367,9 @@ class OneClassDBDetectorTree:
         :param samples: class samples
         :return: -
         """
+
+        class_id = int(class_id)
+
         # collect samples
         self.__p_user_db.add_samples(class_id, samples)
 
@@ -378,6 +387,7 @@ class OneClassDBDetectorTree:
     def __predict(self, samples):
         """predict classes: for each sample on every class, tells whether or not (+1 or -1) it belongs to class"""
         predictions = {}
+
         with self.__training_lock:
             for class_id, __clf in self.__classifiers.iteritems():
                 predictions[class_id] = __clf.predict(samples)

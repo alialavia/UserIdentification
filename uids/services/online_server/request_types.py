@@ -30,6 +30,8 @@ class ImageIdentification:
             print "--- creating new user"
             user_id = server.user_db.create_new_user("a_user")
             server.user_db.print_users()
+            # add classifier
+            server.classifier.init_classifier(user_id, embeddings)
 
         # get user nice name
         user_name = server.user_db.get_name_from_id(user_id)
@@ -47,6 +49,10 @@ class ImageIdentificationUpdate:
     def __init__(self, server, conn):
         # receive user id
         user_id = server.receive_uint(conn)
+
+        print "--------ImageIdentificationUpdate-------------"
+        print user_id
+        print "----------------------------------------------"
 
         # receive images
         images = server.receive_image_batch_squared_same_size(conn)

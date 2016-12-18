@@ -5,17 +5,11 @@ ROUTING = {
    "REQUEST": {
        "ID": {
            "ImageIdentification": 1,  # identify user from image
-           "CollectEmbeddingsByID": 2,  # collect embeddings from images for user with ID XY
-           "CollectEmbeddingsByName": 3, # collect embeddings from images for user with name XY - names assumed to be unique
-           "CalcEmbedding": 4,  # calculate embedding from image
-           "TrainClassifier": 5  # trigger classifier training
+           "ImageIdentificationUpdate": 2  # collect embeddings from images for user with ID XY
        },
        "NAME": {
            1: "ImageIdentification",
-           2: "CollectEmbeddingsByID",
-           3: "CollectEmbeddingsByName",
-           4: "CalcEmbedding",
-           5: "TrainClassifier"
+           2: "ImageIdentificationUpdate"
        }
    },
    "RESPONSE": {
