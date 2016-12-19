@@ -382,7 +382,7 @@ namespace tracking
 		HRESULT RenderFaceBoundingBoxes(cv::Mat &target, base::ImageSpace space) const;
 		HRESULT RenderFaceFeatures(cv::Mat &target, base::ImageSpace space) const;
 
-	private:
+	protected:
 		IKinectSensor* m_pKinectSensor;
 		// tracked user ids
 		std::vector<int> mUserIDs;

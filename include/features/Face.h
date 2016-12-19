@@ -12,6 +12,8 @@
 #include <opencv2\opencv.hpp>
 #include <Config.h>
 
+#include <tracking\FaceTracker.h>
+
 #define _DEBUG_FACENALIGNER
 
 namespace features{
@@ -61,6 +63,81 @@ namespace features{
 		cv::Mat AlignImage(int imgDim, cv::Mat &input, const dlib::rectangle& bb);
 
 	};
+
+
+	class KinectFaceAligner : public tracking::FaceTracker {
+
+		CVPoints mFaceLandmarksReference;
+
+	public:
+		KinectFaceAligner(IKinectSensor* sensor) : tracking::FaceTracker(sensor) 
+		{
+			LoadLandmarkReference();
+		}
+
+		void LoadLandmarkReference();
+
+		// get face landmark positions for bounding box
+		CVPoints GetRefFaceLandmarkPos(const cv::Rect2d& faceBB) const;
+
+		void DrawRefLandmarks(cv::Mat &dst, const cv::Rect2d& faceBB) {
+
+			CVPoints pts = GetRefFaceLandmarkPos(faceBB);
+			// draw
+			for (size_t i = 0; i < pts.size();i++) {
+				cv::circle(dst, pts[i], 1, cv::Scalar(0, 0, 255), cv::LINE_4);
+			}
+
+		}
+		
+		// aling image using facial landmarks
+		bool AlignImage(cv::Mat &dst, int imgDim, cv::Mat &input, const cv::Rect2d& bb) {
+
+			// reference landmarks
+			CVPoints reference_pts = GetRefFaceLandmarkPos(bb);
+
+			// calculate affine transform from three point mappings
+			int ref_index[3] = { 39, 42, 33 };
+			int tracker_index[3] = { FacePointType_EyeLeft, FacePointType_EyeRight, FacePointType_Nose };
+			cv::Point2f alignPointsSS[3];
+			cv::Point2f meanAlignPointsSS[3];
+
+			// select face
+			if (mFaces.size()==0) {
+				std::cout << "no user!" << std::endl;
+				return false;
+			}
+
+			// select face data
+			tracking::Face target_face = mFaces[0];
+
+			for (std::size_t i = 0; i < 3; i++)
+			{
+				// tracked feature location
+				alignPointsSS[i].x = target_face.Points[tracker_index[i]].X;
+				alignPointsSS[i].y = target_face.Points[tracker_index[i]].Y;
+
+				// reference points
+				meanAlignPointsSS[i].x = reference_pts[ref_index[i]].x;
+				meanAlignPointsSS[i].y = reference_pts[ref_index[i]].y;
+			}
+
+			cv::Mat H = cv::getAffineTransform(alignPointsSS, meanAlignPointsSS);
+			cv::Mat warpedImg = cv::Mat::zeros(input.rows, input.cols, input.type());
+			// warp image
+			cv::warpAffine(input, warpedImg, H, warpedImg.size());
+
+			// ----------- select roi
+			warpedImg = warpedImg(bb);
+
+
+			dst = warpedImg;
+			return true;
+		}
+
+	};
+
+
 
 } // namespace
 

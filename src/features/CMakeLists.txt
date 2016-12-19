@@ -14,7 +14,7 @@ SET(TARGET_SRC
 
 # link internally (other project libraries)
 SET(TARGET_LIBRARIES
-	
+	Tracking
 )
 # link externally (library paths included over "find_library(${libname})")
 SET(TARGET_EXTERNAL_LIBRARIES
