@@ -5,11 +5,17 @@ ROUTING = {
    "REQUEST": {
        "ID": {
            "ImageIdentification": 1,  # identify user from image
-           "ImageIdentificationUpdate": 2  # collect embeddings from images for user with ID XY
+           "ImageIdentificationUpdate": 2,  # collect embeddings from images for user with ID XY
+           "ImageIdentificationAligned": 6,
+           "ImageIdentificationUpdateAligned": 7
+
+
        },
        "NAME": {
            1: "ImageIdentification",
-           2: "ImageIdentificationUpdate"
+           2: "ImageIdentificationUpdate",
+           6: "ImageIdentificationAligned",
+           7: "ImageIdentificationUpdateAligned"
        }
    },
    "RESPONSE": {

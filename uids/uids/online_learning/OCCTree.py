@@ -83,6 +83,14 @@ class OneClassDetectorTree:
         """
         proba, class_ids = self.predict_proba(samples)
 
+        if self.__verbose:
+            print "__________predict_class___________"
+            print "proba:"
+            print proba
+            print "class_ids:"
+            print class_ids
+            print "__________________________________"
+
         mask_0 = proba > 0
 
         # no classes detected at all - novelty
@@ -290,6 +298,10 @@ class OneClassDBDetectorTree:
         :return: True/False - success
         """
 
+        print "________init_classifier______________"
+        print "    USER ID: " + str(class_id)
+        print "_________________________________________________"
+
         if class_id in self.__classifiers:
             print "====================== ILLEGAL RETRAINING"
             return False
@@ -368,7 +380,15 @@ class OneClassDBDetectorTree:
         :return: -
         """
 
+        print "________process_labeled_stream_data______________"
+        print "    USER ID: " + str(class_id)
+        print "_________________________________________________"
+
         class_id = int(class_id)
+
+        if class_id not in self.__retraining_counter:
+            print "--- Class {} has not been initialized yet!".format(class_id)
+            return
 
         # collect samples
         self.__p_user_db.add_samples(class_id, samples)
@@ -377,8 +397,13 @@ class OneClassDBDetectorTree:
         predictions = self.__predict(samples)
         self.__retraining_counter[class_id] += self.__contradictive_predictions(predictions, class_id)
 
+        print "predictions:"
+        print predictions
+        print "contradictive samples accumulated: " + str(self.__retraining_counter[class_id])
+
         # trigger retraining
         if self.__retraining_counter[class_id] >= self.__max_model_outliers:
+            print "--- triggered retraining"
             # threaded training
             self.__add_training_task(class_id)
 
@@ -402,24 +427,36 @@ class OneClassDBDetectorTree:
                 if len(col[col > 0]) > 1:
                     nr_cont_samples += 1
         else:
+            # TODO: Debug - abnormal behaviour
             for class_id, col in zip(predictions.keys(), np.array(predictions.values()).T):
                 nr_dects = len(col[col > 0])
-                if nr_dects > 1 or (nr_dects == 1 and class_id != target_class):
-                    nr_cont_samples += 1
+                # if wrongly predicted: class is -1 or w
+                nr_samples = len(col)
+                if class_id == target_class:
+                    nr_cont_samples += (nr_samples - nr_dects)
+                else:
+                    nr_cont_samples += nr_dects
+
         return nr_cont_samples
 
     def __retrain(self, class_id):
         """Retrain One-Class Classifier"""
+
+        print "________retrain__________________________________"
+        print "    CLASS ID: " + str(class_id)
+        print "_________________________________________________"
 
         if class_id not in self.__classifiers:
             print "--- Cannot train class {} without initialized classifier".format(class_id)
             return False
 
         samples = self.__p_user_db.get_class_samples(class_id)
-        if not samples:
-            if self.__verbose:
-                print "--- Cannot train class {} without samples".format(class_id)
-            return False
+
+        # TODO: empty check for arrays
+        # if not samples:
+        #     if self.__verbose:
+        #         print "--- Cannot train class {} without samples".format(class_id)
+        #     return False
 
         start = time.time()
         with self.__training_lock:
@@ -455,6 +492,8 @@ class OneClassDBDetectorTree:
             # print "==== queue size: "+str(self.__tasks.qsize())
             training_id = self.__tasks.get()
             self.__retrain(training_id)
+            # reset training counter
+            self.__retraining_counter[training_id] = 0
             self.__tasks.task_done()
 
     def __deploy_classifier_trainers(self):

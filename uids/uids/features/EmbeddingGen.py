@@ -40,28 +40,30 @@ class EmbeddingGen:
         print("--- EmbeddingGen: model loading took {} seconds".format(time.time() - start))
 
     #  ----------- EMBEDDING GENERATION
-    def get_embeddings(self, input_images):
+    def get_embeddings(self, input_images, align=True):
 
         images_normalized = []
         embeddings = []
         start = time.time()
 
         # normalize images
-        if len(input_images) > 0:
-            for imgObject in input_images:
-                # align face - ignore images with multiple bounding boxes
-                aligned = self.__align_face(imgObject, self.landmarks, self.size)
-                if aligned is not None:
-                    images_normalized.append(aligned)
+        if align is True:
+            if len(input_images) > 0:
+                for imgObject in input_images:
+                    # align face - ignore images with multiple bounding boxes
+                    aligned = self.__align_face(imgObject, self.landmarks, self.size)
+                    if aligned is not None:
+                        images_normalized.append(aligned)
 
-        # print status
-        if self.verbose is True:
-            if len(images_normalized) > 0:
-                print("--- Alignment took {} seconds - {}/{} images suitable".format(time.time() - start, len(images_normalized), len(input_images)))
-            else:
-                print "--- No suitable images (no faces detected)"
+            # print status
+            if self.verbose is True:
+                if len(images_normalized) > 0:
+                    print("--- Alignment took {} seconds - {}/{} images suitable".format(time.time() - start, len(images_normalized), len(input_images)))
+                else:
+                    print "--- No suitable images (no faces detected)"
+                    return embeddings
         else:
-            return embeddings
+            images_normalized = input_images
 
         # generate embeddings
         start = time.time()
