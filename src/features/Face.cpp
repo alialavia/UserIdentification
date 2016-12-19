@@ -24,13 +24,17 @@ void DlibFaceAligner::detect_faces(cv::Mat &cv_mat, cv::Mat roi) {
 	}
 }
 
-dlib::rectangle DlibFaceAligner::GetLargestFaceBoundingBox(const cv::Mat& cvimg)
+bool DlibFaceAligner::GetLargestFaceBoundingBox(const cv::Mat& cvimg, dlib::rectangle& bb)
 {
 	dlib::array2d<dlib::rgb_pixel> img;
 	dlib::assign_image(img, dlib::cv_image<dlib::bgr_pixel>(cvimg));
 	std::vector<dlib::rectangle> faces = mDetector(img);
 	dlib::rectangle largestFace;
 	int largestArea = 0;
+	if (faces.size()==0) {
+		return false;
+	}
+
 	for (dlib::rectangle face : faces) {
 		int currentArea = face.width()*face.height();
 		if (currentArea>largestArea)
@@ -39,7 +43,8 @@ dlib::rectangle DlibFaceAligner::GetLargestFaceBoundingBox(const cv::Mat& cvimg)
 			largestFace = face;
 		}
 	}
-	return largestFace;
+	bb = largestFace;
+	return true;
 }
 
 DlibPoints DlibFaceAligner::DetectFaceLandmarks(const cv::Mat& cvImg, const dlib::rectangle& faceBB)
@@ -156,7 +161,7 @@ void DlibFaceAligner::LoadLandmarkReference()
 	}
 }
 
-cv::Mat DlibFaceAligner::AlignImage(int imgDim, cv::Mat &input, const dlib::rectangle& bb)
+bool DlibFaceAligner::AlignImage(int imgDim, cv::Mat &input, cv::Mat &dst,const dlib::rectangle& bb)
 {
 
 	// convert opencv image to dlib mat
@@ -226,12 +231,11 @@ cv::Mat DlibFaceAligner::AlignImage(int imgDim, cv::Mat &input, const dlib::rect
 	}
 
 	// extract face bounding box in warped image
-	dlib::rectangle wBb = GetLargestFaceBoundingBox(warpedImg);
-
-	if (wBb.width() <= 0 || wBb.height() <= 0)
-	{
+	dlib::rectangle wBb;
+	if (!GetLargestFaceBoundingBox(warpedImg, wBb)) {
 		std::cout << "Error with bounding box." << std::endl;
-		throw std::invalid_argument("Error with bounding box.");
+		//throw std::invalid_argument("Error with bounding box.");
+		return false;
 	}
 
 	DlibPoints wAlignPoints = DetectFaceLandmarks(warpedImg, wBb);
@@ -268,7 +272,8 @@ cv::Mat DlibFaceAligner::AlignImage(int imgDim, cv::Mat &input, const dlib::rect
 
 	cv::resize(warpedImg(wrect), warpedImg, cv::Size(imgDim, imgDim));
 
-	return warpedImg;
+	dst = warpedImg;
+	return true;
 
 }
 

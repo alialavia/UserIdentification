@@ -51,7 +51,7 @@ namespace features{
 		void detect_faces(cv::Mat &cv_mat, cv::Mat roi);
 
 		// detect faces and return larges bounding box (area)
-		dlib::rectangle GetLargestFaceBoundingBox(const cv::Mat& cvimg);
+		bool GetLargestFaceBoundingBox(const cv::Mat& cvimg, dlib::rectangle& bb);
 
 		// detect face landmarks
 		DlibPoints DetectFaceLandmarks(const cv::Mat& cvImg, const dlib::rectangle& faceBB);
@@ -60,7 +60,7 @@ namespace features{
 		DlibPoints GetRefFaceLandmarkPos(const dlib::rectangle& faceBB) const;
 
 		// aling image using facial landmarks
-		cv::Mat AlignImage(int imgDim, cv::Mat &input, const dlib::rectangle& bb);
+		bool AlignImage(int imgDim, cv::Mat &input, cv::Mat &dst, const dlib::rectangle& bb);
 
 	};
 
