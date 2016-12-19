@@ -67,6 +67,7 @@ OPTION(BUILD_USER_IDENTIFICATION_TESTS "Enable to build Tests" ON)
 
 # Folder structure
 set(PROJECT_RESOURCES_PATH "resources" CACHE STRING "Resources path")
+set(PROJECT_MODELS_PATH "models" CACHE STRING "Models path")
 
 #-------------------------------------------------
 # 3rd Party Dependency
@@ -198,8 +199,13 @@ CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/src/Config.cmake.in"
 
 # create directories
 MAKE_DIRECTORY("${OUTPUT_BINDIR}/${PROJECT_RESOURCES_PATH}")
+MAKE_DIRECTORY("${OUTPUT_BINDIR}/${PROJECT_MODELS_PATH}")
 MAKE_DIRECTORY("${OUTPUT_BINDIR}/${PROJECT_OUTPUT_PATH}")
 
+# copy models
+file(COPY ${PROJECT_MODELS_PATH} DESTINATION ${OUTPUT_BINDIR})
+
+Message(${OUTPUT_BINDIR})
 #-------------------------------------------------
 # Add Sources
 #-------------------------------------------------
