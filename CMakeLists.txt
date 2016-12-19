@@ -29,6 +29,7 @@ set(CMAKE_MODULE_PATH
 	${CMAKE_SOURCE_DIR}/cmake
 )
 
+
 # build dynamic/static libraries
 # [STATIC | SHARED | MODULE]
 SET(DYNAMIC_OR_STATIC_LIBS STATIC)
@@ -37,12 +38,18 @@ SET(DYNAMIC_OR_STATIC_LIBS STATIC)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON) 
 
 #-------------------------------------------------
+# Add Submodules
+#-------------------------------------------------
+
+add_subdirectory(${user_identification_SOURCE_DIR}/externals)
+
+#-------------------------------------------------
 # Include Headers
 #-------------------------------------------------
 
 INCLUDE_DIRECTORIES(
     ${user_identification_SOURCE_DIR}/include	# project headers
-    #${OPENGL_INCLUDE_DIR}				# additional headers (e.g. Eigen)
+	${user_identification_SOURCE_DIR}/externals/dlib	# dlib
 )
 
 #-------------------------------------------------
@@ -73,10 +80,16 @@ INCLUDE_DIRECTORIES(${KINECTSDK2_INCLUDE_DIRS})
 FIND_PACKAGE(OpenCV 3.0 REQUIRED)
 #include_directories(${OpenCV_INCLUDE_DIRS}) # Not needed for CMake >= 2.8.11
 
-FIND_PACKAGE(gflags 2.2 REQUIRED)
-include_directories(${GFLAGS_INCLUDE_DIR})
+# include this source when dlib is used
+find_package(dlib REQUIRED)
 
-FIND_PACKAGE(dlib REQUIRED)
+# Alternative:
+# Include only headers and add source.cpp to source of target
+# SET(DLIB_SOURCE ${user_identification_SOURCE_DIR}/externals/dlib/dlib/all/source.cpp)
+
+# google gflags
+find_package(gflags 2.2 REQUIRED)
+# include_directories(${GFLAGS_INCLUDE_DIR})
 
 # Platform specific:
 IF(WIN32)

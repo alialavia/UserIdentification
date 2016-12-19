@@ -1,0 +1,6 @@
+[submodule "externals/dlib"]
+	path = externals/dlib
+	url = https://github.com/davisking/dlib.git
+[submodule "externals/gflags"]
+	path = externals/gflags
+	url = https://github.com/gflags/gflags.git
