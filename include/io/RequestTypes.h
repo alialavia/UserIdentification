@@ -23,6 +23,9 @@ namespace io {
 		NetworkRequest_EmbeddingCollectionByName = 3,
 		NetworkRequest_EmbeddingCalculation = 4,
 		NetworkRequest_ClassifierTraining = 5,
+		NetworkRequest_ImageIdentificationAligned = 6,
+		NetworkRequest_EmbeddingCollectionByIDAligned = 7,
+
 	};
 
 	// request type
@@ -110,8 +113,6 @@ namespace io {
 			NetworkRequest(server_conn, NetworkRequest_EmbeddingCollectionByID),
 			mUserID(user_id)
 		{
-
-			std::cout << "      User id: " << mUserID << std::endl;
 			// make deep copy of images
 			for (size_t i = 0; i < images.size(); i++) {
 				mImages.push_back((*images[i]).clone());
@@ -203,6 +204,67 @@ namespace io {
 	protected:
 		void SubmitPayload() {}
 	};
+
+
+	// ---------- online requests
+
+	class ImageIdentificationAligned : public NetworkRequest
+	{
+	public:
+		ImageIdentificationAligned(
+			io::TCPClient* server_conn,
+			std::vector<cv::Mat*> images
+		) :
+			NetworkRequest(server_conn, NetworkRequest_ImageIdentificationAligned)
+		{
+			// make deep copy of images
+			for (size_t i = 0; i < images.size(); i++) {
+				mImages.push_back((*images[i]).clone());
+			}
+		}
+
+	protected:
+
+		// submit specific payload
+		void SubmitPayload() {
+			pServerConn->SendImageBatchSquaredSameSize(mImages);
+		}
+
+		// payload: quadratic(!) images of same size
+		std::vector<cv::Mat> mImages;
+
+	};
+
+	class EmbeddingCollectionByIDAligned : public NetworkRequest
+	{
+	public:
+		EmbeddingCollectionByIDAligned(
+			io::TCPClient* server_conn,
+			std::vector<cv::Mat*> images,
+			int user_id
+		) :
+			NetworkRequest(server_conn, NetworkRequest_EmbeddingCollectionByIDAligned),
+			mUserID(user_id)
+		{
+			// make deep copy of images
+			for (size_t i = 0; i < images.size(); i++) {
+				mImages.push_back((*images[i]).clone());
+			}
+		}
+
+	protected:
+
+		// submit specific payload
+		void SubmitPayload() {
+			pServerConn->SendUInt(mUserID);
+			pServerConn->SendImageBatchSquaredSameSize(mImages);
+		}
+
+		// payload: quadratic(!) images of same size
+		std::vector<cv::Mat> mImages;
+		int mUserID;
+	};
+
 
 }
 
