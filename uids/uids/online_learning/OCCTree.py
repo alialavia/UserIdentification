@@ -418,25 +418,16 @@ class OneClassDBDetectorTree:
                 predictions[class_id] = __clf.predict(samples)
         return predictions
 
-    def __contradictive_predictions(self, predictions, target_class=None):
+    def __contradictive_predictions(self, predictions, target_class):
         nr_cont_samples = 0
-        if target_class is None:
-            for col in np.array(predictions.values()).T:
-                # only 1x1 and rest -1 or all -1
-                # = nr elements =1 not greater than 1
-                if len(col[col > 0]) > 1:
-                    nr_cont_samples += 1
-        else:
-            # TODO: Debug - abnormal behaviour
-            for class_id, col in zip(predictions.keys(), np.array(predictions.values()).T):
-                nr_dects = len(col[col > 0])
-                # if wrongly predicted: class is -1 or w
-                nr_samples = len(col)
-                if class_id == target_class:
-                    nr_cont_samples += (nr_samples - nr_dects)
-                else:
-                    nr_cont_samples += nr_dects
-
+        for class_id, col in predictions.iteritems():
+            nr_dects = len(col[col > 0])
+            # if wrongly predicted: class is -1 or w
+            nr_samples = len(col)
+            if class_id == target_class:
+                nr_cont_samples += (nr_samples - nr_dects)
+            else:
+                nr_cont_samples += nr_dects
         return nr_cont_samples
 
     def __retrain(self, class_id):
