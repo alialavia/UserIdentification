@@ -171,7 +171,7 @@ int SkeletonTracker::GetJoints(std::vector<std::vector<cv::Point2f>>& joint_coor
 	return mUserIDs.size();
 }
 
-int SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space, float box_size) const
+int SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, std::vector<int> &user_ids, base::ImageSpace space, float box_size) const
 {
 	int srcWidth, srcHeight;
 	if ((base::ImageSpace_Color & space) == base::ImageSpace_Color)
@@ -223,11 +223,21 @@ int SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxe
 		m_pCoordinateMapper->MapCameraPointToColorSpace(p3, &p3c);
 		m_pCoordinateMapper->MapCameraPointToColorSpace(p4, &p4c);
 
-		float head_size_colorspace = abs(p4c.X - p1c.X);
-		bounding_box = cv::Rect2f(p4c.X, p4c.Y, head_size_colorspace, head_size_colorspace);
+		// check if coordinate mapping succeeded
+		if (
+			p1.X != -std::numeric_limits<float>::infinity() && p1.Y != -std::numeric_limits<float>::infinity() &&
+			p2.X != -std::numeric_limits<float>::infinity() && p2.Y != -std::numeric_limits<float>::infinity() &&
+			p3.X != -std::numeric_limits<float>::infinity() && p3.Y != -std::numeric_limits<float>::infinity() &&
+			p4.X != -std::numeric_limits<float>::infinity() && p4.Y != -std::numeric_limits<float>::infinity()
+			)
+		{
 
-		// store
-		bounding_boxes.push_back(bounding_box);
+			float head_size_colorspace = abs(p4c.X - p1c.X);
+			bounding_box = cv::Rect2f(p4c.X, p4c.Y, head_size_colorspace, head_size_colorspace);
+			// save
+			user_ids.push_back(iUser);
+			bounding_boxes.push_back(bounding_box);
+		}
 	}
 
 	return bounding_boxes.size();
@@ -235,10 +245,12 @@ int SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxe
 }
 
 // TODO: fix boundaries
-int SkeletonTracker::GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space, float box_size) const
+int SkeletonTracker::GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& bounding_boxes, std::vector<int> &user_ids, base::ImageSpace space, float box_size) const
 {
-	GetFaceBoundingBoxes(bounding_boxes, space, box_size);
 
+	std::vector<int> u_ids;
+	GetFaceBoundingBoxes(bounding_boxes, u_ids, space, box_size);
+	user_ids = u_ids;
 	float xmin, xmax, ymin, ymax, width, height;
 
 	int srcWidth, srcHeight;
@@ -338,7 +350,8 @@ HRESULT SkeletonTracker::RenderFaceBoundingBoxes(cv::Mat &target, base::ImageSpa
 
 	// get face bounding boxes
 	std::vector<cv::Rect2f> bounding_boxes;
-	GetFaceBoundingBoxes(bounding_boxes, space);
+	std::vector<int> user_ids;
+	GetFaceBoundingBoxes(bounding_boxes, user_ids, space);
 	// draw bounding boxes
 	for (size_t i = 0; i < bounding_boxes.size(); i++)
 	{
@@ -352,19 +365,18 @@ void SkeletonTracker::ExtractFacesPatches(cv::Mat img, int patch_size, std::vect
 {
 	// get face bounding boxes
 	std::vector<cv::Rect2f> bounding_boxes;
-	GetFaceBoundingBoxesRobust(bounding_boxes, base::ImageSpace_Color);
+	std::vector<int> uids;
+	GetFaceBoundingBoxesRobust(bounding_boxes, uids, base::ImageSpace_Color);
 
 	for(int j = 0; j<mUserIDs.size();j++)
 	{
 		cv::Mat face = img(bounding_boxes[j]);
-		if(face.cols == face.rows)
-		{
-			// resize
-			cv::resize(face, face, cv::Size(patch_size, patch_size));
-			// save id
-			user_ids.push_back(mUserIDs[j]);
-			// save face patch
-			patches.push_back(face);
-		}
+		// resize
+		cv::resize(face, face, cv::Size(patch_size, patch_size));
+		// save face patch
+		patches.push_back(face);
 	}
+
+	// save ids
+	user_ids = uids;
 }
