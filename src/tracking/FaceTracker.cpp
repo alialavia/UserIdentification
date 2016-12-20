@@ -252,6 +252,11 @@ void FaceTracker::GetFaces(std::vector<Face> &faces) {
 	faces = mFaces;
 }
 
+void FaceTracker::GetFaces(std::vector<Face> &faces, std::vector<int> &user_ids) {
+	faces = mFaces;
+	user_ids = mUserIDs;
+}
+
 void FaceTracker::GetFaces(std::map<int, Face> &faces) {
 	std::map<int, Face> m;
 	for(size_t i=0;i< mUserIDs.size();i++)
