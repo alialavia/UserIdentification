@@ -6,6 +6,9 @@
 #include "io/ImageHandler.h"
 #include <gflags/gflags.h>
 
+#include <tracking\SkeletonTracker.h>
+#include <features\Face.h>
+
 DEFINE_string(output, "output", "Output path");
 
 int main(int argc, char** argv)
@@ -14,7 +17,6 @@ int main(int argc, char** argv)
 
 
 	HRESULT hr;
-	cvNamedWindow("Color image", CV_WINDOW_AUTOSIZE);
 
 	cv::Mat color_image;
 
@@ -27,11 +29,22 @@ int main(int argc, char** argv)
 	// skeleton tracker
 	IKinectSensor* pSensor = nullptr;
 
-	if(FAILED(k.GetSensorReference(pSensor)))
+	if (FAILED(k.GetSensorReference(pSensor)))
 	{
 		std::cout << "Sensor is not initialized" << std::endl;
 		return -1;
 	}
+
+	tracking::SkeletonTracker st(pSensor);
+	st.Init();
+
+	// dlib aligner
+	features::DlibFaceAligner dlib_aligner;
+	dlib_aligner.Init();
+
+	// kinect aligner
+	features::KinectFaceAligner k_aligner(pSensor);
+
 
 	tracking::FaceTracker ft(pSensor);
 	tracking::RadialFaceGrid grid;
@@ -58,37 +71,73 @@ int main(int argc, char** argv)
 			// get color image
 			k.GetImageCopyRGB(color_image);
 
+			// extract joint data
+			IBody** bodies = k.GetBodyDataReference();
+			st.ExtractJoints(bodies);
+
 			// extract raw face data
 			FaceData* face_data_raw = k.GetFaceDataReference();
-
-			// copy/convert
 			ft.ExtractFacialData(face_data_raw);
 
-			// get face bounding boxes
+
+
+			k_aligner.ExtractFacialData(face_data_raw);
+
+			// get face bounding boxes from face tracking
+			//std::vector<cv::Rect2f> bounding_boxes;
+			//ft.GetFaceBoundingBoxesRobust(bounding_boxes, base::ImageSpace_Color);
+
+			// get face bounding boxes from skeleton tracking
 			std::vector<cv::Rect2f> bounding_boxes;
-			ft.GetFaceBoundingBoxesRobust(bounding_boxes, base::ImageSpace_Color);
+			std::vector<int> user_ids;
+			st.GetFaceBoundingBoxesRobust(bounding_boxes, user_ids, base::ImageSpace_Color);
 
 			if (bounding_boxes.size() > 0)
 			{
 
 				face_snap = color_image(bounding_boxes[0]);
-				//cv::Mat face = color_image(bounding_boxes[0]);
-				//// show image
-				//cv::imshow("Face", face);
-				//int key = cv::waitKey(3);
-				//if (key == 32)	// space = save
-				//{
-				//	std::string filename = "face.png";
-				//	std::string path = FLAGS_output;
 
-				//	// save image
-				//	io::ImageHandler::SaveImage(face, path, filename);
-				//}
-			}
+				// kinect aligner
+				if (false) {
+					k_aligner.DrawRefLandmarks(color_image, bounding_boxes[0]);
+					cv::Mat aligned;
+					bool succ = k_aligner.AlignImage(aligned, 200, color_image, bounding_boxes[0]);
+					if (succ) {
+						cv::imshow("Face", aligned);
+						int key = cv::waitKey(3);
+					}
+				}
+
+				// dlib aligner
+				if (true) {
+					try
+					{
+						dlib::rectangle bb;
+						cv::Mat aligned;
+						if (
+							dlib_aligner.GetLargestFaceBoundingBox(face_snap, bb) && 
+							dlib_aligner.AlignImage(200, face_snap, aligned, bb)
+							) {
+							cv::Rect2f bb_cv(cv::Point2f(bb.top(), bb.left()), cv::Point2f(bb.bottom(), bb.right()));
+							// show image
+							//cv::imshow("Face", aligned(bb_cv));
+							cv::imshow("Face", aligned);
+							int key = cv::waitKey(3);
+						}
+					}
+					catch (std::exception e)
+					{
+						std::cout << "Failed to process image. Caught exception " << e.what() << std::endl;
+					}
+				}
+
+
+			}	// endif faces detected
 
 
 			// faces
-			std::vector<tracking::Face> faces = ft.GetFaces();
+			std::vector<tracking::Face> faces;
+			ft.GetFaces(faces);
 			for (int i = 0; i < faces.size();i++) {
 
 				int roll, pitch, yaw;
@@ -105,12 +154,11 @@ int main(int argc, char** argv)
 				// mirror yaw
 				//yaw = -yaw;
 
-
 				try
 				{
 					// add face if not yet capture from this angle
 					if (grid.IsFree(roll, pitch, yaw)) {
-						grid.StoreSnapshot(roll, pitch, yaw, face_snap);
+						//grid.StoreSnapshot(roll, pitch, yaw, face_snap);
 					}
 				}
 				catch (...)
@@ -120,16 +168,16 @@ int main(int argc, char** argv)
 				}
 			}
 
-			// get face capture grid
-			cv::Mat face_captures;
-			grid.GetFaceGridPitchYaw(face_captures);
+			//// get face capture grid
+			//cv::Mat face_captures;
+			//grid.GetFaceGridPitchYaw(face_captures);
 
 			// draw bounding boxes
-			ft.RenderFaceBoundingBoxes(color_image, base::ImageSpace_Color);
+			//ft.RenderFaceBoundingBoxes(color_image, base::ImageSpace_Color);
 			ft.RenderFaceFeatures(color_image, base::ImageSpace_Color);
 
 			// show image
-			cv::imshow("Faces", face_captures);
+			cv::imshow("Faces", color_image);
 			int key = cv::waitKey(3);
 			if (key == 32)	// space = save
 			{
@@ -148,7 +196,7 @@ int main(int argc, char** argv)
 	std::cout << "Y: " << cYMin << "° .. " << cYMax << "°" << std::endl;
 
 	// dump faces
-	grid.DumpImageGrid();
+	//grid.DumpImageGrid();
 
 
 	return 0;

@@ -23,6 +23,7 @@ SET(TARGET_H
 
 SET(TARGET_EXTERNAL_LIBRARIES
 	Tracking
+	Features
 )
 
 SETUP_APPLICATION(face_tracking Tests)
