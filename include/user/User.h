@@ -25,7 +25,8 @@ namespace user
 	class User {
 
 	public:
-		User() : mUserID(-1), mUserNiceName(""), mIDStatus(IDStatus_Unknown), mActionStatus(ActionStatus_Idle)
+		User() : mUserID(-1), mUserNiceName(""), mIDStatus(IDStatus_Unknown), mActionStatus(ActionStatus_Idle),
+			mFaceData(nullptr)
 		{
 #ifdef FACEGRID_RECORDING
 			pGrid = new tracking::RadialFaceGrid(2, 10, 10);
@@ -36,12 +37,29 @@ namespace user
 #ifdef FACEGRID_RECORDING
 			delete(pGrid);
 #endif
+			// delete allocated features
+			ResetSceneFeatures();
 		}
+
+		// ------ setters
+		// status/id setters
 		void SetUserID(int id, std::string nice_name);
 		void SetIDStatus(IdentificationStatus status);
 		void SetActionStatus(ActionStatus status);
 		void SetFaceBoundingBox(cv::Rect2f bb);
+		// feature setters
 		void SetFaceData(tracking::Face f);
+
+		void ResetSceneFeatures() {
+			// reset all stored features
+			if (mFaceData != nullptr) {
+				delete(mFaceData);
+				mFaceData = nullptr;
+			}
+		}
+
+		// ------ getters
+		// status/id getters
 		void GetStatus(IdentificationStatus &s1, ActionStatus &s2);
 		void GetUserID(int& id, std::string& nice_name) const
 		{
@@ -49,30 +67,38 @@ namespace user
 			nice_name = mUserNiceName;
 		}
 		cv::Rect2f GetFaceBoundingBox();
-		tracking::Face GetFaceData();
+		// feature getters
+		bool GetFaceData(tracking::Face &f);
+
+		// ------ helpers
 
 		void PrintStatus()
 		{
 			std::cout << "--- id_status: " << mIDStatus << " | action: " << mActionStatus << std::endl;
 		}
 
-#ifdef FACEGRID_RECORDING
-		tracking::RadialFaceGrid* pGrid;
-#else
-		// store image vector directly
-#endif
-
 	private:
+		// user id
 		int mUserID;
 		std::string mUserNiceName;
-
+		// localization/tracking: must be set at all times
+		cv::Rect2f mFaceBoundingBox;
 		// status
 		IdentificationStatus mIDStatus;
 		ActionStatus mActionStatus;
 
-		// current user data
-		cv::Rect2f mFaceBoundingBox;
-		tracking::Face mFaceData;
+		// features: might be present or not
+		tracking::Face* mFaceData;
+
+	public:
+		// temporal model data (images, accumulated status)
+#ifdef FACEGRID_RECORDING
+		tracking::RadialFaceGrid* pGrid;
+#else
+		std::vector<cv::Mat> mImages;
+#endif
+
+
 	};
 
 

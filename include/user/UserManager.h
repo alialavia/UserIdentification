@@ -7,7 +7,11 @@
 #include <tracking\FaceTracker.h>
 #include <opencv2/core.hpp>
 
+// face aligner
+#include <features\Face.h>
+
 #define _DEBUG_USERMANAGER
+
 
 
 namespace io{
@@ -37,15 +41,25 @@ namespace user
 		UserManager() : pServerConn(nullptr), pRequestHandler(nullptr)
 		{
 		}
+		~UserManager() {
+			delete(mDlibAligner);
+
+			// TODO: do proper cleanup
+		}
 
 		bool Init(io::TCPClient* connection, io::NetworkRequestHandler* handler);
 
-		void RefreshTrackedUsers(
+		void RefreshUserTracking(
 			const std::vector<int> &user_scene_ids, 
-			std::vector<cv::Rect2f> bounding_boxes, 
-			std::map<int, tracking::Face> faces
+			std::vector<cv::Rect2f> bounding_boxes
 		);
 
+		// ------------ feature updaters
+
+		// TODO: add templated UpdateFeatures function similar to RequestHandler
+		void UpdateFaceData(std::vector<tracking::Face> faces, std::vector<int> user_ids);
+
+		// ------------
 		void ApplyUserIdentification();
 		void GenerateRequests(cv::Mat scene_rgb);
 
@@ -86,6 +100,9 @@ namespace user
 
 		// frame id to user id mapping
 		std::map<int, User*> mFrameIDToUser;
+
+		// face aligner
+		features::DlibFaceAligner* mDlibAligner;
 
 	};
 

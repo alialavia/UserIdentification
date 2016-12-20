@@ -102,7 +102,7 @@ int main(int argc, char** argv)
 			if (user_scene_ids.size() > 0)
 			{
 				// refresh users
-				um.RefreshTrackedUsers(user_scene_ids, bounding_boxes, faces);
+				um.RefreshUserTracking(user_scene_ids, bounding_boxes, faces);
 
 				// update user ids
 				um.ApplyUserIdentification();

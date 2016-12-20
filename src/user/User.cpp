@@ -11,7 +11,6 @@ void User::SetUserID(int id, std::string nice_name)
 }
 void User::SetIDStatus(IdentificationStatus status)
 {
-
 	mIDStatus = status;
 }
 void User::SetActionStatus(ActionStatus status) {
@@ -19,12 +18,12 @@ void User::SetActionStatus(ActionStatus status) {
 }
 void User::SetFaceBoundingBox(cv::Rect2f bb)
 {
-
 	mFaceBoundingBox = bb;
 }
 void User::SetFaceData(tracking::Face f)
 {
-	mFaceData = f;
+	// allocate new face
+	mFaceData = new tracking::Face(f);
 }
 void User::GetStatus(IdentificationStatus &s1, ActionStatus &s2)
 {
@@ -36,7 +35,11 @@ cv::Rect2f User::GetFaceBoundingBox()
 {
 	return mFaceBoundingBox;
 }
-tracking::Face User::GetFaceData()
+bool User::GetFaceData(tracking::Face& f)
 {
-	return mFaceData;
+	if (mFaceData == nullptr) {
+		return false;
+	}
+	f = *mFaceData;
+	return true;
 }

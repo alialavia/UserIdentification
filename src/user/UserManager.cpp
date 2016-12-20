@@ -21,15 +21,27 @@ bool UserManager::Init(io::TCPClient* connection, io::NetworkRequestHandler* han
 	}
 	pServerConn = connection;
 	pRequestHandler = handler;
+
+	// initialize aligner
+	mDlibAligner = new features::DlibFaceAligner();
+	mDlibAligner->Init();
+
+	std::cout << "--- UserManager initialized" << std::endl;
+
 	return true;
 }
 
+void UserManager::UpdateFaceData(std::vector<tracking::Face> faces, std::vector<int> user_ids) {
+	for (size_t i = 0; i < faces.size(); i++) {
+		User* u = mFrameIDToUser[user_ids[i]];
+		u->SetFaceData(faces[i]);
+	}
+}
 
 // refresh tracked users: scene_id, bounding boxes
-void UserManager::RefreshTrackedUsers(
+void UserManager::RefreshUserTracking(
 	const std::vector<int> &user_scene_ids, 
-	std::vector<cv::Rect2f> bounding_boxes, 
-	std::map<int, tracking::Face> faces
+	std::vector<cv::Rect2f> bounding_boxes
 )
 {
 	// add new user for all scene ids that are new
@@ -54,14 +66,8 @@ void UserManager::RefreshTrackedUsers(
 		{
 			// user is in scene - update scene data (bounding box, position etc.)
 			it->second->SetFaceBoundingBox(bounding_boxes[user_index]);
-
-
-			// update face data
-			if(faces.count(it->first)>0)
-			{
-				it->second->SetFaceData(faces[it->first]);
-			}
-
+			// reset feature tracking
+			it->second->ResetSceneFeatures();
 			++it;
 		}
 		// remove user if he has left scene
@@ -146,8 +152,7 @@ void UserManager::ApplyUserIdentification()
 			// remove request mapping
 			RemovePointerMapping(it->second);
 
-			// reset status
-			target_user->SetUserID(response.mUserID, response.mUserNiceName);
+			// reset action status
 			target_user->SetActionStatus(ActionStatus_Idle);
 		}
 		else {
@@ -218,47 +223,52 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 			// collect images for identification
 			if (action == ActionStatus_Initialization) {
 
-				// collect another image
-				cv::Mat face_snap = scene_rgb(it->second->GetFaceBoundingBox());
 
-				// resize
-				cv::resize(face_snap, face_snap, cv::Size(100, 100));
 
 #ifdef FACEGRID_RECORDING
 				// check if face should be recorded
-				tracking::Face face = it->second->GetFaceData();
-				int roll, pitch, yaw;
-				face.GetEulerAngles(roll, pitch, yaw);
-				try
-				{
-					// add face if not yet capture from this angle
-					if (it->second->pGrid->IsFree(roll, pitch, yaw)) {
-						it->second->pGrid->StoreSnapshot(roll, pitch, yaw, face_snap);
-						std::cout << "-- take snapshot" << std::endl;
-						
+				tracking::Face face;
+				if (it->second->GetFaceData(face)) {
+
+					// collect another image
+					cv::Mat face_snap = scene_rgb(it->second->GetFaceBoundingBox());
+
+					// resize
+					cv::resize(face_snap, face_snap, cv::Size(96, 96));
+
+					int roll, pitch, yaw;
+					face.GetEulerAngles(roll, pitch, yaw);
+					try
+					{
+						// add face if not yet capture from this angle
+						if (it->second->pGrid->IsFree(roll, pitch, yaw)) {
+							it->second->pGrid->StoreSnapshot(roll, pitch, yaw, face_snap);
+							std::cout << "-- take snapshot" << std::endl;
+
+						}
 					}
-				}
-				catch (...)
-				{
-				}
+					catch (...)
+					{
+					}
 
-				// if enough images, request identification
-				if (it->second->pGrid->nr_images() > 10) {
+					// if enough images, request identification
+					if (it->second->pGrid->nr_images() > 10) {
 
-					// extract images
-					std::vector<cv::Mat*> face_patches = it->second->pGrid->ExtractGrid();
+						// extract images
+						std::vector<cv::Mat*> face_patches = it->second->pGrid->ExtractGrid();
 
-					// make new identification request
-					IDReq* new_request = new IDReq(pServerConn, face_patches);
-					pRequestHandler->addRequest(new_request);
+						// make new identification request
+						IDReq* new_request = new IDReq(pServerConn, face_patches);
+						pRequestHandler->addRequest(new_request);
 
-					// update linking
-					mRequestToUser[new_request] = it->second;
-					mUserToRequest[it->second] = new_request;
+						// update linking
+						mRequestToUser[new_request] = it->second;
+						mUserToRequest[it->second] = new_request;
 
-					// set user action status
-					it->second->SetActionStatus(ActionStatus_IDPending);
-					it->second->pGrid->Clear();
+						// set user action status
+						it->second->SetActionStatus(ActionStatus_IDPending);
+						it->second->pGrid->Clear();
+					}
 				}
 #endif
 
@@ -283,59 +293,97 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 
 			if (action == ActionStatus_DataCollection) {
 
-				// collect another image
-				cv::Mat face_snap = scene_rgb(it->second->GetFaceBoundingBox());
-
-				// resize
-				cv::resize(face_snap, face_snap, cv::Size(100, 100));
 
 #ifdef FACEGRID_RECORDING
+
+
 				// check if face should be recorded
-				tracking::Face face = it->second->GetFaceData();
-				int roll, pitch, yaw;
-				face.GetEulerAngles(roll, pitch, yaw);
-				try
-				{
-					// add face if not yet capture from this angle
+				tracking::Face face;
+				if (it->second->GetFaceData(face)) {
+
+					int roll, pitch, yaw;
+					face.GetEulerAngles(roll, pitch, yaw);
+
+					// face from this pose not yet recorded
 					if (it->second->pGrid->IsFree(roll, pitch, yaw)) {
-						it->second->pGrid->StoreSnapshot(roll, pitch, yaw, face_snap);
-						std::cout << "-- take snapshot" << std::endl;
 
+						cv::Rect2f facebb = it->second->GetFaceBoundingBox();
+						// TODO: debug why face bb is nan
+						std::cout << "............ Face bb: " << facebb.height << " | " << facebb.width << std::endl;
+
+
+						// collect another image
+						cv::Mat face_snap = scene_rgb(facebb);
+
+						// detect and warp face
+						dlib::rectangle bb;
+						std::cout << "a0." << std::endl;
+						if (mDlibAligner->GetLargestFaceBoundingBox(face_snap, bb)) {
+							std::cout << "a0" << std::endl;
+							cv::Mat aligned;
+							if (mDlibAligner->AlignImage(96, face_snap, aligned, bb)) {
+								// resize
+								//cv::resize(aligned, aligned, cv::Size(96, 96));
+
+								std::cout << "a1" << std::endl;
+
+
+								// save
+								try
+								{
+
+									std::cout << "a2" << std::endl;
+
+									// add face if not yet capture from this angle
+									it->second->pGrid->StoreSnapshot(roll, pitch, yaw, aligned);
+									std::cout << "--- take snapshot: " << it->second->pGrid->nr_images() << std::endl;
+
+
+									std::cout << "a3" << std::endl;
+									cv::imshow("aligned", aligned);
+									cv::waitKey(2);
+
+							/*		cv::Mat grid;
+									it->second->pGrid->GetFaceGridPitchYaw(grid);
+									cv::imshow("Grid", grid);
+									cv::waitKey(3);*/
+								}
+								catch (...)
+								{
+								}
+							}
+
+
+						}
+
+					}	// /free pose position
+
+						// if enough images, request identification
+					if (it->second->pGrid->nr_images() > 10) {
+
+						// extract images
+						std::vector<cv::Mat*> face_patches = it->second->pGrid->ExtractGrid();
+
+						int user_id; std::string user_name;
+
+						// TODO: DEBUG HERE
+						// ID -1
+						it->second->GetUserID(user_id, user_name);
+						std::cout << "________________________________\n" << "============GETTING USER IDDDDD: " << user_id << "\n_____________________________________\n";
+
+						// make new identification request
+						io::EmbeddingCollectionByIDAligned* new_request = new io::EmbeddingCollectionByIDAligned(pServerConn, face_patches, user_id);
+						pRequestHandler->addRequest(new_request);
+
+						// update linking
+						mRequestToUser[new_request] = it->second;
+						mUserToRequest[it->second] = new_request;
+
+						// set user action status
+						it->second->SetActionStatus(ActionStatus_UpdatePending);
+						it->second->pGrid->Clear();
 					}
-				}
-				catch (...)
-				{
-				}
-
-				// if enough images, request identification
-				if (it->second->pGrid->nr_images() > 1) {
-
-					// extract images
-					std::vector<cv::Mat*> face_patches = it->second->pGrid->ExtractGrid();
-
-					int user_id; std::string user_name;
-
-
-
-					// TODO: DEBUG HERE
-					// ID -1
-					it->second->GetUserID(user_id, user_name);
-
-
-					std::cout << "GETTING USER IDDDDD: "<< user_id << std::endl;
-
-					// make new identification request
-					io::EmbeddingCollectionByID* new_request = new io::EmbeddingCollectionByID(pServerConn, face_patches, user_id);
-					pRequestHandler->addRequest(new_request);
-
-					// update linking
-					mRequestToUser[new_request] = it->second;
-					mUserToRequest[it->second] = new_request;
-
-					// set user action status
-					it->second->SetActionStatus(ActionStatus_UpdatePending);
-					it->second->pGrid->Clear();
-				}
+				}	//	/end face data available
 #endif
 
 			}

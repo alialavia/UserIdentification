@@ -40,6 +40,10 @@ namespace features{
 		void Init() {
 			std::string path(PATH_MODELS);
 			path += "dlib/shape_predictor_68_face_landmarks.dat";
+
+#ifdef _DEBUG_FACENALIGNER
+			std::cout << "--- Loading facial landmark detector..." << std::endl;
+#endif
 			dlib::deserialize(path) >> mShapePredictor;
 			// load face model mean/reference
 			LoadLandmarkReference();
