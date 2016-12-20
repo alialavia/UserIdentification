@@ -37,16 +37,24 @@ class OneClassDetectorTree:
 
     # ---- class prediction threshold
     # TODO: tune these parameters according to comparison with LFW - maybe adaptive threshold
-    __class_thresh = 0.75       # X% of samples must be identified positively to identify person
-    __confusion_thresh = 0.01   # 1% confusion chance
-    __novelty_thresh = 0.01     # 1% novelty misdetection
+    __class_thresh = 0.01       # X% of samples must be identified positively to identify person
+    __confusion_thresh = 0.1   # reject if there are samples between confusion_thresh < dect_prob < class_thresh
+    __novelty_thresh = 0.2     # reject if:  novelty_thresh < prob < class_thresh
 
     # ---- multi-threaded training
     __tasks = Queue(maxsize=0)
     __num_threads = 3
     __training_lock = Lock()
 
-    def __init__(self, classifier='OCSVM'):
+    def __init__(self, classifier='OCSVM_RBF'):
+
+        # check parameters
+        if self.__novelty_thresh > self.__class_thresh:
+            print "--- Novelty threshold exceeds class threshold - Novelty if no class detection"
+        if self.__confusion_thresh > self.__class_thresh:
+            print "--- Confusion threshold exceeds class threshold - Confusion capturing deactivated"
+
+        # check classifiers
         if classifier not in self.__VALID_CLASSIFIERS:
             raise ValueError('Invalid Classifier. You can choose between: '+str(list(self.__VALID_CLASSIFIERS)))
 
@@ -73,7 +81,7 @@ class OneClassDetectorTree:
 
     def predict_class(self, samples):
         """
-        Prediction casses:
+        Prediction cases:
         - Only target class is identified with ratio X (high): Class
         - Target and other class is identified with ration X (high) and Y (small): Class with small confusion
         - Multiple classes are identified with small ratios Ys: Novelty
@@ -98,18 +106,18 @@ class OneClassDetectorTree:
             return None
 
         mask_class = proba > self.__class_thresh
-        nr_classes = len(proba[mask_class])
+        nr_detections = len(proba[mask_class])
 
-        if nr_classes > 0:
+        if nr_detections > 0:
             # class detected
-            if nr_classes > 1:
+            if nr_detections > 1:
                 # multiple classes detected
                 if self.__verbose:
-                    print "--- Multiple classes detected: {}".format(nr_classes)
+                    print "--- Multiple classes detected: {}".format(nr_detections)
                 return -1
 
             # count if any element, except for class is above confusion ratio
-            if len(proba[(self.__confusion_thresh < proba) & (proba < self.__class_thresh)]) > 0:
+            if len(proba[(proba > self.__confusion_thresh) & (proba < self.__class_thresh)]) > 0:
                 print "--- Elements above confusion threshold"
                 return -1
 
@@ -208,7 +216,7 @@ class OneClassDetectorTree:
     def __generate_classifier(self):
         """Generate classifier instance"""
         if self.__CLASSIFIER == 'OCSVM':
-            return svm.OneClassSVM(nu=0.1, kernel="linear", gamma=0.1)
+            return svm.OneClassSVM(nu=0.05, kernel="linear", gamma=0.1)
         elif self.__CLASSIFIER == 'OCSVM_RBF':
             return svm.OneClassSVM(nu=0.1, kernel="rbf", gamma=0.1)
         elif self.__CLASSIFIER == 'RF':
@@ -346,8 +354,8 @@ class OneClassDBDetectorTree:
             if len(proba[(self.__confusion_thresh < proba) & (proba < self.__class_thresh)]) > 0:
                 return None
 
-            class_id = class_ids[mask_class]
-            return class_id
+            class_id_arr = class_ids[mask_class]
+            return int(class_id_arr[0])
 
         else:
             if len(proba[proba > self.__novelty_thresh]) > 0:
