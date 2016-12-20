@@ -378,6 +378,7 @@ namespace tracking
 		int GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space) const;
 		void GetFaces(std::vector<Face> &faces);
 		void GetFaces(std::map<int, Face> &faces);
+		void GetFaces(std::vector<Face> &faces, std::vector<int> &user_ids);
 		
 		HRESULT RenderFaceBoundingBoxes(cv::Mat &target, base::ImageSpace space) const;
 		HRESULT RenderFaceFeatures(cv::Mat &target, base::ImageSpace space) const;
