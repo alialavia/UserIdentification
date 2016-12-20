@@ -64,7 +64,8 @@ int main(int argc, char** argv)
 
 			// get face bounding boxes
 			std::vector<cv::Rect2f> bounding_boxes;
-			st.GetFaceBoundingBoxesRobust(bounding_boxes, base::ImageSpace_Color);
+			std::vector<int> user_ids;
+			st.GetFaceBoundingBoxesRobust(bounding_boxes, user_ids, base::ImageSpace_Color);
 
 			if (bounding_boxes.size() > 0)
 			{
