@@ -45,11 +45,14 @@ namespace io {
 	{
 	public:
 		NetworkResponse(io::TCPClient* conn, NetworkResponseType type): pConn(conn), cTypeID(type){}
-		bool Load() {
+		bool Load(int* response_type = nullptr) {
 			int identifier = pConn->Receive32bit<int>();
 			bool succ = (identifier == cTypeID);
 			if (succ) {
 				GetPayload();	// load response data
+			}else
+			{
+				*response_type = identifier;
 			}
 			return succ;
 		}
