@@ -185,10 +185,8 @@ namespace io {
 	protected:
 		// submit specific payload
 		void SubmitPayload() {
-			// send image size
-			pServerConn->SendUInt(mImage.size().width);
 			// send image
-			pServerConn->SendRGBImage(mImage);
+			pServerConn->SendRGBImageQuadratic(mImage);
 		}
 
 		// payload: quadratic(!) image
@@ -256,7 +254,7 @@ namespace io {
 
 		// submit specific payload
 		void SubmitPayload() {
-			pServerConn->SendUInt(mUserID);
+			pServerConn->SendUInt(mUserID);	// user id
 			pServerConn->SendImageBatchSquaredSameSize(mImages);
 		}
 

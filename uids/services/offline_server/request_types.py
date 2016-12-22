@@ -40,10 +40,8 @@ class CalcEmbedding:
 
     def __init__(self, server, conn):
 
-        # receive image size
-        img_size = server.receive_uint(conn)
         # receive image
-        user_face = server.receive_rgb_image(conn, img_size, img_size)
+        user_face = server.receive_rgb_image_squared(conn)
         # generate embedding
         embedding = server.embedding_gen.get_embedding(user_face)
 

@@ -2,7 +2,7 @@
 
 """Global server configuration - Request/Response names match models in src/request src/response"""
 ROUTING = {
-   "REQUEST": {
+   "REQUEST": {  # request id range: 0-255
        "ID": {
            "ImageIdentification": 1,  # identify user from image
            "ImageIdentificationUpdate": 2,  # collect embeddings from images for user with ID XY
@@ -18,7 +18,7 @@ ROUTING = {
            7: "ImageIdentificationUpdateAligned"
        }
    },
-   "RESPONSE": {
+   "RESPONSE": {  # response id range: integer
        "ID": {
            "Identification": 1,
            "Embedding": 2,

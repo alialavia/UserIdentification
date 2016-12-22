@@ -14,6 +14,15 @@ class TCPServer:
         USAGE:
         server = TCPServer('', 555)
         server.start_server()
+
+        DEFINITIONS:
+        request/response type id:
+            - request: uchar (0-255)
+            - response: uint
+        images:
+            - receival/send order: nr_images (short), image_width (short), image_height (short), images
+            - receival/send order (changing size): nr_images (short), Loop(image_width (short), image_height (short), image)
+
     """
 
     HOST = ''     # Symbolic name meaning all available interfaces
@@ -109,31 +118,83 @@ class TCPServer:
         return buffer
 
     #  ----------- IMAGE HANDLERS
-    def receive_rgb_image(self, client_socket, width, height):
+
+    def receive_rgb_image(self, client_socket, width=None, height=None):
         """receive 8 bit rgb image"""
+
+        if height is None:
+            if width is None:
+                # variable image width
+                width = self.receive_short(client_socket)
+                height = self.receive_short(client_socket)
+            else:
+                # squared image
+                height = width
+
         # 3 channels, 8 bit = 1 byte
         string_data = self.receive_message(client_socket, width * height * 3)
         data = numpy.fromstring(string_data, dtype='uint8')
         reshaped = data.reshape((width, height, 3))
         return reshaped
 
+    def receive_rgb_image_squared(self, client_socket, size=None):
+        if size is None:
+            size = self.receive_short(client_socket)
+        return self.receive_rgb_image(client_socket, size)
+
+
     def send_rgb_image(self, client_socket, img):
         """send 8 bit rgb image"""
         data = numpy.array(img)
         stringData = data.tostring()
         # send image size
-        # client_socket.send(str(len(stringData)).ljust(16))
+        cols, rows = img.shape()
+        client_socket.send_short(client_socket, cols)
+        client_socket.send_short(client_socket, rows)
         client_socket.send(stringData)
+
+    def send_rgb_image_squared(self, client_socket, img):
+        data = numpy.array(img)
+        stringData = data.tostring()
+        # send image size
+        cols, rows = img.shape()
+        if cols != rows:
+            raise ValueError('Trying to send image that is not quadratic!')
+        client_socket.send_short(client_socket, cols)
+        client_socket.send(stringData)
+
+    def send_image_batch_squared_same_size(self, client_socket, images):
+
+        if len(images) == 0:
+            return
+
+        # send image number
+        client_socket.send_short(client_socket, len(images))
+
+        # send image size
+        cols, rows = images[0].shape()
+        if cols != rows:
+            raise ValueError('Trying to send image that is not quadratic!')
+
+        # send image size
+        client_socket.send_short(client_socket, cols)
+
+        # send data
+        string_data = ""
+        for img in images:
+            data = numpy.array(img)
+            string_data += data.tostring()
+        client_socket.send(string_data)
 
         #  ----------- BINARY DATA HANDLERS
 
     def receive_image_batch_squared_same_size(self, client_socket):
 
         # receive batch size
-        nr_images = self.receive_uint(client_socket)
+        nr_images = self.receive_short(client_socket)
 
         # receive image dimension
-        img_dim = self.receive_uint(client_socket)
+        img_dim = self.receive_short(client_socket)
 
         # receive image batch
         images = []
@@ -147,13 +208,13 @@ class TCPServer:
     def receive_image_batch_squared(self, client_socket):
 
         # receive batch size
-        nr_images = self.receive_uint(client_socket)
+        nr_images = self.receive_short(client_socket)
 
         # receive image batch
         images = []
         for x in range(0, nr_images):
             # receive image dimension
-            img_dim = self.receive_uint(client_socket)
+            img_dim = self.receive_short(client_socket)
             # receive image
             new_img = self.receive_rgb_image(client_socket, img_dim, img_dim)
             images.append(new_img)
@@ -163,11 +224,11 @@ class TCPServer:
     def receive_image_batch_same_size(self, client_socket):
 
         # receive batch size
-        nr_images = self.receive_uint(client_socket)
+        nr_images = self.receive_short(client_socket)
 
         # image dimensions
-        w = self.receive_uint(client_socket)
-        h = self.receive_uint(client_socket)
+        w = self.receive_short(client_socket)
+        h = self.receive_short(client_socket)
 
         # receive image batch
         images = []
@@ -181,14 +242,14 @@ class TCPServer:
     def receive_image_batch(self, client_socket):
 
         # receive batch size
-        nr_images = self.receive_uint(client_socket)
+        nr_images = self.receive_short(client_socket)
 
         # receive image batch
         images = []
         for x in range(0, nr_images):
             # image dimensions
-            w = self.receive_uint(client_socket)
-            h = self.receive_uint(client_socket)
+            w = self.receive_short(client_socket)
+            h = self.receive_short(client_socket)
             # receive image
             new_img = self.receive_rgb_image(client_socket, w, h)
             images.append(new_img)

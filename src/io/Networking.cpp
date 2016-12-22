@@ -160,8 +160,9 @@ int TCPClient::ReceiveMessage(SOCKET socket, char *buf, int *len)
 	return (n <= 0) ? -1 : 0;
 }
 
-int TCPClient::ReceiveRGBImageQuadratic(cv::Mat &output, int img_dim)
+int TCPClient::ReceiveRGBImageQuadratic(cv::Mat &output)
 {
+	short img_dim = Receive16bit<short>();
 	output = cv::Mat::zeros(img_dim, img_dim, CV_8UC3);
 	int  buffer_length = output.total()*output.elemSize();
 
@@ -178,22 +179,27 @@ int TCPClient::ReceiveRGBImageQuadratic(cv::Mat &output, int img_dim)
 	return bytes_recv;
 }
 
-int TCPClient::ReceiveRGBImageQuadratic(cv::Mat &output)
-{
-	int img_dim = Receive32bit<unsigned int>();
-	return ReceiveRGBImageQuadratic(output, img_dim);
-}
-
 int TCPClient::ReceiveRGBImage(cv::Mat &output)
 {
-
 	// width
-	int width = Receive32bit<int>();
+	short width = Receive16bit<short>();
 	// height
-	int height = Receive32bit<int>();
+	short height = Receive16bit<short>();
 
-	int img_dim = Receive32bit<unsigned int>();
-	return ReceiveRGBImageQuadratic(output, img_dim);
+	output = cv::Mat::zeros(height, width, CV_8UC3);
+	int buffer_length = output.total()*output.elemSize();
+
+	// allocate memory
+	char * sockData = new char[buffer_length];
+	// receive image
+	int bytes_recv = ReceiveMessage(mSocketID, sockData, &buffer_length);
+	// apply to opencv header
+	cv::Mat img(cv::Size(height, width), CV_8UC3, sockData);
+	// deep copy
+	output = img.clone();
+	// delete buffer
+	delete[] sockData;
+	return bytes_recv;
 }
 
 // ------ send
@@ -332,7 +338,7 @@ int TCPClient::SendUChar(unsigned char val) const
 	return bytecount;
 }
 
-int TCPClient::SendRGBImage(const cv::Mat &img) const
+int TCPClient::SendRGBImageData(const cv::Mat &img) const
 {
 
 #ifdef _DEBUG_NETWORKING
@@ -362,7 +368,7 @@ int TCPClient::SendRGBImage(const cv::Mat &img) const
 	}
 
 #ifdef _DEBUG_NETWORKING
-	std::cout << "--- SendRGBImage sent " << bytecount << "bytes\n";
+	std::cout << "--- SendRGBImageData sent " << bytecount << "bytes\n";
 #endif
 	return bytecount;
 }
@@ -446,15 +452,15 @@ void TCPClient::SendImageBatchSquaredSameSize(const std::vector<cv::Mat> &images
 	}
 
 	// send nr images
-	SendUInt(images.size());
+	SendShort(images.size());
 
 	// send image dimension
-	SendUInt(images[0].size().width);
+	SendShort(images[0].size().width);
 
 	// send images
 	for (size_t i = 0; i<images.size(); i++)
 	{
-		SendRGBImage(images[i]);
+		SendRGBImageData(images[i]);
 	}
 }
 
@@ -477,16 +483,16 @@ void TCPClient::SendImageBatchSameSize(const std::vector<cv::Mat> &images) const
 	}
 
 	// send nr images
-	SendUInt(images.size());
+	SendShort(images.size());
 
 	// send image dimension
-	SendUInt(images[0].size().width);
-	SendUInt(images[0].size().height);
+	SendShort(images[0].size().width);
+	SendShort(images[0].size().height);
 
 	// send images
 	for (size_t i = 0; i<images.size(); i++)
 	{
-		SendRGBImage(images[i]);
+		SendRGBImageData(images[i]);
 	}
 }
 
@@ -507,16 +513,16 @@ void TCPClient::SendImageBatchSquared(const std::vector<cv::Mat> &images) const
 	}
 
 	// send nr images
-	SendUInt(images.size());
+	SendShort(images.size());
 
 	// send images
 	for (size_t i = 0; i<images.size(); i++)
 	{
 		// send image dimension
-		SendUInt(images[i].size().width);
+		SendShort(images[i].size().width);
 
 		// send image
-		SendRGBImage(images[i]);
+		SendRGBImageData(images[i]);
 	}
 }
 
@@ -528,18 +534,42 @@ void TCPClient::SendImageBatch(const std::vector<cv::Mat> &images) const
 	}
 
 	// send nr images
-	SendInt(images.size());
+	SendShort(images.size());
 
 	// send images
 	for (size_t i = 0; i<images.size(); i++)
 	{
 		// send image width
-		SendUInt(images[i].size().width);
+		SendShort(images[i].size().width);
 
 		// send image height
-		SendUInt(images[i].size().height);
+		SendShort(images[i].size().height);
 
 		// send image
-		SendRGBImage(images[i]);
+		SendRGBImageData(images[i]);
 	}
 }
+
+int TCPClient::SendRGBImage(const cv::Mat &img) const {
+	int data_sent = 0;
+	// send image dimension
+	data_sent += SendShort(img.size().width);
+	data_sent += SendShort(img.size().height);
+	data_sent += SendRGBImageData(img);
+	return data_sent;
+}
+
+int TCPClient::SendRGBImageQuadratic(const cv::Mat &img) const {
+#ifdef _DEBUG_NETWORKING
+	if (img.size().width != img.size().height) {
+		throw std::invalid_argument("Invalid image dimensions - Image must be quadratic!");
+	}
+#endif
+	int data_sent = 0;
+	// send image dimension
+	data_sent += SendShort(img.size().width);
+	data_sent += SendRGBImageData(img);
+	return data_sent;
+}
+
+

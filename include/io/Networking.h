@@ -41,7 +41,7 @@ namespace io
 		/// </summary>
 		/// <param name="img">The img.</param>
 		/// <returns>Number of bytes sent</returns>
-		int SendRGBImage(const cv::Mat &img) const;
+		int SendRGBImageData(const cv::Mat &img) const;
 		void SendRGBTestImage(int size = 100) const;
 
 		// ----- send primitives
@@ -70,17 +70,20 @@ namespace io
 
 		// ----- send custom types
 
-		void SendImageBatchSquaredSameSize(const std::vector<cv::Mat> &images) const;
+		void SendImageBatchQuadraticSameSize(const std::vector<cv::Mat> &images) const;
 		void SendImageBatchSameSize(const std::vector<cv::Mat> &images) const;
-		void SendImageBatchSquared(const std::vector<cv::Mat> &images) const;
+		void SendImageBatchQuadratic(const std::vector<cv::Mat> &images) const;
 		void SendImageBatch(const std::vector<cv::Mat> &images) const;
+		int SendRGBImage(const cv::Mat &img) const;
+		int SendRGBImageQuadratic(const cv::Mat &img) const;
 
 		// ------ receive
 
 		std::string ReceiveStringWithVarLength();
 		int ReceiveMessage(SOCKET socket_id, char *buf, int *len);
-		int ReceiveRGBImageQuadratic(cv::Mat &output, int img_width);
+
 		int ReceiveRGBImageQuadratic(cv::Mat &output);
+		int ReceiveRGBImage(cv::Mat &output);
 
 		template<typename T>
 		T TCPClient::Receive8bit()
