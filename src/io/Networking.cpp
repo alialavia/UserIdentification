@@ -434,7 +434,7 @@ bool TCPClient::SendKeyboard() const
 	return true;
 }
 
-void TCPClient::SendImageBatchSquaredSameSize(const std::vector<cv::Mat> &images) const
+void TCPClient::SendImageBatchQuadraticSameSize(const std::vector<cv::Mat> &images) const
 {
 #ifdef _DEBUG_NETWORKING
 	// check image dimensions
@@ -496,7 +496,7 @@ void TCPClient::SendImageBatchSameSize(const std::vector<cv::Mat> &images) const
 	}
 }
 
-void TCPClient::SendImageBatchSquared(const std::vector<cv::Mat> &images) const
+void TCPClient::SendImageBatchQuadratic(const std::vector<cv::Mat> &images) const
 {
 #ifdef _DEBUG_NETWORKING
 	// check image dimensions

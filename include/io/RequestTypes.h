@@ -84,7 +84,7 @@ namespace io {
 
 		// submit specific payload
 		void SubmitPayload() {
-			pServerConn->SendImageBatchSquaredSameSize(mImages);
+			pServerConn->SendImageBatchQuadraticSameSize(mImages);
 		}
 
 		// payload: quadratic(!) images of same size
@@ -124,7 +124,7 @@ namespace io {
 		// submit specific payload
 		void SubmitPayload() {
 			pServerConn->SendUInt(mUserID);
-			pServerConn->SendImageBatchSquaredSameSize(mImages);
+			pServerConn->SendImageBatchQuadraticSameSize(mImages);
 		}
 
 		// payload: quadratic(!) images of same size
@@ -164,7 +164,7 @@ namespace io {
 		// submit specific payload
 		void SubmitPayload() {
 			pServerConn->SendString(mUserName);
-			pServerConn->SendImageBatchSquaredSameSize(mImages);
+			pServerConn->SendImageBatchQuadraticSameSize(mImages);
 		}
 
 		// payload: quadratic(!) images of same size
@@ -225,7 +225,7 @@ namespace io {
 
 		// submit specific payload
 		void SubmitPayload() {
-			pServerConn->SendImageBatchSquaredSameSize(mImages);
+			pServerConn->SendImageBatchQuadraticSameSize(mImages);
 		}
 
 		// payload: quadratic(!) images of same size
@@ -255,7 +255,7 @@ namespace io {
 		// submit specific payload
 		void SubmitPayload() {
 			pServerConn->SendUInt(mUserID);	// user id
-			pServerConn->SendImageBatchSquaredSameSize(mImages);
+			pServerConn->SendImageBatchQuadraticSameSize(mImages);
 		}
 
 		// payload: quadratic(!) images of same size
