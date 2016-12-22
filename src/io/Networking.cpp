@@ -160,7 +160,7 @@ int TCPClient::ReceiveMessage(SOCKET socket, char *buf, int *len)
 	return (n <= 0) ? -1 : 0;
 }
 
-int TCPClient::ReceiveRGBImage(cv::Mat &output, int img_dim)
+int TCPClient::ReceiveRGBImageQuadratic(cv::Mat &output, int img_dim)
 {
 	output = cv::Mat::zeros(img_dim, img_dim, CV_8UC3);
 	int  buffer_length = output.total()*output.elemSize();
@@ -176,6 +176,24 @@ int TCPClient::ReceiveRGBImage(cv::Mat &output, int img_dim)
 	// delete buffer
 	delete[] sockData;
 	return bytes_recv;
+}
+
+int TCPClient::ReceiveRGBImageQuadratic(cv::Mat &output)
+{
+	int img_dim = Receive32bit<unsigned int>();
+	return ReceiveRGBImageQuadratic(output, img_dim);
+}
+
+int TCPClient::ReceiveRGBImage(cv::Mat &output)
+{
+
+	// width
+	int width = Receive32bit<int>();
+	// height
+	int height = Receive32bit<int>();
+
+	int img_dim = Receive32bit<unsigned int>();
+	return ReceiveRGBImageQuadratic(output, img_dim);
 }
 
 // ------ send

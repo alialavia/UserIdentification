@@ -79,7 +79,8 @@ namespace io
 
 		std::string ReceiveStringWithVarLength();
 		int ReceiveMessage(SOCKET socket_id, char *buf, int *len);
-		int ReceiveRGBImage(cv::Mat &output, int img_width);
+		int ReceiveRGBImageQuadratic(cv::Mat &output, int img_width);
+		int ReceiveRGBImageQuadratic(cv::Mat &output);
 
 		template<typename T>
 		T TCPClient::Receive8bit()
