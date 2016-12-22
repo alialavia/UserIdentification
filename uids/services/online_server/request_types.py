@@ -4,7 +4,6 @@ import response_types as r
 from config import ROUTING
 r.ROUTING = ROUTING
 
-
 class ImageIdentification:
 
     def __init__(self, server, conn):
@@ -151,13 +150,15 @@ class ImageAlignment:
         print "--------ImageAlignment-------------"
 
         # receive image
-        img = server(conn)
+        img = server.receive_rgb_image_squared(conn)
 
         # align image
-        aligned = server.embedding_gen.align_face(img)
+        # innerEyesAndBottomLip, outerEyesAndNose
+        aligned = server.embedding_gen.align_face(img, 'outerEyesAndNose', 96)
 
         if aligned is None:
             r.Error(server, conn, "Could not align the image")
+            return
 
         # send aligned image back
-        r.QuadraticImage(aligned)
+        r.QuadraticImage(server, conn, aligned)

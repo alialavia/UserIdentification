@@ -7,7 +7,7 @@ ROUTING = {
            "ImageIdentification": 1,  # identify user from image
            "ImageIdentificationUpdate": 2,  # collect embeddings from images for user with ID XY
            "ImageIdentificationAligned": 6,
-           "ImageIdentificationUpdateAligned": 7
+           "ImageIdentificationUpdateAligned": 7,
            "ImageAlignment": 8
        },
        "NAME": {
@@ -15,15 +15,15 @@ ROUTING = {
            2: "ImageIdentificationUpdate",
            6: "ImageIdentificationAligned",
            7: "ImageIdentificationUpdateAligned",
-		   8: "ImageAlignment"
-       }
+           8: "ImageAlignment"
+        }
    },
    "RESPONSE": {  # response id range: integer
        "ID": {
            "Identification": 1,
            "Embedding": 2,
            "Image": 3,
-           "QuadraticImage": 3,
+           "QuadraticImage": 4,
            "OK": 111,
            "Error": 999
        },

@@ -44,7 +44,7 @@ class IdentificationServer(TCPServerBlocking):
                 # handle request
                 req(self, conn)
             except AttributeError:
-                print ("--- Request model '"+req_type+"' is not yet implemented.")
+                print ("--- Request model '"+req_type+"' is not yet implemented or en Exception occured.")
 
         else:
             print "--- Unsupported request type: " + str(request_id)

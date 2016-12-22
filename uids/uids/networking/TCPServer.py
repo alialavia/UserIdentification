@@ -85,7 +85,7 @@ class TCPServer:
 
     #  ----------- HELPER METHODS
 
-    def receive_message(self, the_socket, datasize, timeout = 2):
+    def receive_message(self, the_socket, datasize, timeout=2):
         """Basic message receiver for known datasize"""
         buffer = ''
         begin = time.time()
@@ -142,25 +142,24 @@ class TCPServer:
             size = self.receive_short(client_socket)
         return self.receive_rgb_image(client_socket, size)
 
-
     def send_rgb_image(self, client_socket, img):
         """send 8 bit rgb image"""
         data = numpy.array(img)
         stringData = data.tostring()
         # send image size
         cols, rows = img.shape()
-        client_socket.send_short(client_socket, cols)
-        client_socket.send_short(client_socket, rows)
+        self.send_short(client_socket, cols)
+        self.send_short(client_socket, rows)
         client_socket.send(stringData)
 
     def send_rgb_image_squared(self, client_socket, img):
         data = numpy.array(img)
         stringData = data.tostring()
         # send image size
-        cols, rows = img.shape()
+        cols, rows, channels = img.shape
         if cols != rows:
             raise ValueError('Trying to send image that is not quadratic!')
-        client_socket.send_short(client_socket, cols)
+        self.send_short(client_socket, cols)
         client_socket.send(stringData)
 
     def send_image_batch_squared_same_size(self, client_socket, images):
@@ -169,7 +168,7 @@ class TCPServer:
             return
 
         # send image number
-        client_socket.send_short(client_socket, len(images))
+        self.send_short(client_socket, len(images))
 
         # send image size
         cols, rows = images[0].shape()
@@ -177,7 +176,7 @@ class TCPServer:
             raise ValueError('Trying to send image that is not quadratic!')
 
         # send image size
-        client_socket.send_short(client_socket, cols)
+        self.send_short(client_socket, cols)
 
         # send data
         string_data = ""
