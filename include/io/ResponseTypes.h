@@ -3,6 +3,7 @@
 
 #include <typeindex>
 #include <string>
+#include <opencv2\core.hpp>
 #include <io/Networking.h>
 
 namespace io {
@@ -14,6 +15,8 @@ namespace io {
 	{
 		NetworkResponse_Identification = 1,
 		NetworkResponse_Embedding = 2,
+		NetworkResponse_Image = 3,
+		NetworkResponse_ImageQuadratic = 4,
 		NetworkResponse_Error = 999,
 		NetworkResponse_OK = 111,
 	};
@@ -111,6 +114,21 @@ namespace io {
 		double mEmbedding[cNrEmbeddings];
 	};
 
+	class ImageResponse : public NetworkResponse
+	{
+	public:
+		ImageResponse(io::TCPClient* conn = nullptr) :NetworkResponse(conn, NetworkResponse_Image){}
+		void GetPayload() {pConn->ReceiveRGBImage(mImage);};
+		cv::Mat mImage;
+	};
+
+	class QuadraticImageResponse : public NetworkResponse
+	{
+	public:
+		QuadraticImageResponse(io::TCPClient* conn = nullptr) :NetworkResponse(conn, NetworkResponse_ImageQuadratic) {}
+		void GetPayload() { pConn->ReceiveRGBImageQuadratic(mImage); };
+		cv::Mat mImage;
+	};
 
 }
 

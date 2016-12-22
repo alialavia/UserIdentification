@@ -42,6 +42,18 @@ std::type_index ResponseFactory::AllocateAndLoad(NetworkResponseType type_id, io
 		resp->GetPayload();
 		ptr = resp;
 		return typeid(EmbeddingResponse);
+	}else if(type_id == NetworkResponse_Image){
+		ImageResponse* resp = nullptr;
+		resp = new ImageResponse(conn);
+		resp->GetPayload();
+		ptr = resp;
+		return typeid(ImageResponse);
+	}else if(type_id == NetworkResponse_ImageQuadratic){
+		QuadraticImageResponse* resp = nullptr;
+		resp = new QuadraticImageResponse(conn);
+		resp->GetPayload();
+		ptr = resp;
+		return typeid(QuadraticImageResponse);
 	}else
 	{
 		ErrorResponse* resp = nullptr;

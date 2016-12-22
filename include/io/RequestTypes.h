@@ -25,7 +25,7 @@ namespace io {
 		NetworkRequest_ClassifierTraining = 5,
 		NetworkRequest_ImageIdentificationAligned = 6,
 		NetworkRequest_EmbeddingCollectionByIDAligned = 7,
-
+		NetworkRequest_ImageAlignment = 8
 	};
 
 	// request type
@@ -263,6 +263,26 @@ namespace io {
 		int mUserID;
 	};
 
+	class ImageAlignment : public NetworkRequest
+	{
+	public:
+		ImageAlignment(
+			io::TCPClient* server_conn,
+			cv::Mat img
+		) :
+			NetworkRequest(server_conn, NetworkRequest_ImageAlignment), mImage(img)
+		{
+		}
+	protected:
+
+		// submit specific payload
+		void SubmitPayload() {
+			pServerConn->SendRGBImageQuadratic(mImage);
+		}
+
+		// payload: quadratic(!) image
+		cv::Mat mImage;
+	};
 
 }
 
