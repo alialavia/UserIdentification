@@ -51,7 +51,7 @@ class EmbeddingGen:
             if len(input_images) > 0:
                 for imgObject in input_images:
                     # align face - ignore images with multiple bounding boxes
-                    aligned = self.__align_face(imgObject, self.landmarks, self.size)
+                    aligned = self.align_face(imgObject, self.landmarks, self.size)
                     if aligned is not None:
                         images_normalized.append(aligned)
 
@@ -78,7 +78,7 @@ class EmbeddingGen:
 
     def get_embedding(self, user_img):
         # align image
-        normalized = self.__align_face(user_img, self.landmarks, self.size)
+        normalized = self.align_face(user_img, self.landmarks, self.size)
         if normalized is None:
             return None
 
@@ -86,8 +86,7 @@ class EmbeddingGen:
         rep = self.neural_net.forward(normalized)
         return rep
 
-    #  ----------- TOOLS
-    def __align_face(self, image, landmark, output_size, skip_multi=False):
+    def align_face(self, image, landmark, output_size, skip_multi=False):
 
         landmarkMap = {
             'outerEyesAndNose': openface.AlignDlib.OUTER_EYES_AND_NOSE,

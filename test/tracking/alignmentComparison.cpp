@@ -3,38 +3,46 @@
 #include <strsafe.h>
 #include <opencv2\opencv.hpp>
 #include "tracking/FaceTracker.h"
-#include "io/ImageHandler.h"
 #include <gflags/gflags.h>
+
+#include <io/Networking.h>
+#include <io/RequestTypes.h>
+#include <io/ResponseTypes.h>
 
 #include <tracking\SkeletonTracker.h>
 #include <features\Face.h>
 
-DEFINE_string(output, "output", "Output path");
+DEFINE_int32(port, 8080, "Server port");
 
 int main(int argc, char** argv)
 {
-	io::KinectSensorMultiSource k;
 
+	gflags::ParseCommandLineFlags(&argc, &argv, true);
+
+	// config to server connection
+	io::TCPClient server_conn;
+	server_conn.Config("127.0.0.1", FLAGS_port);
 
 	HRESULT hr;
-
 	cv::Mat color_image;
+	cv::Mat face_snap;
 
-	// initialize sens
+	// initialize sensor
+	io::KinectSensorMultiSource k;
 	if (FAILED(k.Open())) {
 		std::cout << "Initialization failed" << std::endl;
 		return -1;
 	}
 
-	// skeleton tracker
+	// extract sensor reference
 	IKinectSensor* pSensor = nullptr;
-
 	if (FAILED(k.GetSensorReference(pSensor)))
 	{
 		std::cout << "Sensor is not initialized" << std::endl;
 		return -1;
 	}
 
+	// skeleton tracker
 	tracking::SkeletonTracker st(pSensor);
 	st.Init();
 
@@ -45,18 +53,9 @@ int main(int argc, char** argv)
 	// kinect aligner
 	features::KinectFaceAligner k_aligner(pSensor);
 
-
+	// face tracker
 	tracking::FaceTracker ft(pSensor);
-	tracking::RadialFaceGrid grid;
-	cv::Mat face_snap;
-
-	int cRMin = 0;
-	int cRMax = 0;
-	int cPMin = 0;
-	int cPMax = 0;
-	int cYMin = 0;
-	int cYMax = 0;
-
+	
 	while (true) {
 
 		// polling
@@ -79,8 +78,6 @@ int main(int argc, char** argv)
 			FaceData* face_data_raw = k.GetFaceDataReference();
 			ft.ExtractFacialData(face_data_raw);
 
-
-
 			k_aligner.ExtractFacialData(face_data_raw);
 
 			// get face bounding boxes from face tracking
@@ -97,88 +94,47 @@ int main(int argc, char** argv)
 
 				face_snap = color_image(bounding_boxes[0]);
 
-				// kinect aligner
-				if (false) {
-					k_aligner.DrawRefLandmarks(color_image, bounding_boxes[0]);
-					cv::Mat aligned;
-					bool succ = k_aligner.AlignImage(aligned, 200, color_image, bounding_boxes[0]);
-					if (succ) {
-						cv::imshow("Face", aligned);
-						int key = cv::waitKey(3);
+				// request requires quadratic image
+				cv::resize(face_snap, face_snap, cv::Size(100, 100));
+
+				// connect to server
+				if (server_conn.Connect())
+				{
+
+					// generate request
+					io::ImageAlignment req(&server_conn, face_snap);
+					req.SubmitRequest();
+
+					// get reponse
+					io::QuadraticImageResponse response(&server_conn);
+					if (!response.Load()) {
+						std::cout << "--- An error occurred during alignment\n";
 					}
-				}
-
-				// dlib aligner
-				if (true) {
-					try
-					{
-						cv::Mat aligned;
-						if (dlib_aligner.AlignImage(200, face_snap, aligned)
-							) {
-
-							// TODO: debug why face bb is nan
-							//std::cout << "............ Face bb: " << bb.height() << " | " << bb.width() << std::endl;
-							// show image
-							cv::imshow("Face", aligned);
-							//cv::imshow("Face", aligned);
-							int key = cv::waitKey(3);
+					else {
+					
+						cv::imshow("Remote aligned face", response.mImage);
+						int key = cv::waitKey(3);
+						if (key == 32)	// space = quite
+						{
+							break;
 						}
 					}
-					catch (std::exception e)
-					{
-						std::cout << "Failed to process image. Caught exception " << e.what() << std::endl;
-					}
-				}
 
+					// close server connection
+					server_conn.Close();
+				}
 
 			}	// endif faces detected
 
 
-			// faces
-			std::vector<tracking::Face> faces;
-			ft.GetFaces(faces);
-			for (int i = 0; i < faces.size();i++) {
-
-				int roll, pitch, yaw;
-				faces[i].GetEulerAngles(roll, pitch, yaw);
-
-				if (roll < cRMin) {cRMin = roll;}
-				if (roll > cRMax) {cRMax = roll;}
-				if (pitch < cPMin) { cPMin = pitch; }
-				if (pitch > cPMax) { cPMax = pitch; }
-				if (yaw < cYMin) { cYMin = yaw; }
-				if (yaw > cYMax) { cYMax = yaw; }
-
-				//std::cout << "r: " << roll << " | p: " << pitch << " | y: " << yaw << std::endl;
-				// mirror yaw
-				//yaw = -yaw;
-
-				try
-				{
-					// add face if not yet capture from this angle
-					if (grid.IsFree(roll, pitch, yaw)) {
-						//grid.StoreSnapshot(roll, pitch, yaw, face_snap);
-					}
-				}
-				catch (...)
-				{
-
-
-				}
-			}
-
-			//// get face capture grid
-			//cv::Mat face_captures;
-			//grid.GetFaceGridPitchYaw(face_captures);
-
 			// draw bounding boxes
-			//ft.RenderFaceBoundingBoxes(color_image, base::ImageSpace_Color);
+			ft.RenderFaceBoundingBoxes(color_image, base::ImageSpace_Color);
 			ft.RenderFaceFeatures(color_image, base::ImageSpace_Color);
 
 			// show image
 			cv::imshow("Faces", color_image);
 			int key = cv::waitKey(3);
-			if (key == 32)	// space = save
+			if (key == 32)	// space = quite
 			{
 				break;
 			}
@@ -188,15 +144,6 @@ int main(int argc, char** argv)
 
 		}
 	}	// end while camera loop
-
-
-	std::cout << "R: " << cRMin << "° .. " << cRMax << "°" << std::endl;
-	std::cout << "P: " << cPMin << "° .. " << cPMax << "°" << std::endl;
-	std::cout << "Y: " << cYMin << "° .. " << cYMax << "°" << std::endl;
-
-	// dump faces
-	//grid.DumpImageGrid();
-
 
 	return 0;
 }

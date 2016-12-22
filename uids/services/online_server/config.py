@@ -23,6 +23,7 @@ ROUTING = {
            "Identification": 1,
            "Embedding": 2,
            "Image": 3,
+           "QuadraticImage": 3,
            "OK": 111,
            "Error": 999
        },
@@ -30,6 +31,7 @@ ROUTING = {
            1: "Identification",
            2: "Embedding",
            3: "Image",
+           4: "QuadraticImage",
            111: "OK",
            999: "Error"
        }

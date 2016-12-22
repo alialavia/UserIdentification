@@ -143,3 +143,21 @@ class SaveDatabase:
         server.user_db.save()
 
         r.OK(server, conn)
+
+
+class ImageAlignment:
+
+    def __init__(self, server, conn):
+        print "--------ImageAlignment-------------"
+
+        # receive image
+        img = server(conn)
+
+        # align image
+        aligned = server.embedding_gen.align_face(img)
+
+        if aligned is None:
+            r.Error(server, conn, "Could not align the image")
+
+        # send aligned image back
+        r.QuadraticImage(aligned)
