@@ -47,7 +47,7 @@ int main(int argc, char** argv)
 	st.Init();
 
 	// dlib aligner
-	features::DlibFaceAligner2 dlib_aligner;
+	features::DlibFaceAligner dlib_aligner;
 	dlib_aligner.Init();
 
 	// kinect aligner
@@ -128,7 +128,7 @@ int main(int argc, char** argv)
 						}
 						else
 						{
-							std::cout << "No face detected" << std::endl;
+							std::cout << "--- No face detected" << std::endl;
 						}
 
 	
