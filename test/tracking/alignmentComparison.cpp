@@ -60,9 +60,6 @@ int main(int argc, char** argv)
 
 		// polling
 		hr = k.AcquireFrame();
-		if (SUCCEEDED(hr)) {
-
-		}
 
 		// check if there is a new frame available
 		if (SUCCEEDED(hr)) {
@@ -95,12 +92,11 @@ int main(int argc, char** argv)
 				face_snap = color_image(bounding_boxes[0]);
 
 				// request requires quadratic image
-				cv::resize(face_snap, face_snap, cv::Size(100, 100));
+				cv::resize(face_snap, face_snap, cv::Size(200, 200));
 
 				// connect to server
 				if (server_conn.Connect())
 				{
-
 					// generate request
 					io::ImageAlignment req(&server_conn, face_snap);
 					req.SubmitRequest();
@@ -111,13 +107,31 @@ int main(int argc, char** argv)
 						std::cout << "--- An error occurred during alignment\n";
 					}
 					else {
-					
-						cv::imshow("Remote aligned face", response.mImage);
-						int key = cv::waitKey(3);
-						if (key == 32)	// space = quite
-						{
-							break;
+
+						// detect face with dlib
+						cv::Mat aligned;
+						if (dlib_aligner.AlignImage(200, face_snap, aligned)
+							) {
+
+							cv::Size sz1 = aligned.size();
+							cv::Size sz2 = response.mImage.size();
+							cv::Mat im3(sz1.height, sz1.width + sz2.width, CV_8UC3);
+							aligned.copyTo(im3(cv::Rect(0, 0, sz1.width, sz1.height)));
+							response.mImage.copyTo(im3(cv::Rect(sz1.width, 0, sz2.width, sz2.height)));
+							cv::imshow("im3", im3);
+
+							int key = cv::waitKey(3);
+							if (key == 32)	// space = quite
+							{
+								break;
+							}
 						}
+						else
+						{
+							std::cout << "No face detected" << std::endl;
+						}
+
+	
 					}
 
 					// close server connection
