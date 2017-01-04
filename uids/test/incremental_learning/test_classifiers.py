@@ -76,10 +76,7 @@ def plot_learning_curve(estimator, title, X, y, ylim=None, cv=None,
 
 def load_embeddings(filename):
     filename = "{}/{}".format(modelDir, filename)
-
-    print filename
     if os.path.isfile(filename):
-        print filename
         with open(filename, 'r') as f:
             embeddings = pickle.load(f)
             f.close()
@@ -162,11 +159,9 @@ def test_sgd(X, Y):
 
 
 # ================================= #
-#              Main
+#           Test functions
 
-if __name__ == '__main__':
-
-
+def test_1():
     emb1 = load_embeddings("embeddings_matthias.pkl")
     emb2 = load_embeddings("embeddings_lfw.pkl")
     emb3 = load_embeddings("embeddings_laia.pkl")
@@ -178,8 +173,110 @@ if __name__ == '__main__':
 
     train_both_and_classify(emb1_split[0], emb2, sgda)
 
-
     label_pred = sgda.predict(emb1_split[1])
 
     print label_pred
     print "{}/{} outliers have been detected".format(len(label_pred[label_pred==1]), len(label_pred))
+
+
+def test_learning_rate(clf, verbose=True, init_shuffle=True):
+    emb1 = load_embeddings("embeddings_elias.pkl")
+    emb2 = load_embeddings("embeddings_matthias.pkl")
+    emb3 = load_embeddings("embeddings_laia.pkl")
+    emb_lfw = load_embeddings("embeddings_lfw.pkl")
+
+    # select ds
+    target = emb2
+
+    # number of batches
+    nr_batches = 100
+
+    # prepare ds
+    np.random.shuffle(target)
+    while len(target) % nr_batches != 0:
+        target = target[:-1]
+
+    # split into train and test sets
+    split_set = np.array_split(target, nr_batches)
+
+    # select test set
+    X_test = split_set[-1]
+
+    # outlier dataset
+    X_outliers = emb_lfw
+
+    # plotting
+    error_train = []
+    error_test = []
+    error_outliers = []
+
+    for i in range(0, nr_batches-1):
+        if verbose:
+            print "=====================================================\n"
+            print "        Training Round {}\n".format(i)
+            print "=====================================================\n"
+
+        X_train = split_set[i]
+
+        # fit
+        inlier_labels = np.repeat(1, len(X_train))
+
+        if i == 0:
+            all_classes = [0, 1]
+            rest_labels = np.repeat(0, len(X_outliers))
+            # mix samples with outliers
+            x_2 = np.concatenate((X_train, X_outliers))
+            y_2 = np.concatenate((inlier_labels, rest_labels))
+
+            if init_shuffle is True:
+                shuffledRange = range(len(y_2))
+                random.shuffle(shuffledRange)
+                x_2 = [x_2[i] for i in shuffledRange]
+                y_2 = [y_2[i] for i in shuffledRange]
+
+            clf.partial_fit(x_2, y_2, all_classes)
+        else:
+            clf.partial_fit(X_train, inlier_labels)
+
+        # evaluate
+        y_pred_train = clf.predict(X_train)
+        y_pred_test = clf.predict(X_test)
+        y_pred_outliers = clf.predict(X_outliers)
+        n_error_train = y_pred_train[y_pred_train == 0].size
+        n_error_test = y_pred_test[y_pred_test == 0].size
+        n_error_outliers = y_pred_outliers[y_pred_outliers == 1].size
+
+        error_train.append(n_error_train/float(len(X_train))*100.0)
+        error_test.append(n_error_test/float(len(X_test))*100.0)
+        error_outliers.append(n_error_outliers/ float(len(X_outliers))*100.0)
+
+        # display results
+        if verbose:
+            print "error train: {}/{}, error novel regular: {}/{}, error novel abnormal: {}/{}" \
+                .format(
+                        n_error_train, len(X_train),
+                        n_error_test, len(X_test),
+                        n_error_outliers, len(X_outliers))
+            print "error train: {:.2f}%, error novel regular: {:.2f}%, error novel abnormal: {:.2f}%" \
+                .format(
+                        n_error_train/float(len(X_train))*100.0,
+                        n_error_test/float(len(X_test))*100.0,
+                        n_error_outliers/ float(len(X_outliers))*100.0)
+    # extract error
+    fig = plt.figure()
+    plt.plot(range(0, nr_batches-1), error_train, label="Training data")
+    plt.plot(range(0, nr_batches-1), error_test, label="Test data")
+    plt.plot(range(0, nr_batches-1), error_outliers, label="Outlier data")
+    plt.legend()
+    plt.xlabel('Training Batch')
+    plt.ylabel('Detection Error Rate')
+    plt.title('Detector drift')
+    plt.show()
+
+# ================================= #
+#              Main
+
+if __name__ == '__main__':
+    clf = SGDClassifier(loss='log')
+    test_learning_rate(clf)  # shuffle=True is useless here)
+
