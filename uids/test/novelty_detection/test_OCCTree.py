@@ -19,11 +19,11 @@ def load_embeddings(filename):
         return np.array(embeddings)
     return None
 
+
 # ================================= #
-#              Main
+#        Test Functions
 
-if __name__ == '__main__':
-
+def test_1():
     emb1 = load_embeddings("embeddings_elias.pkl")
     emb2 = load_embeddings("embeddings_matthias.pkl")
     emb3 = load_embeddings("embeddings_laia.pkl")
@@ -72,3 +72,9 @@ if __name__ == '__main__':
 
     while True:
         pass
+
+# ================================= #
+#              Main
+
+if __name__ == '__main__':
+    test_1()

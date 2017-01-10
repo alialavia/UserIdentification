@@ -7,7 +7,10 @@ import os
 from sklearn import svm
 from sklearn import linear_model
 
-from sklearn.linear_model import SGDClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import SGDClassifier, Perceptron
+from sklearn.linear_model import PassiveAggressiveClassifier
+from sklearn.linear_model import LogisticRegression
 import random
 
 from sklearn.learning_curve import learning_curve
@@ -179,7 +182,7 @@ def test_1():
     print "{}/{} outliers have been detected".format(len(label_pred[label_pred==1]), len(label_pred))
 
 
-def test_learning_rate(clf, verbose=True, init_shuffle=True):
+def test_incremental_learning_rate(clf, nr_batches=50, verbose=True, init_shuffle=True):
     emb1 = load_embeddings("embeddings_elias.pkl")
     emb2 = load_embeddings("embeddings_matthias.pkl")
     emb3 = load_embeddings("embeddings_laia.pkl")
@@ -187,9 +190,6 @@ def test_learning_rate(clf, verbose=True, init_shuffle=True):
 
     # select ds
     target = emb2
-
-    # number of batches
-    nr_batches = 100
 
     # prepare ds
     np.random.shuffle(target)
@@ -273,10 +273,78 @@ def test_learning_rate(clf, verbose=True, init_shuffle=True):
     plt.title('Detector drift')
     plt.show()
 
+
+def test_compare_online_solvers():
+
+    emb1 = load_embeddings("embeddings_elias.pkl")
+    emb2 = load_embeddings("embeddings_matthias.pkl")
+    emb3 = load_embeddings("embeddings_laia.pkl")
+    emb_lfw = load_embeddings("embeddings_lfw.pkl")
+
+    heldout = [0.95, 0.90, 0.75, 0.50, 0.02, 0.001]
+    rounds = 20
+    xx = 1. - np.array(heldout)
+
+    X_train = emb2
+    X_outliers = emb_lfw
+
+    # fit
+    inlier_labels = np.repeat(1, len(X_train))
+    rest_labels = np.repeat(0, len(X_outliers))
+
+    ds = [emb1, emb2, emb3]
+
+    X = []
+    y = []
+    for label, emb in enumerate(ds):
+        if len(X) == 0:
+            X = emb
+            y = np.repeat(label, len(emb))
+        else:
+            X = np.concatenate((X, emb))
+            y = np.concatenate((y, np.repeat(label, len(emb))))
+
+    # choose classifiers
+    classifiers = [
+        ("SGD", SGDClassifier()),
+        ("ASGD", SGDClassifier(average=True)),
+        ("Perceptron", Perceptron()),
+        ("Passive-Aggressive I", PassiveAggressiveClassifier(loss='hinge',
+                                                             C=1.0)),
+        ("Passive-Aggressive II", PassiveAggressiveClassifier(loss='squared_hinge',
+                                                              C=1.0)),
+        ("SAG", LogisticRegression(solver='sag', tol=1e-1, C=1.e4 / X.shape[0]))
+    ]
+
+    for name, clf in classifiers:
+        print("training %s" % name)
+        rng = np.random.RandomState(42)
+        yy = []
+        for i in heldout:
+            yy_ = []
+            for r in range(rounds):
+                X_train, X_test, y_train, y_test = \
+                    train_test_split(X, y, test_size=i, random_state=rng)
+                clf.fit(X_train, y_train)
+                y_pred = clf.predict(X_test)
+                yy_.append(1 - np.mean(y_pred == y_test))
+            yy.append(np.mean(yy_))
+        plt.plot(xx, yy, label=name)
+
+    plt.legend(loc="upper right")
+    plt.xlabel("Proportion train")
+    plt.ylabel("Test Error Rate")
+    plt.show()
+
 # ================================= #
 #              Main
 
 if __name__ == '__main__':
-    clf = SGDClassifier(loss='log')
-    test_learning_rate(clf)  # shuffle=True is useless here)
+    # clf = SGDClassifier(loss='log')
+    # clf = PassiveAggressiveClassifier(loss='squared_hinge', C=1.0)
+    clf = Perceptron()
+    test_incremental_learning_rate(clf, nr_batches=3)  # shuffle=True is useless here)
+
+    # compare learning rate of different online solvers
+    # test_compare_online_solvers()
 
