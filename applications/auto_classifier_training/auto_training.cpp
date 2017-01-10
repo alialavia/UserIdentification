@@ -148,8 +148,10 @@ int main(int argc, char** argv)
 					face_snap = color_image(bounding_boxes[0]);
 				}	// /bounding boxes
 
-					// faces
-				std::vector<tracking::Face> faces = ft.GetFaces();
+				// get faces
+				std::vector<tracking::Face> faces;
+				std::vector<int> face_ids;
+				ft.GetFaces(faces, face_ids);
 				for (int i = 0; i < faces.size(); i++) {
 
 					int roll, pitch, yaw;

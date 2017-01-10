@@ -316,12 +316,10 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 						cv::Mat face_snap = scene_rgb(facebb);
 
 						// detect and warp face
-						dlib::rectangle bb;
 						std::cout << "a0." << std::endl;
-						if (mDlibAligner->GetLargestFaceBoundingBox(face_snap, bb)) {
-							std::cout << "a0" << std::endl;
-							cv::Mat aligned;
-							if (mDlibAligner->AlignImage(96, face_snap, aligned, bb)) {
+						cv::Mat aligned;
+
+							if (mDlibAligner->AlignImage(96, face_snap, aligned)) {
 								// resize
 								//cv::resize(aligned, aligned, cv::Size(96, 96));
 
@@ -354,7 +352,6 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 							}
 
 
-						}
 
 					}	// /free pose position
 

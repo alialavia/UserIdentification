@@ -84,7 +84,10 @@ int main(int argc, char** argv)
 			// extract raw face data
 			FaceData* face_data_raw = k.GetFaceDataReference();
 			ft.ExtractFacialData(face_data_raw);
-			std::vector<tracking::Face> faces = ft.GetFaces();
+
+			std::vector<tracking::Face> faces;
+			std::vector<int> face_ids;
+			ft.GetFaces(faces, face_ids);
 
 			std::vector<cv::Rect2f> bounding_boxes;
 			std::vector<int> user_scene_ids;
@@ -101,16 +104,23 @@ int main(int argc, char** argv)
 			// if users in scene
 			if (user_scene_ids.size() > 0)
 			{
-				// refresh users
-				um.RefreshUserTracking(user_scene_ids, bounding_boxes, faces);
 
-				// update user ids
+				// refresh users (add/remove users, reset features)
+				um.RefreshUserTracking(user_scene_ids, bounding_boxes);
+
+				// face data
+				um.UpdateFaceData(faces, face_ids);
+
+				// Process responses
+				// - update user ids
 				um.ApplyUserIdentification();
 
 				// draw users
 				um.DrawUsers(color_image);
 
-				// request identification for unknown users
+				// Generate requests
+				// - request identification for unknown users
+				// - update classifiers for known users
 				um.GenerateRequests(color_image);
 			}
 
