@@ -48,29 +48,23 @@ public:
 	}
 	bool IterateRows()
 	{
-
 		line_number_++;
-
-	std::string item_string;
-
-	std::getline(*filehandle_, current_line_);
-
-	if (!filehandle_->eof())
-	{
-		//std::cout << current_line_ << std::endl;
-
-		current_items_.clear();
-		std::istringstream inStream(current_line_);
-
-		T value;
-		while (std::getline(inStream, item_string, ',') && std::istringstream(item_string) >> value)
+		std::string item_string;
+		std::getline(*filehandle_, current_line_);
+		if (!filehandle_->eof())
 		{
-			//std::cout << csvItem << std::endl;
-			current_items_.push_back(value);
+			current_items_.clear();
+			std::istringstream inStream(current_line_);
+
+			T value;
+			while (std::getline(inStream, item_string, ',') && std::istringstream(item_string) >> value)
+			{
+				//std::cout << csvItem << std::endl;
+				current_items_.push_back(value);
+			}
+			return true;
 		}
-		return true;
-	}
-	return false;
+		return false;
 	}
 	T GetVal(int col) {
 		return current_items_[col];

@@ -5,7 +5,17 @@ using namespace io;
 
 CSVWriter::CSVWriter(std::string filename) :filename_(filename), col_nr(0), line_nr(0) {
 	filehandle_ = new std::ofstream();
-	filehandle_->open(filename);
+	// check if file exists
+	struct stat buffer;
+	if((stat(filename.c_str(), &buffer) == 0))
+	{
+		// append
+		filehandle_->open(filename, std::ofstream::app);
+	}
+	else
+	{
+		filehandle_->open(filename);
+	}
 }
 void CSVWriter::startNewRow() {
 	line_nr++;
@@ -19,6 +29,15 @@ void CSVWriter::changeFile(std::string filename) {
 	filehandle_->close();
 	delete(filehandle_);
 	filehandle_ = new std::ofstream();
-	filehandle_->open(filename);
+	struct stat buffer;
+	if ((stat(filename.c_str(), &buffer) == 0))
+	{
+		// append
+		filehandle_->open(filename, std::ofstream::app);
+	}
+	else
+	{
+		filehandle_->open(filename);
+	}
 	filename_ = filename;
 }
