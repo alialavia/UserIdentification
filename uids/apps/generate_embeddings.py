@@ -129,6 +129,9 @@ if __name__ == '__main__':
     # parse arguments
     args = parser.parse_args()
 
+    if args.output != "face_embeddings":
+        args.save_embeddings = True
+
     emb_gen = EmbeddingGen()
 
     # do calculations
