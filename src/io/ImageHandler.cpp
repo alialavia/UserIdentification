@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include "io/ImageHandler.h"
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/video.hpp>
 #include <sys/stat.h>
 #include <iostream>
-#include <windows.h>
-#include <opencv2/video.hpp>
+
 
 using namespace io;
 
@@ -95,6 +96,111 @@ bool ImageHandler::SaveImage(cv::Mat img, std::string path, std::string filename
 bool ImageHandler::FileExists(const std::string& name) {
 	struct stat buffer;
 	return (stat(name.c_str(), &buffer) == 0);
+}
+
+
+int ImageHandler::LoadImageBatch(std::vector<cv::Mat> &img_batch, std::vector<std::string> &filenames, int batch_size) {
+
+	if (!mValidDirectory) {
+		return false;
+	}
+
+	img_batch.clear();
+	filenames.clear();
+	cv::Mat image;
+
+	int i = 0;
+	do {
+		const std::string file_name = mCurrentFile.cFileName;
+		const std::string full_file_name = mDirectory + "/" + file_name;
+		const bool is_directory = (mCurrentFile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+
+		if (file_name[0] == '.')
+			continue;
+
+		if (is_directory)
+			continue;
+
+		if (!IsImage(file_name))
+			continue;
+
+		// load image
+		image = cv::imread(full_file_name, CV_LOAD_IMAGE_COLOR);   // Read the file
+		if (!image.data) {
+			// could not open file
+		}
+		else {
+			img_batch.push_back(image);
+			filenames.push_back(file_name);
+		}
+
+		// increment batch size
+		i++;
+
+	} while (i <= batch_size && FindNextFile(mDirHandle, &mCurrentFile));
+
+	return img_batch.size();
+
+}
+
+bool ImageHandler::IsImage(const std::string &filename) {
+	std::string ext = filename.substr(filename.find_last_of(".") + 1);
+	std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+	if (
+		ext == "jpg" ||
+		ext == "jpeg" ||
+		ext == "png" ||
+		ext == "gif"
+		) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+bool ImageHandler::ChangeDirectory(const std::string &directory) {
+
+	FindClose(mDirHandle);
+	mValidDirectory = false;
+
+	// check if exists
+	if ((mDirHandle = FindFirstFile((directory + "/*").c_str(), &mCurrentFile)) == INVALID_HANDLE_VALUE) {
+		// no files found
+
+		return false;
+	}
+	else {
+		mDirectory = directory;
+		mValidDirectory = true;
+		return true;
+	}
+
+}
+
+void ImageHandler::GetFilesInDirectory(std::vector<std::string> &out, const std::string &directory)
+{
+	HANDLE dir;
+	WIN32_FIND_DATA file_data;
+
+	if ((dir = FindFirstFile((directory + "/*").c_str(), &file_data)) == INVALID_HANDLE_VALUE)
+		return; /* No files found */
+
+	do {
+		const std::string file_name = file_data.cFileName;
+		const std::string full_file_name = directory + "/" + file_name;
+		const bool is_directory = (file_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+
+		if (file_name[0] == '.')
+			continue;
+
+		if (is_directory)
+			continue;
+
+		out.push_back(full_file_name);
+	} while (FindNextFile(dir, &file_data));
+
+	FindClose(dir);
 }
 
 // ------------------------ drawing functions
