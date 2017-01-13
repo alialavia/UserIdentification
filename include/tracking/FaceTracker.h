@@ -45,7 +45,7 @@ namespace tracking
 
 		}
 
-		void DumpImageGrid(std::string filename = "capture", std::string log_name = "face_log.csv", std::string out_folder = "face_grid");
+		void DumpImageGrid(std::string filename = "capture", std::string log_name = "face_log.csv", std::string out_folder = "face_grid", bool append_log = false);
 		std::vector<cv::Mat*> ExtractGrid();
 		void GetFaceGridPitchYaw(cv::Mat &dst, int canvas_height=500);
 
@@ -290,7 +290,7 @@ namespace tracking
 			io::CSVWriter fh(output_folder+filename);
 
 			fh.addEntry("Label (1=Blurred | 0=Not),LAPV,LAPD,GLVN,MLAP,CEC");
-			fh.startNewRow();
+			fh.EndRow();
 			for (auto const& target : angles) {
 				cv::Vec3d a = target.second;
 				// get image
@@ -312,7 +312,7 @@ namespace tracking
 				fh.addEntry(imgproc::FocusMeasure::GLVN(greyMat));
 				fh.addEntry(imgproc::FocusMeasure::MLAP(greyMat));
 				fh.addEntry(imgproc::FocusMeasure::CEC(greyMat));
-				fh.startNewRow();
+				fh.EndRow();
 			}
 		}
 

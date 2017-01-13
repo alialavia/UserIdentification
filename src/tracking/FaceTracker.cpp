@@ -9,7 +9,7 @@ using namespace tracking;
 
 // ---------- RadialFaceGrid
 
-void RadialFaceGrid::DumpImageGrid(std::string img_basename, std::string log_name, std::string out_folder) {
+void RadialFaceGrid::DumpImageGrid(std::string img_basename, std::string log_name, std::string out_folder, bool append_log) {
 
 	time_t t = std::time(0);
 	long int now = static_cast<long int> (t);
@@ -20,7 +20,13 @@ void RadialFaceGrid::DumpImageGrid(std::string img_basename, std::string log_nam
 		out_folder += "/";
 	}
 
-	io::CSVWriter o_h(out_folder+std::to_string(now)+"_"+log_name);
+	// generate unique log name using timestamp
+	if (!append_log) {
+		log_name = std::to_string(now) + "_" + log_name;
+	}
+
+	// open file writer
+	io::CSVWriter o_h(out_folder + log_name);
 
 	// iterate over 3d array
 	for (int r = 0; r < image_grid.Size(0); r++) {
@@ -44,7 +50,7 @@ void RadialFaceGrid::DumpImageGrid(std::string img_basename, std::string log_nam
 					o_h.addEntry(precies_angles[0]);
 					o_h.addEntry(precies_angles[1]);
 					o_h.addEntry(precies_angles[2]);
-					o_h.startNewRow();
+					o_h.EndRow();
 				}
 			}
 		}
