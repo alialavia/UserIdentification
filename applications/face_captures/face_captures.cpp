@@ -68,6 +68,7 @@ int main(int argc, char** argv)
 		"[1]: autocollect face snapshots. When finished use:\n"
 		"		[s]: save blur statistics\n"
 		"		[i]: save images\n"
+		"[2]: autocollect face snapshots (unlimited, savepoint triggered in intervals)\n"
 		"[q]: Quit\n"
 		"--------------------------------------\n"
 		"During picture collection use [LMB], [RMB], [MMB] to flag, reset or ignore individual pictures\n"
@@ -75,6 +76,7 @@ int main(int argc, char** argv)
 
 	cv::destroyAllWindows();
 	int key = (int)('-1');
+	int key_save = (int)('-1');
 
 	while (true) {
 
@@ -91,7 +93,7 @@ int main(int argc, char** argv)
 			// mode selection
 			if (STATE == State_none)
 			{
-				if ((int)('1') == key)	// space = save
+				if ((int)('1') == key || (int)('2') == key)	// space = save
 				{
 					STATE = State_capturing;
 					std::cout << "--- Start image capturing...\n";
@@ -180,25 +182,40 @@ int main(int argc, char** argv)
 
 				// show image
 				cv::imshow(cWindowLabel, face_captures);
-				key = cv::waitKey(5);
-				if ((int)('s') == key)	// space = save
-				{
-					std::cout << "--- Saving blur metrics...\n";
-					grid.DumpFocusMeasuresWithLabels(FLAGS_stat_file, FLAGS_output_folder);
-					grid.Clear();
-					STATE = State_none;
-					cv::destroyAllWindows();
-				}
-				else if ((int)('i') == key)
-				{
-					std::cout << "--- Saving images...\n";
-					grid.DumpImageGrid(FLAGS_img_basename, "picture_log.csv", FLAGS_output_folder);
-					grid.Clear();
-					STATE = State_none;
-					cv::destroyAllWindows();
-				}
+				key_save = cv::waitKey(5);
 
-
+				if((int)('1') == key){
+					if ((int)('s') == key_save)	// space = save
+					{
+						std::cout << "--- Saving blur metrics...\n";
+						grid.DumpFocusMeasuresWithLabels(FLAGS_stat_file, FLAGS_output_folder);
+						grid.Clear();
+						STATE = State_none;
+						cv::destroyAllWindows();
+					}
+					else if ((int)('i') == key_save)
+					{
+						std::cout << "--- Saving images...\n";
+						grid.DumpImageGrid(FLAGS_img_basename, "picture_log.csv", FLAGS_output_folder);
+						grid.Clear();
+						STATE = State_none;
+						cv::destroyAllWindows();
+					}
+				}
+				else if ((int)('2') == key) {
+					// autosave
+					if (grid.nr_images() > 20) {
+						std::cout << "Autosaving..." << std::endl;
+						grid.DumpImageGrid(FLAGS_img_basename, "picture_log.csv", FLAGS_output_folder, true);
+						grid.Clear();
+						cv::destroyAllWindows();
+					}
+					if ((int)('q') == key_save)
+					{
+						std::cout << "--- Terminating...\n";
+						break;
+					}
+				}
 			}
 
 			// wait for input

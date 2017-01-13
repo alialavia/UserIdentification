@@ -65,7 +65,7 @@ int main(int argc, char** argv)
 		//{
 		//	csv_out.addEntry(resp.mEmbedding[i]);
 		//}
-		//csv_out.startNewRow();
+		//csv_out.EndRow();
 
 	}
 

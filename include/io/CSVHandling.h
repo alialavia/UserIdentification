@@ -12,7 +12,7 @@ class CSVWriter {
 public:
 	CSVWriter(std::string filename);
 	~CSVWriter();
-	void startNewRow();
+	void EndRow();
 	template<class T> void addEntry(T val) {
 		if (col_nr > 0) {
 			// add new column

@@ -1,6 +1,8 @@
 #include <io\CSVHandling.h>
 #include <fstream>
 
+#include <iostream>
+
 using namespace io;
 
 CSVWriter::CSVWriter(std::string filename) :filename_(filename), col_nr(0), line_nr(0) {
@@ -17,7 +19,7 @@ CSVWriter::CSVWriter(std::string filename) :filename_(filename), col_nr(0), line
 		filehandle_->open(filename);
 	}
 }
-void CSVWriter::startNewRow() {
+void CSVWriter::EndRow() {
 	line_nr++;
 	col_nr = 0;
 	*filehandle_ << "\n";
