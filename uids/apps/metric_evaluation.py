@@ -15,10 +15,12 @@ import time
 import sys
 
 from sklearn.metrics.pairwise import *
+from numpy import genfromtxt
 
 # path managing
 fileDir = os.path.dirname(os.path.realpath(__file__))
 modelDir = os.path.join(fileDir, '..', 'models', 'embedding_samples')	# path to the model directory
+
 
 def load_data(filename):
     filename = "{}/{}".format(modelDir, filename)
@@ -29,6 +31,15 @@ def load_data(filename):
             embeddings = pickle.load(f)
             f.close()
         return np.array(embeddings)
+    return None
+
+
+def load_labels(filename):
+    filename = "{}/{}".format(modelDir, filename)
+    # print filename
+    if os.path.isfile(filename):
+        my_data = genfromtxt(filename, delimiter=',')
+        return my_data
     return None
 
 
@@ -79,9 +90,13 @@ def plot_dist_to_centroid(c1_samples, c2_samples, metric='cosine'):
 #        Evaluation Routines
 
 
-def plot_ds_separations(ds1, ds2, metric='euclidean'):
+def plot_inter_class_separation(ds1, ds2, metric='euclidean'):
 
     # Cosine distance is defined as 1.0 minus the cosine similarity.
+
+    print "=====================================================\n"
+    print "  INTER-CLASS SEPARATION IN {} DISTANCE\n".format(metric)
+    print "=====================================================\n"
 
     if metric == 'cosine_similarity':
         sep = cosine_similarity(ds1, ds2)
@@ -90,7 +105,8 @@ def plot_ds_separations(ds1, ds2, metric='euclidean'):
 
     max_out = np.amax(sep)
     min_out = np.amin(sep)
-    print "--- min: {}, max: {}".format(min_out, max_out)
+    mean = np.mean(sep)
+    print "--- min: {}, max: {}, mean: {}".format(min_out, max_out, mean)
 
     fig = plt.figure()
     n, bins, patches = plt.hist(np.transpose(sep), 50, normed=1, facecolor='green', alpha=0.75)
@@ -99,10 +115,12 @@ def plot_ds_separations(ds1, ds2, metric='euclidean'):
     plt.xlabel('Sample separation')
     plt.show()
 
-def plot_separation_dist(ds1, metric='euclidean'):
+
+def plot_intra_class_separation_on_class_subspace(ds1, metric='euclidean'):
 
     print "=====================================================\n"
     print "  INTRA-CLASS SEPARATION IN {} DISTANCE\n".format(metric)
+    print "  ON 20% VAR CLASS SUBSPACE\n"
     print "=====================================================\n"
 
     if metric == 'cosine_similarity':
@@ -110,30 +128,23 @@ def plot_separation_dist(ds1, metric='euclidean'):
     else:
         sep = pairwise_distances(ds1, metric=metric)
 
-    fig = plt.figure()
-    n, bins, patches = plt.hist(np.transpose(sep), 50, normed=1, facecolor='green', alpha=0.75)
-    plt.title('Intra-Class separation: {}-distance'.format(metric))
-    plt.ylabel('Number of samples')
-    plt.xlabel('Sample separation')
-
-    # extract 99.9% subspace
-    basis, mean = ExtractInverseSubspace(ds1, 1 - 0.1)
+    # extract 20% subspace
+    basis, mean = ExtractInverseSubspace(ds1, 1 - 0.2)
     print "--- reduced dimension to: {}".format(np.size(basis, 1))
 
     # project data onto subspace
     ds1_sub = ProjectOntoSubspace(ds1, mean, basis)
 
-    # add mean
+    # add mean?
 
     if metric == 'cosine_similarity':
         sep = cosine_similarity(ds1)
     else:
         sep = pairwise_distances(ds1, metric=metric)
 
-
     fig = plt.figure()
     n, bins, patches = plt.hist(np.transpose(ds1_sub), 50, normed=1, facecolor='green', alpha=0.75)
-    plt.title('Intra-Class separation on 0.2 Var subspace: {}-distance'.format(metric))
+    plt.title('Intra-Class separation on 0.2 Var Class subspace: {}-distance'.format(metric))
     plt.ylabel('Number of samples')
     plt.xlabel('Sample separation')
     plt.show()
@@ -233,16 +244,11 @@ def run_evaluation():
     parser.add_argument('--output', help="Statistics output folder.", default="stats")
     args = parser.parse_args()
 
-
     # load embeddings
     emb_1 = load_data('embeddings_matthias.pkl')
     emb_2 = load_data('embeddings_elias.pkl')
     emb_3 = load_data('embeddings_laia.pkl')
     emb_lfw = load_data('embeddings_lfw.pkl')
-    print len(emb_lfw)
-    print sys.getsizeof(emb_lfw[3])
-    print sys.getsizeof(emb_lfw)
-    return
 
     if emb_1 is None or emb_2 is None:
         print "--- embeddings could not be loaded. Aborting..."
@@ -259,8 +265,81 @@ def run_evaluation():
     print_distr_on_subspace(emb_1, emb_2, emb_lfw, 'cosine')
 
     # 2. INTRA-/INTER-CLASS DISTANCE DISTRIBUTION
-    plot_separation_dist(emb_1, 'cosine')
-    plot_ds_separations(emb_1, emb_lfw, 'cosine')
+    plot_intra_class_separation_on_class_subspace(emb_1, 'cosine')
+    plot_inter_class_separation(emb_1, emb_lfw, 'cosine')
+
+
+def run_evaluation_2():
+    emb1 = load_data("embeddings_elias.pkl")
+    emb2 = load_data("embeddings_matthias_big.pkl")
+    emb3 = load_data("embeddings_laia.pkl")
+    emb_lfw = load_data("embeddings_lfw.pkl")
+
+    # filter blurred images
+    l = load_labels('blur_labels_matthias_big.csv')
+    l = l[:,1]
+    blurred = emb2[l==1]
+    clear = emb2[l==0]
+
+    print len(blurred)
+    print len(clear)
+
+    # plot separations
+    plot_inter_class_separation(clear, clear, 'cosine')
+    # plot_inter_class_separation(clear, blurred, 'cosine')
+
+
+def run_blur_evaluation():
+
+    # 0: no blur, 1: 1.5, 2: 3, 4: 4.5
+    emb1 = load_data("embedding_frontal_increasing_blur.pkl")
+    emb2 = load_data("embeddings_matthias_big.pkl")
+    # filter blurred images
+    l = load_labels('blur_labels_matthias_big.csv')
+    l = l[:,1]
+    blurred = emb2[l==1]
+    clear = emb2[l==0]
+
+    # 1: Draw Separation of a Frontal Face to Blurred Versions
+    if False:
+        sep = pairwise_distances(emb1[0,:], emb1[1:,:], metric='cosine')
+        blur_stages = [1.5, 3, 4.5]
+        plt.title('Separation of blurred (Gaussian) to unblurred Image')
+        plt.ylabel('Separation [cosine distance]')
+        plt.xlabel('Blur Radius [px]')
+        plt.plot(blur_stages,sep[0])
+        plt.show()
+
+    # 2: Draw Separation of Blurred Frontal View to General Dataset
+    blur_stages = [0, 1.5, 3, 4.5]
+    if False:
+        for i, blur in enumerate(blur_stages):
+            plot_inter_class_separation(emb1[i,:], emb2, 'cosine')
+
+    # 3: Calculate Distribution Statistics for Separation of Frontal View vs General Dataset
+    if True:
+        min = []
+        max = []
+        mean = []
+        median = []
+        for i, blur in enumerate(blur_stages):
+            sep = pairwise_distances(emb1[i,:], emb2, metric='cosine')
+            min.append(np.amin(sep))
+            max.append(np.amax(sep))
+            mean.append(np.mean(sep))
+            median.append(np.median(sep))
+
+        plt.title('Separation of Blurred Frontal View to Random Class Images')
+        plt.ylabel('Separation [cosine distance]')
+        plt.xlabel('Gaussian Blur Radius [px]')
+        plt.plot(blur_stages, min, label="Minimum")
+        plt.plot(blur_stages, max, label="Maximum")
+        plt.plot(blur_stages, mean, label="Mean")
+        plt.plot(blur_stages, median, label="Median")
+        plt.legend()
+        plt.show()
+
+
 
 if __name__ == '__main__':
-    run_evaluation()
+    run_blur_evaluation()
