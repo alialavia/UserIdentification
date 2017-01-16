@@ -4,3 +4,6 @@
 [submodule "externals/gflags"]
 	path = externals/gflags
 	url = https://github.com/gflags/gflags.git
+[submodule "uids/test/face_specific_augm"]
+	path = uids/test/face_specific_augm
+	url = https://github.com/iacopomasi/face_specific_augm.git
