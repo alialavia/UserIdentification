@@ -7,3 +7,6 @@
 [submodule "uids/test/face_specific_augm"]
 	path = uids/test/face_specific_augm
 	url = https://github.com/iacopomasi/face_specific_augm.git
+[submodule "uids/test/face-frontalization"]
+	path = uids/test/face-frontalization
+	url = https://github.com/dougsouza/face-frontalization.git
