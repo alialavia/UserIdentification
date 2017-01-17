@@ -9,7 +9,7 @@ import pickle
 # path managing
 fileDir = os.path.dirname(os.path.realpath(__file__))
 
-def calc_embeddings_recursive(in_folder, gen, output, batch_size = 100, cleanup = False):
+def calc_embeddings_recursive(in_folder, gen, output, batch_size = 100, cleanup = False, align=True):
 
     path_in = os.path.join(fileDir, in_folder)
     print "--- starting to generate embeddings..."
@@ -34,7 +34,7 @@ def calc_embeddings_recursive(in_folder, gen, output, batch_size = 100, cleanup 
 
                 #print "--- Processing file {}/{}".format(index + 1, tot_files)
                 image = misc.imread(file)
-                embedding = gen.get_embedding(image)
+                embedding = gen.get_embedding(image, align=align)
                 if embedding is None:
                     print "--- could not generate face embedding"
                     if cleanup is True:
@@ -74,7 +74,7 @@ def calc_embeddings_recursive(in_folder, gen, output, batch_size = 100, cleanup 
     print "--- useable: {}/{} images".format(tot_files - removed, tot_files)
     return embeddings
 
-def calc_embeddings(in_folder, gen, cleanup=False):
+def calc_embeddings(in_folder, gen, cleanup=False, align=True):
 
     path_in = os.path.join(fileDir, in_folder)
     print "--- starting to generate embeddings..."
@@ -91,7 +91,8 @@ def calc_embeddings(in_folder, gen, cleanup=False):
         if file.endswith(".jpg") or file.endswith(".png"):
             print "--- Processing file {}/{}".format(index+1, tot_files)
             image = misc.imread(path_in+file)
-            embedding = gen.get_embedding(image)
+            print "file {}".format(file)
+            embedding = gen.get_embedding(image, align=align)
             if embedding is None:
                 print "--- could not generate face embedding"
                 if cleanup is True:
@@ -122,9 +123,12 @@ if __name__ == '__main__':
     parser.add_argument('--no-save_emb', dest='save_embeddings', action='store_false')
     parser.add_argument('--recursive', dest='recursive', action='store_true')
     parser.add_argument('--no-recursive', dest='recursive', action='store_false')
+    parser.add_argument('--align', dest='align', action='store_true')
+    parser.add_argument('--no-align', dest='align', action='store_false')
     parser.set_defaults(save_embeddings=False)
     parser.set_defaults(clean=False)
     parser.set_defaults(recursive=False)
+    parser.set_defaults(align=True)
 
     # parse arguments
     args = parser.parse_args()
@@ -136,9 +140,9 @@ if __name__ == '__main__':
 
     # do calculations
     if args.recursive:
-        embeddings = calc_embeddings_recursive(args.img_folder, emb_gen, args.output, args.batch_size, args.clean)
+        embeddings = calc_embeddings_recursive(args.img_folder, emb_gen, args.output, args.batch_size, args.clean, align=args.align)
     else:
-        embeddings = calc_embeddings(args.img_folder, emb_gen, args.clean)
+        embeddings = calc_embeddings(args.img_folder, emb_gen, args.clean, align=args.align)
         if args.save_embeddings is True:
             filename = "{}.pkl".format(args.output)
             print("--- Saving face embeddings to '{}'".format(filename))

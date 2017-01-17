@@ -76,11 +76,14 @@ class EmbeddingGen:
 
         return embeddings
 
-    def get_embedding(self, user_img):
+    def get_embedding(self, user_img, align=True):
         # align image
-        normalized = self.align_face(user_img, self.landmarks, self.size)
-        if normalized is None:
-            return None
+        if align:
+            normalized = self.align_face(user_img, self.landmarks, self.size)
+            if normalized is None:
+                return None
+        else:
+            normalized = user_img
 
         # generate embedding
         rep = self.neural_net.forward(normalized)
