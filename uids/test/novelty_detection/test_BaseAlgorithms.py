@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import random
 import time
 from sklearn.ensemble import IsolationForest
+import csv
+from numpy import genfromtxt
 
 # path managing
 fileDir = os.path.dirname(os.path.realpath(__file__))
@@ -20,6 +22,14 @@ def load_embeddings(filename):
             embeddings = pickle.load(f)
             f.close()
         return np.array(embeddings)
+    return None
+
+def load_labels(filename):
+    filename = "{}/{}".format(modelDir, filename)
+    # print filename
+    if os.path.isfile(filename):
+        my_data = genfromtxt(filename, delimiter=',')
+        return my_data
     return None
 
 
@@ -105,14 +115,22 @@ def test_1():
                     n_error_outliers, len(X_outliers))
 
 
-def test_detection_rate(classifiers, nr_batches=50, verbose=False, init_shuffle=True, display=True):
+def test_detection_rate(classifiers, nr_batches=50, ds_limit=500, verbose=False, init_shuffle=True, display=True):
     """
     user plt.show() at the end
     """
     emb1 = load_embeddings("embeddings_elias.pkl")
-    emb2 = load_embeddings("embeddings_matthias.pkl")
+    emb2 = load_embeddings("embeddings_matthias_big.pkl")
     emb3 = load_embeddings("embeddings_laia.pkl")
     emb_lfw = load_embeddings("embeddings_lfw.pkl")
+
+
+    # filter blurred images
+    l = load_labels('blur_labels_matthias_big.csv')
+    l = l[:,1]
+    mask = l==0
+    emb2 = emb2[mask]
+
 
     # select ds
     target = emb2
@@ -247,6 +265,8 @@ def test_repeated_detection_rate(classifiers, nr_tests=2, nr_batches=4, plot_tar
 
         print "Test nr {} complete".format(i)
 
+    # print "Batch size: {}".format(batch_size)
+
     # take max
     max_error_train = np.max(sum_error_train, axis=0)
     max_error_test = np.max(sum_error_test, axis=0)
@@ -271,7 +291,7 @@ def test_repeated_detection_rate(classifiers, nr_tests=2, nr_batches=4, plot_tar
                 # plt.plot(range(0, nr_batches - 1), sum_error_training_time, label="Training Time [ms]")
                 plt.xlabel('Training Set Size')
                 plt.ylabel('Detection Error Rate')
-                plt.title('Average Learning Rate [{}] for {} Randomized Tests'.format(clf_name, nr_tests))
+                plt.title('Learning Rate [{}] \nfor {} Randomized Tests\n batch size {}'.format(clf_name, nr_tests, batch_size))
 
             # plot legend
             handles, labels = plt.gca().get_legend_handles_labels()
@@ -301,7 +321,7 @@ def test_repeated_detection_rate(classifiers, nr_tests=2, nr_batches=4, plot_tar
             plt.legend()
             plt.xlabel('Training Set Size')
             plt.ylabel('Detection Error Rate')
-            plt.title('Average Learning Rate [{}] for {} Randomized Tests'.format(clf_name, nr_tests))
+            plt.title('Average Learning Rate [{}]\n for {} Randomized Tests\n batch size {}'.format(clf_name, nr_tests, batch_size))
             j += 1
 
     plt.show()
@@ -313,15 +333,32 @@ def test_repeated_detection_rate(classifiers, nr_tests=2, nr_batches=4, plot_tar
 if __name__ == '__main__':
 
     # select classifier
+    # classifiers = [
+    #     ('Isolation Forest (0.5% contamination)', IsolationForest(random_state=np.random.RandomState(42), contamination=0.005)),
+    #     ('Isolation Forest (1% contamination)', IsolationForest(random_state=np.random.RandomState(42), contamination=0.01)),
+    #     ('Isolation Forest (10% contamination)', IsolationForest(random_state=np.random.RandomState(42), contamination=0.1)),
+    #     # ('Isolation Forest (15% contamination)', IsolationForest(random_state=np.random.RandomState(42), contamination=0.15)),
+    #     ('One-Class SVM (RBF)', svm.OneClassSVM(nu=0.1, kernel="rbf", gamma=0.15)),
+    #     ('One-Class SVM (Linear)', svm.OneClassSVM(nu=0.1, gamma=0.15))
+    # ]
+
+    # perform test
+
+
     classifiers = [
         # ('Isolation Forest (0.5% contamination)', IsolationForest(random_state=np.random.RandomState(42), contamination=0.005)),
         # ('Isolation Forest (1% contamination)', IsolationForest(random_state=np.random.RandomState(42), contamination=0.01)),
-        # ('Isolation Forest (10% contamination)', IsolationForest(random_state=np.random.RandomState(42), contamination=0.1)),
-        ('Isolation Forest (15% contamination)', IsolationForest(random_state=np.random.RandomState(42), contamination=0.15)),
-        # svm.OneClassSVM(nu=0.1, kernel="rbf", gamma=0.15),
-        # svm.OneClassSVM(nu=0.1, gamma=0.15)
+        # ('Isolation Forest (5% contamination)', IsolationForest(random_state=np.random.RandomState(42), contamination=0.05)),
+        # ('Isolation Forest (10% contamination)', IsolationForest(random_state=np.random.RandomState(42), contamination=0.1))
+        # # ('Isolation Forest (15% contamination)', IsolationForest(random_state=np.random.RandomState(42), contamination=0.15)),
+        # ('One-Class SVM (RBF)', svm.OneClassSVM(nu=0.1, kernel="rbf", gamma=0.15)),
+        ('One-Class SVM (Linear)', svm.OneClassSVM(nu=0.01, gamma=0.15)),
+        # ('One-Class SVM (Linear)', svm.OneClassSVM(nu=0.2, gamma=0.15)),
+        # ('One-Class SVM (Linear)', svm.OneClassSVM(nu=0.3, gamma=0.15)),
+        # ('One-Class SVM (Linear)', svm.OneClassSVM(nu=0.4, gamma=0.15))
     ]
 
-    # perform test
-    test_repeated_detection_rate(classifiers, nr_tests=10, nr_batches=4, plot_target='all')
+    # test_detection_rate(classifiers, nr_batches=50, verbose=False, display=True)
+    # plt.show()
 
+    test_repeated_detection_rate(classifiers, nr_tests=3, nr_batches=20, plot_target='all')
