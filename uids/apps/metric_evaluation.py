@@ -116,26 +116,11 @@ def plot_inter_class_separation(ds1, ds2, metric='euclidean'):
     plt.show()
 
 
-def plot_intra_class_separation_on_class_subspace(ds1, metric='euclidean'):
+def plot_separation_dist(ds1, metric='euclidean', on_99_sub=False):
 
     print "=====================================================\n"
     print "  INTRA-CLASS SEPARATION IN {} DISTANCE\n".format(metric)
-    print "  ON 20% VAR CLASS SUBSPACE\n"
     print "=====================================================\n"
-
-    if metric == 'cosine_similarity':
-        sep = cosine_similarity(ds1)
-    else:
-        sep = pairwise_distances(ds1, metric=metric)
-
-    # extract 20% subspace
-    basis, mean = ExtractInverseSubspace(ds1, 1 - 0.2)
-    print "--- reduced dimension to: {}".format(np.size(basis, 1))
-
-    # project data onto subspace
-    ds1_sub = ProjectOntoSubspace(ds1, mean, basis)
-
-    # add mean?
 
     if metric == 'cosine_similarity':
         sep = cosine_similarity(ds1)
@@ -143,8 +128,31 @@ def plot_intra_class_separation_on_class_subspace(ds1, metric='euclidean'):
         sep = pairwise_distances(ds1, metric=metric)
 
     fig = plt.figure()
+    n, bins, patches = plt.hist(np.transpose(sep), 50, normed=1, facecolor='green', alpha=0.75)
+    plt.title('Intra-Class separation: {}-distance'.format(metric))
+    plt.ylabel('Number of samples')
+    plt.xlabel('Sample separation')
+
+    if on_99_sub is False:
+        plt.show()
+        return
+
+    # extract 99.9% subspace
+    basis, mean = ExtractInverseSubspace(ds1, 1 - 0.1)
+    print "--- reduced dimension to: {}".format(np.size(basis, 1))
+
+    # project data onto subspace
+    ds1_sub = ProjectOntoSubspace(ds1, mean, basis)
+
+    # add mean
+    if metric == 'cosine_similarity':
+        sep = cosine_similarity(ds1)
+    else:
+        sep = pairwise_distances(ds1, metric=metric)
+
+    fig = plt.figure()
     n, bins, patches = plt.hist(np.transpose(ds1_sub), 50, normed=1, facecolor='green', alpha=0.75)
-    plt.title('Intra-Class separation on 0.2 Var Class subspace: {}-distance'.format(metric))
+    plt.title('Intra-Class separation on 0.2 Var subspace: {}-distance'.format(metric))
     plt.ylabel('Number of samples')
     plt.xlabel('Sample separation')
     plt.show()
@@ -246,15 +254,50 @@ def run_evaluation():
 
     # load embeddings
     emb_1 = load_data('embeddings_matthias.pkl')
-    emb_2 = load_data('embeddings_elias.pkl')
-    emb_3 = load_data('embeddings_laia.pkl')
+    emb_2 = load_data('embeddings_matthias_3.pkl')
+    emb_3 = load_data('embeddings_matthias_clean.pkl')
+    emb_4 = load_data('embeddings_matthias_logged.pkl')
+    emb_5 = load_data('embeddings_elias.pkl')
+    emb_6 = load_data('embeddings_laia.pkl')
     emb_lfw = load_data('embeddings_lfw.pkl')
+
+    emb_combined = np.concatenate((emb_1, emb_2, emb_3, emb_4))
 
     if emb_1 is None or emb_2 is None:
         print "--- embeddings could not be loaded. Aborting..."
         return
 
     # ------------------- START EVALUATION
+    # plot_separation_dist(emb_combined, 'cosine')
+    # print_distr_on_minvar_subspace(emb_3, emb_lfw, emb_3, explained_variance = 1.0, metric='cosine')
+    # print_distr_on_minvar_subspace(emb_3, emb_lfw, emb_3, explained_variance = 0.05, metric='cosine')
+
+
+
+    if False:
+        # extract 20% subspace
+        basis, mean = ExtractInverseSubspace(emb_3, 1-0.2)
+        print "--- reduced dimension to: {}".format(np.size(basis, 1))
+
+        # project data onto subspace
+        emb_3 = ProjectOntoSubspace(emb_3, mean, basis)
+        plot_separation_dist(emb_2, 'cosine')
+        emb_2 = ProjectOntoSubspace(emb_2, mean, basis)
+        plot_separation_dist(emb_2, 'cosine')
+    if True:
+        # extract 20% subspace
+        basis, mean = ExtractInverseSubspace(emb_3, 1-0.1)
+        print "--- reduced dimension to: {}".format(np.size(basis, 1))
+
+
+        # project data onto subspace
+        emb_3 = ProjectOntoSubspace(emb_3, mean, basis)
+        emb_5 = ProjectOntoSubspace(emb_5, mean, basis)
+
+        plot_separation_dist(emb_3, 'cosine')
+        plot_ds_separations(emb_3, emb_5, 'cosine')
+
+    return
 
     # 1. DISTANCE TO CENTROID
 
