@@ -7,6 +7,7 @@ FOREACH( mylibfolder
 		math
 		imgproc
 		features
+		recognition
     )
 	
     ADD_SUBDIRECTORY(${mylibfolder})

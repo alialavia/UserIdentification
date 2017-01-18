@@ -17,6 +17,7 @@ SET(TARGET_COMMON_LIBRARIES
 ADD_SUBDIRECTORY(networking)
 ADD_SUBDIRECTORY(tracking)
 ADD_SUBDIRECTORY(classification)
+ADD_SUBDIRECTORY(detection)
 
 # component unit testing
 ADD_SUBDIRECTORY(components)

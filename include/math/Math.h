@@ -67,8 +67,6 @@ namespace math {
 			}
 			catch (...)
 			{
-
-
 				return false;
 			}
 		}

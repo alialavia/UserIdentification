@@ -55,6 +55,17 @@ namespace base
 		JointType_Count = 25
 	};
 
+	static const DWORD JOINT_INDICES_LOWER_BODY =
+		base::JointType_HipLeft
+		| base::JointType_HipRight
+		| base::JointType_KneeLeft
+		| base::JointType_KneeRight
+		| base::JointType_AnkleRight
+		| base::JointType_AnkleLeft
+		| base::JointType_FootLeft
+		| base::JointType_FootRight
+		| base::JointType_Neck;
+
 	enum StreamType
 	{
 		StreamType_Depth = 1 << 0,
