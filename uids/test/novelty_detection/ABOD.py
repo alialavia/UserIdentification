@@ -5,9 +5,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random
 import time
-from sklearn.ensemble import IsolationForest
+from sklearn.metrics.pairwise import pairwise_distances
+from sklearn.metrics.pairwise import *
 import csv
 from numpy import genfromtxt
+from scipy.spatial import distance as dist
 
 # path managing
 fileDir = os.path.dirname(os.path.realpath(__file__))
@@ -35,16 +37,63 @@ def load_labels(filename):
 
 class ABOD:
     data = None
+    verbose = False
     # impl. : see https://github.com/MarinYoung4596/OutlierDetection
 
     def __init__(self):
         self.data = []
 
     def train(self, data):
-        pass
+        self.data = data
 
-    def predict(self, data):
-        pass
+    def angle(self, x, y):
+        costheta = 1 - pairwise_distances(x.reshape(1, -1), y.reshape(1, -1), metric='cosine')
+        return np.arccos(costheta)
+
+    def predict(self, samples, method="mean_cosdist"):
+        if method == "angle":
+            return self.__predict_angle(samples)
+        elif method == "cosdist_var":
+            return self.__predict_cosine_dist_var(samples)
+        else:
+            return self.__predict_mean_cosdist(samples)
+
+    # ------------SAMPLE WEIGHTING--------------- #
+
+    # ------------PREDICTION METRICS--------------- #
+
+    def __predict_mean_cosdist(self, samples):
+        cos_dist = pairwise_distances(samples, self.data, metric='cosine')
+        result = np.mean(cos_dist, axis=1)
+        print len(result)
+        return result
+
+    def __predict_angle(self, samples):
+
+        dist = []
+        for x in samples:
+            angles = []
+            for y in self.data:
+                angles.append(self.angle(x,y))
+            dist.append(angles)
+
+        dist = np.array(dist)
+
+        if self.verbose:
+            print "--- Max cosine distance: {}".format(np.max(dist))
+        result = np.var(dist, axis=1)
+        if self.verbose:
+            print "--- ABOD: {}".format(result)
+        return result
+
+    def __predict_cosine_dist_var(self, samples):
+        cos_dist = pairwise_distances(samples, self.data, metric='cosine')
+        if self.verbose:
+            print "--- Max cosine distance: {}".format(np.max(cos_dist))
+        result = np.var(cos_dist, axis=1)
+        if self.verbose:
+            print "--- ABOD: {}".format(result)
+        return result
 
 
 # ================================= #
@@ -172,10 +221,33 @@ def test_detection_rate(classifiers, nr_batches=50, ds_limit=500, verbose=False,
     return (total_error_train, total_error_test, total_error_outliers, total_training_time,batch_size)
 
 
+def test_ABOD():
+
+    clf = ABOD()
+
+    emb1 = load_embeddings("embeddings_elias.pkl")
+    emb2 = load_embeddings("embeddings_matthias.pkl")
+    emb3 = load_embeddings("embeddings_matthias_big.pkl")
+    emb_lfw = load_embeddings("embeddings_lfw.pkl")
+
+
+    clf.train(emb2)
+    abod_class = clf.predict(emb2)
+
+    abod_class_2 = clf.predict(emb3)
+    abod_outliers = clf.predict(emb_lfw)
+
+    n, bins, patches = plt.hist(np.transpose(abod_class), 50, normed=1, facecolor='blue', alpha=0.75)
+    n, bins, patches = plt.hist(np.transpose(abod_class_2), 50, normed=1, facecolor='green', alpha=0.75)
+    n, bins, patches = plt.hist(np.transpose(abod_outliers), 50, normed=1, facecolor='red', alpha=0.75)
+    plt.show()
+
 # ================================= #
 #              Main
 
 if __name__ == '__main__':
+
+
 
     # select classifier
     # classifiers = [
@@ -206,5 +278,7 @@ if __name__ == '__main__':
     # test_detection_rate(classifiers, nr_batches=50, verbose=False, display=True)
     # plt.show()
 
-    test_detection_rate(classifiers, nr_batches=20)
-    plt.show()
+    # test_detection_rate(classifiers, nr_batches=20)
+    # plt.show()
+
+    test_ABOD()
