@@ -143,6 +143,26 @@ def test_bb():
     print TPL_MAX
     # print MINMAX_TEMPLATE
 
+def sample_weighting():
+
+    # 2 input samples, 3 reference class samples
+    dist = np.array([[1,2,3], [2,3,4], [1,2,3], [2,3,4]])
+    weights = np.array([0.2,0.5,0.8])
+    print np.shape(dist)
+    print np.shape(weights)
+    out = dist * weights
+    print dist
+    print out
+
+def pairwise_subtract():
+
+    # dim = 2
+    # ref cluster = 4pts
+    ref = np.array([[1,2], [3.4,5], [9,0], [2,4]])
+
+    # samples: 2
+    samples = np.array([[2,1],[4,2]])
 
 
-test_bb()
+
+pairwise_subtract()

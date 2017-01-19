@@ -2,6 +2,7 @@ from sklearn import svm
 import os
 import pickle
 import numpy as np
+import random
 import matplotlib.pyplot as plt
 import random
 import time
@@ -10,6 +11,10 @@ from sklearn.metrics.pairwise import *
 import csv
 from numpy import genfromtxt
 from scipy.spatial import distance as dist
+import sys
+import math
+import pickle
+from uids.utils.DataAnalysis import *
 
 # path managing
 fileDir = os.path.dirname(os.path.realpath(__file__))
@@ -26,6 +31,7 @@ def load_embeddings(filename):
         return np.array(embeddings)
     return None
 
+
 def load_labels(filename):
     filename = "{}/{}".format(modelDir, filename)
     # print filename
@@ -38,52 +44,165 @@ def load_labels(filename):
 class ABOD:
     data = None
     verbose = False
+    cluster_distances = False
     # impl. : see https://github.com/MarinYoung4596/OutlierDetection
 
     def __init__(self):
         self.data = []
 
+    def __calc_iters(self, knn):
+        p = 0.99  # that at least one of the sets of random samples does not include an outlier
+        u = 0.99  # probability that any selected data point is an inlier
+        N = np.log10(1-p)/np.log10(1-np.power(u, knn))
+        return N
+
     def train(self, data):
+        start = time.time()
         self.data = data
+        self.cluster_distances = pairwise_distances(data, data, metric='euclidean')
+        print "--- Classifier initialized in {}s".format("%.4f"%(time.time()-start))
 
-    def angle(self, x, y):
-        costheta = 1 - pairwise_distances(x.reshape(1, -1), y.reshape(1, -1), metric='cosine')
-        return np.arccos(costheta)
+    def find_threshold(self):
+        pass
 
-    def predict(self, samples, method="mean_cosdist"):
-        if method == "angle":
-            return self.__predict_angle(samples)
-        elif method == "cosdist_var":
-            return self.__predict_cosine_dist_var(samples)
+    def predict(self, samples):
+        start = time.time()
+        # dist_table = pairwise_distances(samples, samples, metric='euclidean')
+        abof = self.__abof_multi(samples)
+        print "--- ABOF: {} | calc time: {}s".format(["%.5f"%item for item in abof], "%.4f"%(time.time()-start))
+        return abof
+
+    def predict_approx(self, samples, knn=90, approx=False):
+        start = time.time()
+        # dist_table = pairwise_distances(samples, samples, metric='euclidean')
+        if approx is True:
+            abof = self.__abof_multi(samples, knn=knn)
         else:
-            return self.__predict_mean_cosdist(samples)
+            # multiple iterations
+            nr_iters = int(self.__calc_iters(knn))
+            print "--- {} iterations necessary".format(nr_iters)
+            vars = []
+            for i in range(0,nr_iters):
+                vars.append(self.__abof_multi(samples, knn=knn))
+            # TODO: max, mean?
+            abof = np.mean(vars, axis=0)
+        print "--- ABOF: {} | calc time: {}s".format(["%.5f"%item for item in abof], "%.4f"%(time.time()-start))
+        return abof
 
-    # ------------SAMPLE WEIGHTING--------------- #
+    def predict_single(self, sample):
+        start = time.time()
+        # dist_table = pairwise_distances(samples, samples, metric='euclidean')
+        abof = self.__abof_single(self.data, sample)
+        print "--- ABOF: {} | calc time: {}s".format(abof, "%.4f"%(time.time()-start))
+        return abof
 
     # ------------PREDICTION METRICS--------------- #
 
-    def __predict_mean_cosdist(self, samples):
+    def __abof_multi(self, samples, knn=None):
+        """
+        calculate the ABOF of A = (x1, x2, ..., xn)
+        pt_list = self.data (cluster)
+        """
+
+        i = 0
+        pt_list = self.data
+
+        if knn is not None and knn < len(self.data):
+            pt_list = random.sample(pt_list, knn)
+
+        dist_lookup = pairwise_distances(samples, pt_list, metric='euclidean')
+
+        # print np.shape(dist_lookup[0])
+        factors = []
+        for i_sample, A in enumerate(samples):
+            varList = []
+            for i in range(len(pt_list)):
+                B = pt_list[i]
+                AB = dist_lookup[i_sample][i]
+                j = 0
+                for j in range(i + 1):
+                    if j == i:  # ensure B != C
+                        continue
+
+                    C = pt_list[j]
+                    AC = dist_lookup[i_sample][j]
+                    angle_BAC = self.__angleBAC(A, B, C, AB, AC)
+                    # compute each element of variance list
+                    try:
+                        tmp = angle_BAC / float(math.pow(AB * AC, 2))
+                    except ZeroDivisionError:
+                        sys.exit('ERROR\tABOF\tfloat division by zero! Trying to predict training point?')
+                    varList.append(tmp)
+            factors.append(np.var(varList))
+        return factors
+
+    def __abof_single(self, pt_list, A):
+        """
+        calculate the ABOF of A = (x1, x2, ..., xn)
+        pt_list = self.data (cluster)
+        """
+        i = 0
+        dist_lookup = pairwise_distances(A.reshape(1,-1) , pt_list, metric='euclidean')
+        dist_lookup = dist_lookup[0] # single point A
+        # print np.shape(dist_lookup[0])
+        varList = []
+        for i in range(len(pt_list)):
+            B = pt_list[i]
+            AB = dist_lookup[i]
+            j = 0
+            for j in range(i + 1):
+                if j == i:  # ensure B != C
+                    continue
+
+                C = pt_list[j]
+                AC = dist_lookup[j]
+                angle_BAC = self.__angleBAC(A, B, C, AB, AC)
+                # compute each element of variance list
+                try:
+                    tmp = angle_BAC / float(math.pow(AB * AC, 2))
+                except ZeroDivisionError:
+                    sys.exit('ERROR\tABOF\tfloat division by zero! Trying to predict training point?')
+                varList.append(tmp)
+
+        variance = np.var(varList)
+        return variance
+
+    def __angleBAC(self, A, B, C, AB, AC):				# AB AC mold
+        """
+        calculate <AB, AC>
+        """
+        vector_AB = B - A						# vector_AB = (x1, x2, ..., xn)
+        vector_AC = C - A
+        mul = vector_AB * vector_AC				# mul = (x1y1, x2y2, ..., xnyn)
+        dotProduct = mul.sum()					# dotProduct = x1y1 + x2y2 + ... + xnyn
+
+        try:
+            cos_AB_AC_ = dotProduct / (AB * AC) # cos<AB, AC>
+        except ZeroDivisionError:
+            sys.exit('ERROR\tangleBAC\tdistance can not be zero!')
+
+        if math.fabs(cos_AB_AC_) > 1:
+            print 'A\n', A
+            print 'B\n', B
+            print 'C\n', C
+            print 'AB = %f, AC = %f' % (AB, AC)
+            print 'AB * AC = ', dotProduct
+            print '|AB| * |AC| = ', AB * AC
+            sys.exit('ERROR\tangleBAC\tmath domain ERROR, |cos<AB, AC>| <= 1')
+        angle = float(math.acos(cos_AB_AC_))	# <AB, AC> = arccos(cos<AB, AC>)
+        return angle
+
+    def __predict_mean_cosdist(self, samples, weighted=False):
         cos_dist = pairwise_distances(samples, self.data, metric='cosine')
-        result = np.mean(cos_dist, axis=1)
-        print len(result)
-        return result
-
-    def __predict_angle(self, samples):
-
-        dist = []
-        for x in samples:
-            angles = []
-            for y in self.data:
-                angles.append(self.angle(x,y))
-            dist.append(angles)
-
-        dist = np.array(dist)
-
-        if self.verbose:
-            print "--- Max cosine distance: {}".format(np.max(dist))
-        result = np.var(dist, axis=1)
-        if self.verbose:
-            print "--- ABOD: {}".format(result)
+        if weighted:
+            print np.shape(cos_dist)
+            print np.shape(self.weights)
+            # apply weight (total weight=1)
+            cos_dist = cos_dist * self.weights
+            # sum sample influence
+            result = np.sum(cos_dist, axis=1)
+        else:
+            result = np.mean(cos_dist, axis=1)
         return result
 
     def __predict_cosine_dist_var(self, samples):
@@ -95,131 +214,28 @@ class ABOD:
             print "--- ABOD: {}".format(result)
         return result
 
+    def __calc_weightsSVM(self, data):
+        clf = svm.OneClassSVM(nu=0.01, gamma=0.15)
+        clf.fit(data)
+        print "---------decision"
+        dec = clf.decision_function(data)
+        print np.shape(dec)
+        print np.shape(dec[:,0])
+        print "---------decision"
+        dec = dec[:,0]
+
+        # 1 = sum(scale * weight_i) = scale * sum(weight_i)
+        # scale = 1/sum(weight_i)
+
+        # normalize weights
+        dec = dec/np.sum(dec)
+
+        # return dec
+        return dec
+
 
 # ================================= #
 #        Test Functions
-
-
-def test_detection_rate(classifiers, nr_batches=50, ds_limit=500, verbose=False, init_shuffle=True, display=True):
-    """
-    user plt.show() at the end
-    """
-    emb1 = load_embeddings("embeddings_elias.pkl")
-    emb2 = load_embeddings("embeddings_matthias_big.pkl")
-    emb3 = load_embeddings("embeddings_laia.pkl")
-    emb_lfw = load_embeddings("embeddings_lfw.pkl")
-
-
-    # filter blurred images
-    l = load_labels('blur_labels_matthias_big.csv')
-    l = l[:,1]
-    mask = l==0
-    emb2 = emb2[mask]
-
-
-    # select ds
-    target = emb2
-
-    # prepare ds
-    np.random.shuffle(target)
-    np.random.shuffle(emb_lfw)
-
-
-    while len(target) % nr_batches != 0:
-        target = target[:-1]
-    batch_size = len(target)/nr_batches
-
-    # split into train and test sets
-    split_set = np.array_split(target, nr_batches)
-
-    # select test set
-    X_test = split_set[-1]
-
-    # outlier dataset
-    X_outliers = emb_lfw
-
-    # plotting
-    total_error_train = [None] * len(classifiers)
-    total_error_test = [None] * len(classifiers)
-    total_error_outliers = [None] * len(classifiers)
-    total_training_time = [None] * len(classifiers)
-
-    for i in range(1, nr_batches):
-        if verbose:
-            print "=====================================================\n"
-            print "        Training Round {}\n".format(i)
-            print "=====================================================\n"
-
-        # select training set
-        X_train = np.concatenate((split_set[0:i]))
-
-        # shuffle
-        if init_shuffle is True:
-            random.shuffle(X_train)
-
-        j = 0
-        for clf_name, clf in classifiers:
-
-            # fit classifier
-            start = time.time()
-            clf.fit(X_train)
-
-            if i == 1:
-                total_error_train[j] = []
-                total_error_test[j] = []
-                total_error_outliers[j] = []
-                total_training_time[j] = []
-
-            total_training_time[j].append(float(time.time()-start)*1000)
-
-            # evaluate
-            y_pred_train = clf.predict(X_train)
-            y_pred_test = clf.predict(X_test)
-            y_pred_outliers = clf.predict(X_outliers)
-            n_error_train = y_pred_train[y_pred_train == -1].size
-            n_error_test = y_pred_test[y_pred_test == -1].size
-            n_error_outliers = y_pred_outliers[y_pred_outliers == 1].size
-
-            total_error_train[j].append(n_error_train / float(len(X_train)) * 100.0)
-            total_error_test[j].append(n_error_test / float(len(X_test)) * 100.0)
-            total_error_outliers[j].append(n_error_outliers / float(len(X_outliers)) * 100.0)
-
-            j += 1
-
-            # display results
-            if verbose:
-                print "error train: {}/{}, error novel regular: {}/{}, error novel abnormal: {}/{}" \
-                    .format(
-                    n_error_train, len(X_train),
-                    n_error_test, len(X_test),
-                    n_error_outliers, len(X_outliers))
-                print "error train: {:.2f}%, error novel regular: {:.2f}%, error novel abnormal: {:.2f}%" \
-                    .format(
-                    n_error_train / float(len(X_train)) * 100.0,
-                    n_error_test / float(len(X_test)) * 100.0,
-                    n_error_outliers / float(len(X_outliers)) * 100.0)
-
-    # plot
-    if display is True:
-        j = 0
-        for clf_name, clf in classifiers:
-            # extract error
-            fig = plt.figure()
-
-            x_axis_values = range(1 * batch_size, nr_batches * batch_size, batch_size)
-
-            plt.plot(x_axis_values, total_error_train[j], label="Training data")
-            plt.plot(x_axis_values, total_error_test[j], label="Test data")
-            plt.plot(x_axis_values, total_error_outliers[j], label="Outlier data")
-            # plt.plot(range(0, nr_batches - 1), training_time, label="Training Time [ms]")
-            plt.legend()
-            plt.xlabel('Training Set Size')
-            plt.ylabel('Detection Error Rate')
-            plt.title('Learning Rate {}'.format(clf_name))
-            j += 1
-
-    return (total_error_train, total_error_test, total_error_outliers, total_training_time,batch_size)
-
 
 def test_ABOD():
 
@@ -228,57 +244,41 @@ def test_ABOD():
     emb1 = load_embeddings("embeddings_elias.pkl")
     emb2 = load_embeddings("embeddings_matthias.pkl")
     emb3 = load_embeddings("embeddings_matthias_big.pkl")
+    emb4 = load_embeddings("embeddings_laia.pkl")
     emb_lfw = load_embeddings("embeddings_lfw.pkl")
 
-
     clf.train(emb2)
-    abod_class = clf.predict(emb2)
 
-    abod_class_2 = clf.predict(emb3)
-    abod_outliers = clf.predict(emb_lfw)
+    # class_sample = emb3[100,:]
+    # outlier_sample = emb1[30,:]
 
-    n, bins, patches = plt.hist(np.transpose(abod_class), 50, normed=1, facecolor='blue', alpha=0.75)
-    n, bins, patches = plt.hist(np.transpose(abod_class_2), 50, normed=1, facecolor='green', alpha=0.75)
-    n, bins, patches = plt.hist(np.transpose(abod_outliers), 50, normed=1, facecolor='red', alpha=0.75)
-    plt.show()
+    abod_class = clf.predict(emb3)
+    abod_outliers = clf.predict(random.sample(emb_lfw, 1000))
+
+    thresh = 0.2
+    print "--- Innliers recognized as outliers: {}/{}".format(len(abod_class[abod_class>thresh]), len(abod_class))
+    print "--- Outliers recognized as inliers: {}/{}".format(len(abod_outliers[abod_outliers<thresh]), len(abod_outliers))
+
+
+    # s1 = random.sample(emb_lfw,200)
+    # s2 = random.sample(emb3,200)
+    #
+    # abod_outliers = clf.predict_approx(s1)
+    # abod_inliers = clf.predict_approx(s2)
+    # n, bins, patches = plt.hist(abod_inliers, 50, normed=1, facecolor='green', log=True, alpha=0.75)
+    # n, bins, patches = plt.hist(abod_outliers, 50, normed=1, facecolor='red', log=True, alpha=0.75)
+    # plt.show()
+
+    # clf.predict(class_sample)
+    # clf.predict(outlier_sample)
+
+    # # clf.plot_angle_distr()
+    # abod_class = clf.predict(emb3)
+    # abod_outliers = clf.predict(emb_lfw)
+
 
 # ================================= #
 #              Main
 
 if __name__ == '__main__':
-
-
-
-    # select classifier
-    # classifiers = [
-    #     ('Isolation Forest (0.5% contamination)', IsolationForest(random_state=np.random.RandomState(42), contamination=0.005)),
-    #     ('Isolation Forest (1% contamination)', IsolationForest(random_state=np.random.RandomState(42), contamination=0.01)),
-    #     ('Isolation Forest (10% contamination)', IsolationForest(random_state=np.random.RandomState(42), contamination=0.1)),
-    #     # ('Isolation Forest (15% contamination)', IsolationForest(random_state=np.random.RandomState(42), contamination=0.15)),
-    #     ('One-Class SVM (RBF)', svm.OneClassSVM(nu=0.1, kernel="rbf", gamma=0.15)),
-    #     ('One-Class SVM (Linear)', svm.OneClassSVM(nu=0.1, gamma=0.15))
-    # ]
-
-    # perform test
-
-
-    classifiers = [
-        # ('Isolation Forest (0.5% contamination)', IsolationForest(random_state=np.random.RandomState(42), contamination=0.005)),
-        # ('Isolation Forest (1% contamination)', IsolationForest(random_state=np.random.RandomState(42), contamination=0.01)),
-        # ('Isolation Forest (5% contamination)', IsolationForest(random_state=np.random.RandomState(42), contamination=0.05)),
-        # ('Isolation Forest (10% contamination)', IsolationForest(random_state=np.random.RandomState(42), contamination=0.1))
-        # # ('Isolation Forest (15% contamination)', IsolationForest(random_state=np.random.RandomState(42), contamination=0.15)),
-        # ('One-Class SVM (RBF)', svm.OneClassSVM(nu=0.1, kernel="rbf", gamma=0.15)),
-        ('One-Class SVM (Linear)', svm.OneClassSVM(nu=0.01, gamma=0.15)),
-        # ('One-Class SVM (Linear)', svm.OneClassSVM(nu=0.2, gamma=0.15)),
-        # ('One-Class SVM (Linear)', svm.OneClassSVM(nu=0.3, gamma=0.15)),
-        # ('One-Class SVM (Linear)', svm.OneClassSVM(nu=0.4, gamma=0.15))
-    ]
-
-    # test_detection_rate(classifiers, nr_batches=50, verbose=False, display=True)
-    # plt.show()
-
-    # test_detection_rate(classifiers, nr_batches=20)
-    # plt.show()
-
     test_ABOD()
