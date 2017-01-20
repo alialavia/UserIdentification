@@ -112,13 +112,8 @@ int main(int argc, char** argv)
 				if (true) {
 					try
 					{
-						dlib::rectangle bb;
 						cv::Mat aligned;
-						if (
-							dlib_aligner.GetLargestFaceBoundingBox(face_snap, bb) && 
-							dlib_aligner.AlignImage(200, face_snap, aligned, bb)
-							) {
-							cv::Rect2f bb_cv(cv::Point2f(bb.top(), bb.left()), cv::Point2f(bb.bottom(), bb.right()));
+						if (dlib_aligner.AlignImage(200, face_snap, aligned)) {
 							// show image
 							//cv::imshow("Face", aligned(bb_cv));
 							cv::imshow("Face", aligned);

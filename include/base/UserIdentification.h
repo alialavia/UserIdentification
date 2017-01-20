@@ -9,6 +9,8 @@
 #include <string>
 #include <cstdlib>
 
+#include <windows.h>
+
 // ---------------------------------------------------------------
 //		constants
 // ---------------------------------------------------------------
@@ -57,14 +59,14 @@ namespace base
 
 	static const DWORD JOINT_INDICES_LOWER_BODY =
 		base::JointType_HipLeft
-		| base::JointType_HipRight
-		| base::JointType_KneeLeft
-		| base::JointType_KneeRight
-		| base::JointType_AnkleRight
-		| base::JointType_AnkleLeft
-		| base::JointType_FootLeft
-		| base::JointType_FootRight
-		| base::JointType_Neck;
+		+ base::JointType_HipRight
+		+ base::JointType_KneeLeft
+		+ base::JointType_KneeRight
+		+ base::JointType_AnkleRight
+		+ base::JointType_AnkleLeft
+		+ base::JointType_FootLeft
+		+ base::JointType_FootRight
+		+ base::JointType_Neck;
 
 	enum StreamType
 	{

@@ -9,6 +9,7 @@ SET(TARGET_H
 SET(TARGET_EXTERNAL_LIBRARIES
 	Tracking
 	Recognition
+	Features
 )
 
 SETUP_APPLICATION(torso_detection Tests)
@@ -24,6 +25,7 @@ SET(TARGET_H
 SET(TARGET_EXTERNAL_LIBRARIES
 	Tracking
 	Recognition
+	Features
 )
 
 SETUP_APPLICATION(lower_body_detection Tests)

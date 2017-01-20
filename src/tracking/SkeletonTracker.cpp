@@ -251,7 +251,7 @@ int SkeletonTracker::GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& boundin
 	std::vector<int> u_ids;
 	GetFaceBoundingBoxes(bounding_boxes, u_ids, space, box_size);
 	user_ids = u_ids;
-	float xmin, xmax, ymin, ymax, width, height;
+	float xmin, ymin, width, height;
 
 	int srcWidth, srcHeight;
 	if ((base::ImageSpace_Color & space) == base::ImageSpace_Color)

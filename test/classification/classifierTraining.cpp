@@ -157,8 +157,7 @@ int main(int argc, char** argv)
 				// get face bounding boxes
 				std::vector<cv::Rect2f> bounding_boxes;
 				std::vector<int> user_scene_ids;
-				st.GetFaceBoundingBoxesRobust(bounding_boxes, base::ImageSpace_Color);
-				st.GetUserSceneIDs(user_scene_ids);
+				st.GetFaceBoundingBoxesRobust(bounding_boxes, user_scene_ids, base::ImageSpace_Color);
 
 				if (bounding_boxes.size() > 0)
 				{
@@ -232,8 +231,7 @@ int main(int argc, char** argv)
 				// get face bounding boxes
 				std::vector<cv::Rect2f> bounding_boxes;
 				std::vector<int> user_scene_ids;
-				st.GetFaceBoundingBoxesRobust(bounding_boxes, base::ImageSpace_Color);
-				st.GetUserSceneIDs(user_scene_ids);
+				st.GetFaceBoundingBoxesRobust(bounding_boxes, user_scene_ids, base::ImageSpace_Color);
 
 				if (bounding_boxes.size() > 0)
 				{
@@ -293,9 +291,7 @@ int main(int argc, char** argv)
 				// get face bounding boxes
 				std::vector<cv::Rect2f> bounding_boxes;
 				std::vector<int> user_scene_ids;
-				st.GetFaceBoundingBoxesRobust(bounding_boxes, base::ImageSpace_Color);
-				st.GetUserSceneIDs(user_scene_ids);
-
+				st.GetFaceBoundingBoxesRobust(bounding_boxes, user_scene_ids, base::ImageSpace_Color);
 
 				if (bounding_boxes.size() > 0)
 				{
