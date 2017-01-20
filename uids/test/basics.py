@@ -100,6 +100,37 @@ def test_dict_reduct():
     # or wrong class determined = not target class selected
 
 
+def test_cont_samples(predictions, target_class):
+    nr_cont_samples = 0
+    for class_id, col in predictions.iteritems():
+        nr_dects = len(col[col > 0])
+        # if wrongly predicted: class is -1 or w
+        nr_samples = len(col)
+        if class_id == target_class:
+            nr_cont_samples += (nr_samples - nr_dects)
+        else:
+            nr_cont_samples += nr_dects
+    return nr_cont_samples
+
+
+def test_train_error():
+    # predictions = {2:np.array([-1,-1,-1,1,1,-1,-1]), 1:np.array([-1,-1,-1,-1,-1,-1,-1])}
+    # predictions = {2:np.array([-1,-1,-1,1,1,-1,-1])}
+    # print test_cont_samples(predictions)
+    classifiers = [('a',1), ('b',2), ('c',3)]
+    nr_batches = 4
+    total_error_train = [None] * len(classifiers)
+    # total_error_train[classifier_nr][batch_nr]
+    for i in range(1, nr_batches):
+        j = 0
+        for clf_name, clf in classifiers:
+            if i == 1:
+                total_error_train[j] = []
+            total_error_train[j].append(2)
+            j += 1
+        print total_error_train
+
+
 def test_bb():
     TEMPLATE = np.float32([
         (0.0792396913815, 0.339223741112), (0.0829219487236, 0.456955367943),
@@ -143,6 +174,7 @@ def test_bb():
     print TPL_MAX
     # print MINMAX_TEMPLATE
 
+
 def sample_weighting():
 
     # 2 input samples, 3 reference class samples
@@ -154,6 +186,7 @@ def sample_weighting():
     print dist
     print out
 
+
 def pairwise_subtract():
 
     # dim = 2
@@ -162,7 +195,6 @@ def pairwise_subtract():
 
     # samples: 2
     samples = np.array([[2,1],[4,2]])
-
 
 
 pairwise_subtract()
