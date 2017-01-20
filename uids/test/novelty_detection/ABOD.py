@@ -46,6 +46,8 @@ class ABOD:
     verbose = False
     cluster_distances = False
     # impl. : see https://github.com/MarinYoung4596/OutlierDetection
+    basis = None
+    mean = None
 
     def __init__(self):
         self.data = []
@@ -56,10 +58,23 @@ class ABOD:
         N = np.log10(1-p)/np.log10(1-np.power(u, knn))
         return N
 
-    def train(self, data):
+    def train(self, data, dim_reduction=True):
         start = time.time()
-        self.data = data
-        self.cluster_distances = pairwise_distances(data, data, metric='euclidean')
+
+        if dim_reduction is True:
+            # ExtractSubspace
+            self.basis, self.mean = ExtractSubspace(data, 0.999)
+            print "--- reduced dimension to: {}".format(np.size(self.basis, 1))
+
+            # project data onto subspace
+            self.data = ProjectOntoSubspace(data, self.mean, self.basis)
+        else:
+            self.basis = None
+            self.mean = None
+            self.data = data
+
+        # calculate intra-cluster distances
+        self.cluster_distances = pairwise_distances(self.data, self.data, metric='euclidean')
         print "--- Classifier initialized in {}s".format("%.4f"%(time.time()-start))
 
     def find_threshold(self):
@@ -74,6 +89,11 @@ class ABOD:
 
     def predict_approx(self, samples, knn=90, approx=False):
         start = time.time()
+
+        # project onto subspace
+        if self.basis is not None:
+            samples = ProjectOntoSubspace(samples, self.mean, self.basis)
+
         # dist_table = pairwise_distances(samples, samples, metric='euclidean')
         if approx is True:
             abof = self.__abof_multi(samples, knn=knn)
@@ -98,7 +118,7 @@ class ABOD:
 
     # ------------PREDICTION METRICS--------------- #
 
-    def __abof_multi(self, samples, knn=None):
+    def __abof_multi(self, samples, knn=None, cosine_weighting=True):
         """
         calculate the ABOF of A = (x1, x2, ..., xn)
         pt_list = self.data (cluster)
@@ -111,6 +131,9 @@ class ABOD:
             pt_list = random.sample(pt_list, knn)
 
         dist_lookup = pairwise_distances(samples, pt_list, metric='euclidean')
+
+        if cosine_weighting:
+            cos_dist_lookup = pairwise_distances(samples, pt_list, metric='cosine')
 
         # print np.shape(dist_lookup[0])
         factors = []
@@ -129,7 +152,11 @@ class ABOD:
                     angle_BAC = self.__angleBAC(A, B, C, AB, AC)
                     # compute each element of variance list
                     try:
-                        tmp = angle_BAC / float(math.pow(AB * AC, 2))
+                        # apply weighting
+                        if cosine_weighting:
+                            tmp = angle_BAC / float(math.pow((2.0-cos_dist_lookup[i_sample][i]) * (2.0-cos_dist_lookup[i_sample][j]), 2))
+                        else:
+                            tmp = angle_BAC / float(math.pow(AB * AC, 2))
                     except ZeroDivisionError:
                         sys.exit('ERROR\tABOF\tfloat division by zero! Trying to predict training point?')
                     varList.append(tmp)
@@ -245,6 +272,7 @@ def test_ABOD():
     emb2 = load_embeddings("embeddings_matthias.pkl")
     emb3 = load_embeddings("embeddings_matthias_big.pkl")
     emb4 = load_embeddings("embeddings_laia.pkl")
+    emb5 = load_embeddings("embeddings_christian.pkl")
     emb_lfw = load_embeddings("embeddings_lfw.pkl")
 
     clf.train(emb2)
@@ -252,29 +280,31 @@ def test_ABOD():
     # class_sample = emb3[100,:]
     # outlier_sample = emb1[30,:]
 
-    abod_class = clf.predict(emb3)
-    abod_outliers = clf.predict(random.sample(emb_lfw, 1000))
+    abod_class = clf.predict_approx(emb3)
 
-    thresh = 0.2
-    print "--- Innliers recognized as outliers: {}/{}".format(len(abod_class[abod_class>thresh]), len(abod_class))
-    print "--- Outliers recognized as inliers: {}/{}".format(len(abod_outliers[abod_outliers<thresh]), len(abod_outliers))
+    abod_outliers = clf.predict_approx(emb5)
+    step = 0.0001
+    start = 0.005
+    stop = 0.6
+    il = []
+    ul = []
+    x = np.arange(start, stop, step)
+    for thresh in x:
+        il.append(float(len(abod_class[abod_class<thresh]))/len(abod_class)*100.0)
+        ul.append(float(len(abod_outliers[abod_outliers>thresh]))/len(abod_outliers)*100.0)
 
+    plt.plot(x,il,color='green', label="Inliers")
+    plt.plot(x,ul,color='red', label="Outliers")
+    plt.title("Classification Error")
+    plt.xlabel("Threshold")
+    plt.ylabel("Error [%]")
+    plt.legend()
+    plt.show()
 
-    # s1 = random.sample(emb_lfw,200)
-    # s2 = random.sample(emb3,200)
     #
-    # abod_outliers = clf.predict_approx(s1)
-    # abod_inliers = clf.predict_approx(s2)
-    # n, bins, patches = plt.hist(abod_inliers, 50, normed=1, facecolor='green', log=True, alpha=0.75)
-    # n, bins, patches = plt.hist(abod_outliers, 50, normed=1, facecolor='red', log=True, alpha=0.75)
-    # plt.show()
-
-    # clf.predict(class_sample)
-    # clf.predict(outlier_sample)
-
-    # # clf.plot_angle_distr()
-    # abod_class = clf.predict(emb3)
-    # abod_outliers = clf.predict(emb_lfw)
+    thresh = 0.2
+    print "error il: {}/{} : {}%".format(len(abod_class[abod_class<0.2]), len(abod_class),float(len(abod_class[abod_class<0.2]))/len(abod_class)*100.0)
+    print "error ul: {}/{} : {}%".format(len(abod_outliers[abod_outliers>0.2]), len(abod_outliers),float(len(abod_outliers[abod_outliers>0.2]))/len(abod_outliers)*100.0)
 
 
 # ================================= #
