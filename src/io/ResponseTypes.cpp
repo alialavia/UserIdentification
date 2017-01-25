@@ -58,7 +58,7 @@ std::type_index ResponseFactory::AllocateAndLoad(NetworkResponseType type_id, io
 	{
 		ErrorResponse* resp = nullptr;
 		resp = new ErrorResponse(conn);
-		resp->mMessage = "Invalid response type id";
+		resp->mMessage = "Invalid response type id: "+std::to_string(type_id);
 		ptr = resp;
 		return typeid(ErrorResponse);
 	}

@@ -249,7 +249,16 @@ namespace io {
 				mImages.push_back((*images[i]).clone());
 			}
 		}
-
+		EmbeddingCollectionByIDAligned(
+			io::TCPClient* server_conn,
+			std::vector<cv::Mat> images,
+			int user_id
+		) :
+			NetworkRequest(server_conn, NetworkRequest_EmbeddingCollectionByIDAligned),
+			mUserID(user_id)
+		{
+			mImages = images;
+		}
 	protected:
 
 		// submit specific payload

@@ -116,13 +116,7 @@ bool TCPClient::OpenSocket()
 std::string TCPClient::ReceiveStringWithVarLength()
 {
 	// receive char array length
-	uint32_t val;	// 32bit
-	recv(mSocketID, (char*)&val, 4, 0);
-	int nr_bytes;
-	val = ntohl(val);
-	memcpy(&nr_bytes, &val, sizeof(int));
-
-	// -----------
+	int nr_bytes = Receive32bit<int>();
 
 	char * buffer = new char[nr_bytes];
 	std::string receivedString = "";
