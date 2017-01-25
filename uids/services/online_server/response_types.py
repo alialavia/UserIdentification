@@ -16,6 +16,7 @@ class OK:
         # send back message
         server.send_string(conn, msg)
 
+
 class Identification:
 
     def __init__(self, server, conn, user_id, user_name):
@@ -30,6 +31,7 @@ class Identification:
         # send back nice name
         server.send_string(conn, user_name)
 
+
 class Error:
 
     def __init__(self, server, conn, error_msg="An error occurred during processing of the request"):
@@ -40,6 +42,7 @@ class Error:
 
         # send back error message
         server.send_string(conn, error_msg)
+
 
 class Embedding:
 

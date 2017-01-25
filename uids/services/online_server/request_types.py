@@ -1,8 +1,10 @@
 #!/usr/bin/python
 import response_types as r
+from uids.utils.Logger import Logger as log
 # config
 from config import ROUTING
 r.ROUTING = ROUTING
+
 
 class ImageIdentification:
 
@@ -26,7 +28,7 @@ class ImageIdentification:
             return
         elif user_id < 0:
             # unknown user
-            print "--- creating new user"
+            log.info('db', "Creating new user")
             user_id = server.user_db.create_new_user("a_user")
             server.user_db.print_users()
             # add classifier
@@ -38,7 +40,7 @@ class ImageIdentification:
         if user_name is None:
             user_name = "unnamed"
 
-        print "--- User ID: " + str(user_id) + " | name: " + user_name
+        log.info('server', "User identification complete: {} [ID], {} [Username]".format(user_id, user_name))
 
         r.Identification(server, conn, int(user_id), user_name)
 
@@ -49,9 +51,7 @@ class ImageIdentificationUpdate:
         # receive user id
         user_id = server.receive_uint(conn)
 
-        print "--------ImageIdentificationUpdate-------------"
-        print "    USER ID: " + str(user_id)
-        print "----------------------------------------------"
+        log.info('server', 'User Update for ID {}'.format(user_id))
 
         # receive images
         images = server.receive_image_batch_squared_same_size(conn)
@@ -92,6 +92,7 @@ class ImageIdentificationAligned:
         elif user_id < 0:
             # unknown user
             print "--- creating new user"
+            log.info('db', "Creating new User")
             user_id = server.user_db.create_new_user("a_user")
             server.user_db.print_users()
             # add classifier
@@ -103,7 +104,7 @@ class ImageIdentificationAligned:
         if user_name is None:
             user_name = "unnamed"
 
-        print "--- User ID: " + str(user_id) + " | name: " + user_name
+        log.info('server', "User identification complete: {} [ID], {} [Username]".format(user_id, user_name))
 
         r.Identification(server, conn, int(user_id), user_name)
 
@@ -114,9 +115,7 @@ class ImageIdentificationUpdateAligned:
         # receive user id
         user_id = server.receive_uint(conn)
 
-        print "--------ImageIdentificationUpdateAligned------"
-        print "    USER ID: " + str(user_id)
-        print "----------------------------------------------"
+        log.info('server', 'User Update for ID {}'.format(user_id))
 
         # receive images
         images = server.receive_image_batch_squared_same_size(conn)
@@ -127,6 +126,8 @@ class ImageIdentificationUpdateAligned:
         if not embeddings:
             r.Error(server, conn, "Could not generate face embeddings.")
             return
+
+        log.info('cl', "Start to process stream data...")
 
         # submit data
         server.classifier.process_labeled_stream_data(user_id, embeddings)
@@ -147,7 +148,8 @@ class SaveDatabase:
 class ImageAlignment:
 
     def __init__(self, server, conn):
-        print "--------ImageAlignment-------------"
+
+        log.info('server', "Image alignment")
 
         # receive image
         img = server.receive_rgb_image_squared(conn)

@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-
 import time
 import os
 import pickle
 import numpy as np
+from uids.utils.Logger import Logger as log
 
 # path managing
 fileDir = os.path.dirname(os.path.realpath(__file__))
@@ -26,10 +26,10 @@ class UserDB:
 
     def __init__(self):
         start = time.time()
-        print "--- loading user database..."
         if self.load() is False:
-            print "    Not database exists yet. Initializing new one..."
-        print("--- database initialization took {} seconds".format(time.time() - start))
+            log.info('db', "No database exists yet. Created new one...")
+        else:
+            log.info('db', "Database initialization took {} seconds".format( "%.5f" % (time.time() - start)))
 
     #  ----------- DESCRIPTOR TOOLS
     def add_samples(self, user_id, new_samples):
@@ -94,7 +94,7 @@ class UserDB:
 
     def save(self):
         filename = "{}/userdb_{}.pkl".format(DBDir, self.version_name)
-        print("--- Saving database to '{}'".format(filename))
+        log.info('db', "Saving database to '{}'".format(filename))
         with open(filename, 'wb') as f:
             pickle.dump((
                 self.version_name,
@@ -107,13 +107,13 @@ class UserDB:
     # ----------- DISPLAY
     def print_users(self):
         if len(self.user_list) == 0:
-            print "--- No users found in the database"
-
-        print "--- Current users:"
-        for user_id, name in self.user_list.iteritems():
-            print "     User: ID(" + str(user_id) + "): " + name
+            log.info('db', "No users found in the database")
+        else:
+            log.info('db', "Current Users:")
+            for user_id, name in self.user_list.iteritems():
+                log.info('db', "     {} [ID] - {} [username]".format(user_id, name))
 
     def print_embedding_status(self):
-        print "--- Current embeddings:"
+        log.info('db', "Current embeddings:")
         for user_id, embeddings in self.class_samples.iteritems():
-            print "     User" + str(user_id) + ": " + str(len(embeddings)) + " representations"
+            log.info('db', "     User" + str(user_id) + ": " + str(len(embeddings)) + " representations")

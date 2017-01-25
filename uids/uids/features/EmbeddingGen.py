@@ -4,6 +4,7 @@ import time
 import openface
 import openface.helper
 from openface.data import iterImgs
+from uids.utils.Logger import Logger as log
 
 # path managing
 fileDir = os.path.dirname(os.path.realpath(__file__))
@@ -32,12 +33,12 @@ class EmbeddingGen:
 
     def __init__(self):
         start = time.time()
-        print "--- EmbeddingGen: loading models..."
+        log.info('cnn', "EmbeddingGen: loading models...")
         # load neural net
         self.neural_net = openface.TorchNeuralNet(self.networkModel, imgDim=self.size, cuda=self.cuda)
         # load dlib model
         self.dlib_aligner = openface.AlignDlib(dlibModelDir + "/" + self.dlibFacePredictor)
-        print("--- EmbeddingGen: model loading took {} seconds".format(time.time() - start))
+        log.info('cnn', "EmbeddingGen: model loading took {} seconds".format("%.3f" % (time.time() - start)))
 
     #  ----------- EMBEDDING GENERATION
     def get_embeddings(self, input_images, align=True):
@@ -58,9 +59,9 @@ class EmbeddingGen:
             # print status
             if self.verbose is True:
                 if len(images_normalized) > 0:
-                    print("--- Alignment took {} seconds - {}/{} images suitable".format(time.time() - start, len(images_normalized), len(input_images)))
+                    log.debug('cnn', "Alignment took {} seconds - {}/{} images suitable".format(time.time() - start, len(images_normalized), len(input_images)))
                 else:
-                    print "--- No suitable images (no faces detected)"
+                    log.warning("No suitable images (no faces detected)")
                     return embeddings
         else:
             images_normalized = input_images
@@ -71,8 +72,8 @@ class EmbeddingGen:
             rep = self.neural_net.forward(img)
             embeddings.append(rep)
 
-        if self.verbose:
-            print("--- Neural network forward pass took {} seconds.".format(time.time() - start))
+        # if self.verbose:
+        #     print("--- Neural network forward pass took {} seconds.".format(time.time() - start))
 
         return embeddings
 

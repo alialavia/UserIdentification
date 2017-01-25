@@ -5,6 +5,7 @@ import time
 from Queue import Queue
 from threading import Thread, Lock
 from sklearn.preprocessing import LabelEncoder
+from uids.utils.Logger import Logger as log
 
 
 class OneClassDetectorTree:
@@ -269,7 +270,7 @@ class OneClassDBDetectorTree:
     __status = 1
     __nr_classes = 0
     __max_model_outliers = 1    # after x number of outlier features (per class), classifiers are retrained
-    __verbose = True
+    __verbose = False
 
     STATUS_CLEAN = {
         0: 'shutdown',
@@ -306,12 +307,9 @@ class OneClassDBDetectorTree:
         :return: True/False - success
         """
 
-        print "________init_classifier______________"
-        print "    USER ID: " + str(class_id)
-        print "_________________________________________________"
-
+        log.info('cl', "Initializing new Classifier for user ID {}".format(class_id))
         if class_id in self.__classifiers:
-            print "====================== ILLEGAL RETRAINING"
+            log.severe("Illegal reinitialization of classifier")
             return False
         self.__classifiers[class_id] = self.__generate_classifier()
         self.__retraining_counter[class_id] = 0
@@ -388,10 +386,7 @@ class OneClassDBDetectorTree:
         :return: -
         """
 
-        print "________process_labeled_stream_data______________"
-        print "    USER ID: " + str(class_id)
-        print "_________________________________________________"
-
+        log.info('cl', "Processing labeled stream data for user ID {}".format(class_id))
         class_id = int(class_id)
 
         if class_id not in self.__retraining_counter:
@@ -405,13 +400,12 @@ class OneClassDBDetectorTree:
         predictions = self.__predict(samples)
         self.__retraining_counter[class_id] += self.__contradictive_predictions(predictions, class_id)
 
-        print "predictions:"
-        print predictions
-        print "contradictive samples accumulated: " + str(self.__retraining_counter[class_id])
+        log.info('cl', "predictions: {}".format(predictions))
+        log.info('cl', "contradictive samples accumulated: " + str(self.__retraining_counter[class_id]))
 
         # trigger retraining
         if self.__retraining_counter[class_id] >= self.__max_model_outliers:
-            print "--- triggered retraining"
+            log.info('cl', "Retraining was triggered - adding training task")
             # threaded training
             self.__add_training_task(class_id)
 
@@ -441,12 +435,10 @@ class OneClassDBDetectorTree:
     def __retrain(self, class_id):
         """Retrain One-Class Classifier"""
 
-        print "________retrain__________________________________"
-        print "    CLASS ID: " + str(class_id)
-        print "_________________________________________________"
+        log.info('cl', "(Re-)training Classifier for user ID {}".format(class_id))
 
         if class_id not in self.__classifiers:
-            print "--- Cannot train class {} without initialized classifier".format(class_id)
+            log.severe("Cannot train class {} without initialized classifier".format(class_id))
             return False
 
         samples = self.__p_user_db.get_class_samples(class_id)
@@ -463,7 +455,7 @@ class OneClassDBDetectorTree:
             self.__retraining_counter[class_id] = 0
             self.__classifier_states[class_id] += 1
             if self.__verbose:
-                print "fitting took {} seconds".format(time.time() - start)
+                log.info('cl', "fitting took {} seconds".format(time.time() - start))
         return True
 
     def __generate_classifier(self):
@@ -482,11 +474,11 @@ class OneClassDBDetectorTree:
 
     def __classifier_trainer(self):
         if self.__verbose is True:
-            print "--- starting classifier training thread"
+            log.info('cl', "Starting classifier training thread")
         while True:
 
             if self.__verbose is True:
-                print "--- thread training classifier"
+                log.info('cl', "Begin classifier training in thread")
 
             # print "==== queue size: "+str(self.__tasks.qsize())
             training_id = self.__tasks.get()
