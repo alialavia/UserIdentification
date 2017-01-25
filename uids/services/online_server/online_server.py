@@ -6,6 +6,7 @@ from uids.UserDB import UserDB   # user database
 from uids.features.EmbeddingGen import EmbeddingGen   # CNN embedding generator
 from uids.networking.TCPServer import TCPServerBlocking # tcp networking
 from uids.online_learning.OCCTree import OneClassDBDetectorTree
+from uids.utils.Logger import Logger as log
 # import request types
 M_REQUESTS = importlib.import_module("request_types")
 
@@ -37,21 +38,18 @@ class IdentificationServer(TCPServerBlocking):
 
         if request_id in req_lookup:
             req_type = req_lookup[request_id]
-            print("=== Incomming request: " + req_type)
+            log.info('server', "Incomming request: " + req_type)
 
             try:
                 req = getattr(M_REQUESTS, req_type)
                 # handle request
                 req(self, conn)
             except AttributeError:
-                print ("--- Request model '"+req_type+"' is not yet implemented or en Exception occured.")
-
+                log.error("Request model '"+req_type+"' is not yet implemented or an Exception occurred.")
         else:
-            print "--- Unsupported request type: " + str(request_id)
+            log.error("Unsupported request type: " + str(request_id))
 
-        print "--------------------------------------------------------------"
         # communication finished - close connection
-        conn.close()
 
 # ================================= #
 #              Main

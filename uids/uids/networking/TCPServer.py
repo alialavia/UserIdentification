@@ -5,6 +5,7 @@ import sys
 import socket
 import time
 from abc import abstractmethod
+from uids.utils.Logger import Logger as log
 
 
 class TCPServer:
@@ -47,14 +48,14 @@ class TCPServer:
         try:
             self.SERVER_SOCKET.bind((self.HOST, self.PORT))
         except socket.error, msg:
-            print '--- Bind failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
+            log.error('--- Bind failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1])
             sys.exit()
 
         # begin listening to connections
         self.SERVER_SOCKET.listen(5)
         self.SERVER_STATUS = 1
-        print '--- Server started on port ', self.PORT
 
+        log.info('server', 'Server started on port {}'.format(self.PORT))
         # server loop
         self.server_loop()
 
@@ -378,6 +379,7 @@ class TCPServer:
         msg = struct.pack('!d', val)  # convert to network byte order
         target_socket.send(msg)
 
+
 class TCPServerBlocking(TCPServer):
     """Blocking TCP Server - 1 socket connected at a time"""
     def __init__(self, host, port):
@@ -388,7 +390,7 @@ class TCPServerBlocking(TCPServer):
         while True:
             # accept new connection - blocking call, wait for new socket to connect to
             conn, addr = self.SERVER_SOCKET.accept()
-            print '--- Connected with ' + addr[0] + ':' + str(addr[1])
+            log.info('server', '--- Connected with ' + addr[0] + ':' + str(addr[1]))
 
             # handle request
             self.handle_request(conn, addr)
@@ -398,5 +400,10 @@ class TCPServerBlocking(TCPServer):
                 conn.close()    # close connection
                 break
 
+            # wait till client has disconnected
+            while 1:
+                data = conn.recv(1024)
+                if not data:
+                    break
             # close connection - allow new socket connections
             conn.close()
