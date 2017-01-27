@@ -110,7 +110,7 @@ int main(int argc, char** argv)
 
 						// detect face with dlib
 						cv::Mat aligned;
-						if (dlib_aligner.AlignImage(200, face_snap, aligned)
+						if (dlib_aligner.AlignImage(96, face_snap, aligned)
 							) {
 
 							cv::Size sz1 = aligned.size();

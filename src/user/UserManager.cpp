@@ -244,7 +244,6 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 						if (it->second->pGrid->IsFree(roll, pitch, yaw)) {
 							it->second->pGrid->StoreSnapshot(roll, pitch, yaw, face_snap);
 							std::cout << "-- take snapshot" << std::endl;
-
 						}
 					}
 					catch (...)
@@ -309,35 +308,25 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 
 						cv::Rect2f facebb = it->second->GetFaceBoundingBox();
 						// TODO: debug why face bb is nan
-						std::cout << "............ Face bb: " << facebb.height << " | " << facebb.width << std::endl;
+						//std::cout << "............ Face bb: " << facebb.height << " | " << facebb.width << std::endl;
 
 
 						// collect another image
 						cv::Mat face_snap = scene_rgb(facebb);
 
 						// detect and warp face
-						std::cout << "a0." << std::endl;
 						cv::Mat aligned;
 
+						
+
 							if (mDlibAligner->AlignImage(96, face_snap, aligned)) {
-								// resize
-								//cv::resize(aligned, aligned, cv::Size(96, 96));
-
-								std::cout << "a1" << std::endl;
-
 
 								// save
 								try
 								{
-
-									std::cout << "a2" << std::endl;
-
 									// add face if not yet capture from this angle
 									it->second->pGrid->StoreSnapshot(roll, pitch, yaw, aligned);
 									std::cout << "--- take snapshot: " << it->second->pGrid->nr_images() << std::endl;
-
-
-									std::cout << "a3" << std::endl;
 									cv::imshow("aligned", aligned);
 									cv::waitKey(2);
 
@@ -366,7 +355,6 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 						// TODO: DEBUG HERE
 						// ID -1
 						it->second->GetUserID(user_id, user_name);
-						std::cout << "________________________________\n" << "============GETTING USER IDDDDD: " << user_id << "\n_____________________________________\n";
 
 						// make new identification request
 						io::EmbeddingCollectionByIDAligned* new_request = new io::EmbeddingCollectionByIDAligned(pServerConn, face_patches, user_id);

@@ -386,16 +386,19 @@ bool DlibFaceAligner::AlignImage(int imgDim, const cv::Mat &src, cv::Mat &dst)
 		//cv::Mat H = cv::getAffineTransform(src_points, &dst_points[0]);
 
 		cv::Mat H = cv::getAffineTransform(src_points, &dst_points[0]);
-		warpedImg = cv::Mat::zeros(imgDim, imgDim, src.type());
+		warpedImg = cv::Mat::zeros(src.rows, src.cols, src.type());
 
 		// warp image - performs hard crop from top, left
-		cv::warpAffine(src, warpedImg, H, src.size());
+		cv::warpAffine(src, warpedImg, H, warpedImg.size());
 
 		// draw points
 		for (std::size_t i = 0; i < 3; i++)
 		{
-			cv::circle(warpedImg, dst_points[i], 2, cv::Scalar(0, 0, 255), cv::LINE_4);
+			//cv::circle(warpedImg, dst_points[i], 2, cv::Scalar(0, 0, 255), cv::LINE_4);
 		}
+
+		// resize to output size
+		cv::resize(warpedImg, warpedImg, cv::Size(imgDim, imgDim));
 
 	}
 	else
@@ -414,14 +417,17 @@ bool DlibFaceAligner::AlignImage(int imgDim, const cv::Mat &src, cv::Mat &dst)
 		}
 
 		cv::Mat H = cv::getPerspectiveTransform(src_points, &dst_points[0]);
-		warpedImg = cv::Mat::zeros(imgDim, imgDim, src.type());
+		warpedImg = cv::Mat::zeros(src.rows, src.cols, src.type());
 		cv::warpPerspective(src, warpedImg, H, warpedImg.size());
 
 		// draw points
 		for (std::size_t i = 0; i < 4; i++)
 		{
-			cv::circle(warpedImg, dst_points[i], 2, cv::Scalar(0, 0, 255), cv::LINE_4);
+			//cv::circle(warpedImg, dst_points[i], 2, cv::Scalar(0, 0, 255), cv::LINE_4);
 		}
+
+		// resize to output size
+		cv::resize(warpedImg, warpedImg, cv::Size(imgDim, imgDim));
 
 	}
 
