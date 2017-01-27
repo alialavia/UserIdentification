@@ -19,7 +19,7 @@ class TCPServer:
         DEFINITIONS:
         request/response type id:
             - request: uchar (0-255)
-            - response: uint
+            - response: int
         images:
             - receival/send order: nr_images (short), image_width (short), image_height (short), images
             - receival/send order (changing size): nr_images (short), Loop(image_width (short), image_height (short), image)
@@ -62,12 +62,12 @@ class TCPServer:
     @abstractmethod
     def handle_request(self, conn, addr):
         """Handles the socket request in each loop"""
-        raise NotImplementedError( "The basic request handler must be implemented first." )
+        raise NotImplementedError("The basic request handler must be implemented first.")
 
     @abstractmethod
     def server_loop(self):
         """The main processing loop - implement in server type (blocking/parallel)"""
-        raise NotImplementedError( "The basic processling loop must be implemented in the server type class." )
+        raise NotImplementedError("The basic processling loop must be implemented in the server type class.")
 
     #  ----------- DYNAMIC MESSAGE HANDLERS
 
@@ -115,7 +115,7 @@ class TCPServer:
         except socket.error, (errorCode, message):
             # error 10035 is no data available, it is non-fatal
             if errorCode != 10035:
-                print 'socket.error - (' + str(errorCode) + ') ' + message
+                log.severe('socket.error - (' + str(errorCode) + ') ' + message)
         return buffer
 
     #  ----------- IMAGE HANDLERS
@@ -390,7 +390,7 @@ class TCPServerBlocking(TCPServer):
         while True:
             # accept new connection - blocking call, wait for new socket to connect to
             conn, addr = self.SERVER_SOCKET.accept()
-            log.info('server', '--- Connected with ' + addr[0] + ':' + str(addr[1]))
+            log.info('server', "--- Connected with {}:{} ---".format(addr[0], addr[1]))
 
             # handle request
             self.handle_request(conn, addr)
@@ -400,7 +400,7 @@ class TCPServerBlocking(TCPServer):
                 conn.close()    # close connection
                 break
 
-            # wait till client has disconnected
+            # block till client has disconnected
             while 1:
                 data = conn.recv(1024)
                 if not data:
