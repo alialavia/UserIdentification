@@ -14,12 +14,16 @@ from uids.utils.Logger import Logger as log
 
 class ABOD:
     data = None
-    verbose = False
+    __verbose = False
     cluster_distances = False
     # impl. : see https://github.com/MarinYoung4596/OutlierDetection
     basis = None
     mean = None
-    verbose = False
+    __verbose = False
+
+    # thresholding
+    threshold = 0.2
+    uncertainty_bandwidth = 0.1 # uncertain region: T-b/2 ... T+b/2
 
     def __init__(self):
         self.data = []
@@ -42,7 +46,7 @@ class ABOD:
         if dim_reduction is True:
             # ExtractSubspace
             self.basis, self.mean = ExtractSubspace(data, 0.999)
-            if self.verbose:
+            if self.__verbose:
                 log.info('cl', "reduced dimension to: {}".format(np.size(self.basis, 1)))
 
             # project data onto subspace
@@ -55,21 +59,31 @@ class ABOD:
         # calculate intra-cluster distances
         self.cluster_distances = pairwise_distances(self.data, self.data, metric='euclidean')
 
-        if self.verbose:
+        if self.__verbose:
             log.info('cl', "Classifier initialized in {}s".format("%.4f"%(time.time()-start)))
 
-    def find_threshold(self):
+    def tune_threshold(self):
         pass
 
     def decision_function(self, samples):
         return self.__predict(samples)
 
     def predict(self, samples):
+        """
+        One Class prediction
+        :param samples:
+        :return: np.array of labels. 1: is-class, -1 is-not class, 0 sample is uncertain
+        """
         # project onto subspace
         if self.basis is not None:
             samples = ProjectOntoSubspace(samples, self.mean, self.basis)
+
         variance = self.__predict(samples)
-        return np.array([-1 if v < 0.2 else 1 for v in variance])
+
+        return np.array([-1 if v < (self.threshold-self.uncertainty_bandwidth/2)
+                         else 1 if v > (self.threshold+self.uncertainty_bandwidth/2)
+                         else 0
+                         for v in variance])
 
     def __predict(self, samples):
         start = time.time()
@@ -229,10 +243,10 @@ class ABOD:
 
     def __predict_cosine_dist_var(self, samples):
         cos_dist = pairwise_distances(samples, self.data, metric='cosine')
-        if self.verbose:
+        if self.__verbose:
             print "--- Max cosine distance: {}".format(np.max(cos_dist))
         result = np.var(cos_dist, axis=1)
-        if self.verbose:
+        if self.__verbose:
             print "--- ABOD: {}".format(result)
         return result
 
