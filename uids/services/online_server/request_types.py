@@ -21,7 +21,7 @@ class ImageIdentification:
             return
 
         # predict user id
-        user_id = server.classifier.predict_class(embeddings)
+        user_id = server.classifier.predict(embeddings)
 
         if user_id is None:
             r.Error(server, conn, "Label could not be predicted - Face cannot be detected.")
@@ -84,7 +84,7 @@ class ImageIdentificationAligned:
             return
 
         # predict user id
-        user_id = server.classifier.predict_class(embeddings)
+        user_id = server.classifier.predict(embeddings)
 
         if user_id is None:
             r.Error(server, conn, "Label could not be predicted - Face cannot be detected.")
