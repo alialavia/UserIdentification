@@ -29,7 +29,7 @@ namespace user
 			mFaceData(nullptr)
 		{
 #ifdef FACEGRID_RECORDING
-			pGrid = new tracking::RadialFaceGrid(2, 10, 10);
+			pGrid = new tracking::RadialFaceGrid(2, 15, 15);
 #endif
 		}
 		~User()
@@ -66,6 +66,11 @@ namespace user
 			id = mUserID;
 			nice_name = mUserNiceName;
 		}
+		int GetUserID()
+		{
+			return mUserID;
+		}
+
 		cv::Rect2f GetFaceBoundingBox();
 		// feature getters
 		bool GetFaceData(tracking::Face &f);

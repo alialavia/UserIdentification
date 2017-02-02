@@ -11,8 +11,7 @@
 #include <features\Face.h>
 
 #define _DEBUG_USERMANAGER
-
-
+#define _DLIB_PREALIGN // use dlib on client side for face alignment
 
 namespace io{
 class TCPClient;
@@ -38,11 +37,18 @@ namespace user
 	class UserManager {
 	public:
 
-		UserManager() : pServerConn(nullptr), pRequestHandler(nullptr)
+		UserManager() : 
+		pServerConn(nullptr), 
+		pRequestHandler(nullptr)
+#ifdef _DLIB_PREALIGN
+		,mDlibAligner(nullptr)
+#endif
 		{
 		}
 		~UserManager() {
+#ifdef _DLIB_PREALIGN
 			delete(mDlibAligner);
+#endif
 
 			// TODO: do proper cleanup
 		}
@@ -98,11 +104,13 @@ namespace user
 		std::map<io::NetworkRequest*, User*> mRequestToUser;
 		std::map<User*, io::NetworkRequest*> mUserToRequest;
 
-		// frame id to user id mapping
+		// scene id to user id mapping
 		std::map<int, User*> mFrameIDToUser;
 
+#ifdef _DLIB_PREALIGN
 		// face aligner
 		features::DlibFaceAligner* mDlibAligner;
+#endif
 
 	};
 

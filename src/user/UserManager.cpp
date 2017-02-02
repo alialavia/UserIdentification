@@ -22,9 +22,11 @@ bool UserManager::Init(io::TCPClient* connection, io::NetworkRequestHandler* han
 	pServerConn = connection;
 	pRequestHandler = handler;
 
+#ifdef _DLIB_PREALIGN
 	// initialize aligner
 	mDlibAligner = new features::DlibFaceAligner();
 	mDlibAligner->Init();
+#endif
 
 	std::cout << "--- UserManager initialized" << std::endl;
 
@@ -116,13 +118,33 @@ void UserManager::ApplyUserIdentification()
 			// remove request mapping
 			RemovePointerMapping(it->second);
 
+			bool user_in_scene = false;
+			int tmp_id = 0;
+
 			// check if other user in scene has same id
-			// TODO: Handle Missdetection
+			for (auto its = mFrameIDToUser.begin(); its != mFrameIDToUser.end(); ++its)
+			{
+				// check if has assigned id - equals identified
+				if((tmp_id = its->second->GetUserID()) > 0 && tmp_id == response.mUserID)
+				{
+					user_in_scene = true;
+					break;
+				}
+			}
+			
+			if(!user_in_scene)
+			{
+				std::cout << "......... assigning ID to user: " << response.mUserID << std::endl;
+				// apply user identification
+				target_user->SetUserID(response.mUserID, response.mUserNiceName);
+			}else
+			{
+				// person with same id is already in scene
+				// do nothing and force reinitialization
+				// TODO: maybe send retraining request for target classes
+			}
 
-			std::cout << "......... assigning ID to user: " << response.mUserID << std::endl;
-
-			// apply user identification
-			target_user->SetUserID(response.mUserID, response.mUserNiceName);
+			// reset action status
 			target_user->SetActionStatus(ActionStatus_Idle);
 		}
 		else {
@@ -145,15 +167,16 @@ void UserManager::ApplyUserIdentification()
 			// extract user
 			User* target_user = it->second;
 
-			if (req_type == io::NetworkRequest_EmbeddingCollectionByID) {
-				target_user->SetActionStatus(ActionStatus_Idle);
-			}
-
 			// remove request mapping
 			RemovePointerMapping(it->second);
 
 			// reset action status
 			target_user->SetActionStatus(ActionStatus_Idle);
+
+			// handle custom events
+			//if (req_type == io::NetworkRequest_EmbeddingCollectionByID) {
+			//
+			//}
 		}
 		else {
 			// user corresponding to request not found (may have left scene) - drop response
@@ -230,8 +253,10 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 				tracking::Face face;
 				if (it->second->GetFaceData(face)) {
 
+					std::cout << ".";
 					// collect another image
 					cv::Mat face_snap = scene_rgb(it->second->GetFaceBoundingBox());
+					std::cout << ",\n";
 
 					// resize
 					cv::resize(face_snap, face_snap, cv::Size(96, 96));
@@ -251,7 +276,7 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 					}
 
 					// if enough images, request identification
-					if (it->second->pGrid->nr_images() > 10) {
+					if (it->second->pGrid->nr_images() > 9) {
 
 						// extract images
 						std::vector<cv::Mat*> face_patches = it->second->pGrid->ExtractGrid();
@@ -308,18 +333,25 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 
 						cv::Rect2f facebb = it->second->GetFaceBoundingBox();
 						// TODO: debug why face bb is nan
-						//std::cout << "............ Face bb: " << facebb.height << " | " << facebb.width << std::endl;
+						std::cout << "............ Face bb: " << facebb.height << " | " << facebb.width << std::endl;
 
-
+						std::cout << ".";
 						// collect another image
 						cv::Mat face_snap = scene_rgb(facebb);
+						std::cout << ",\n";
 
 						// detect and warp face
 						cv::Mat aligned;
 
 						
+#ifdef _DLIB_PREALIGN
+							if (mDlibAligner->AlignImage(96, face_snap, aligned)) 
 
-							if (mDlibAligner->AlignImage(96, face_snap, aligned)) {
+#else
+						aligned = face_snap;
+#endif
+							{
+							std::cout << "cols: " << aligned.cols << std::endl;
 
 								// save
 								try
@@ -327,8 +359,8 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 									// add face if not yet capture from this angle
 									it->second->pGrid->StoreSnapshot(roll, pitch, yaw, aligned);
 									std::cout << "--- take snapshot: " << it->second->pGrid->nr_images() << std::endl;
-									cv::imshow("aligned", aligned);
-									cv::waitKey(2);
+									/*cv::imshow("aligned", aligned);
+									cv::waitKey(2);*/
 
 							/*		cv::Mat grid;
 									it->second->pGrid->GetFaceGridPitchYaw(grid);
@@ -345,11 +377,15 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 					}	// /free pose position
 
 						// if enough images, request identification
-					if (it->second->pGrid->nr_images() > 10) {
+					if (it->second->pGrid->nr_images() > 9) {
 
 						// extract images
 						std::vector<cv::Mat*> face_patches = it->second->pGrid->ExtractGrid();
 
+						if(face_patches[0]->cols == 0)
+						{
+							std::cout << "----------- WHY? -----------" << std::endl;
+						}
 						int user_id; std::string user_name;
 
 						// TODO: DEBUG HERE
@@ -357,7 +393,11 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 						it->second->GetUserID(user_id, user_name);
 
 						// make new identification request
+#ifdef _DLIB_PREALIGN
 						io::EmbeddingCollectionByIDAligned* new_request = new io::EmbeddingCollectionByIDAligned(pServerConn, face_patches, user_id);
+#else
+						io::EmbeddingCollectionByID* new_request = new io::EmbeddingCollectionByID(pServerConn, face_patches, user_id);
+#endif
 						pRequestHandler->addRequest(new_request);
 
 						// update linking
