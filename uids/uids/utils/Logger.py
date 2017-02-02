@@ -68,7 +68,7 @@ class Logger:
     @classmethod
     def warning(self, msg):
         if self.thresh < 4:
-            print "\033[0;" + FontColor.white + ";" + BGColor.yellow + msg + self.endc
+            print "\033[0;" + FontColor.black + ";" + BGColor.yellow + msg + self.endc
 
     @classmethod
     def debug(self, scope, msg):

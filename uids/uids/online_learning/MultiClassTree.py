@@ -10,28 +10,9 @@ from abc import abstractmethod
 from uids.online_learning.ABOD import ABOD
 
 
-class MultiClassTree:
-    """
-    Goal: labeled classes, user database
-    """
+class MultiClassTreeBase:
 
-    """
-    A Classifier needs the following methods:
-    - fit(samples) (partial or regular)
-    - predict(samples)
-
-    """
-
-    CLASSIFIER = ''
-    VALID_CLASSIFIERS = {}
-
-    classifiers = {}
-    classifier_states = {}
-    training_counter = {}   # number of times classifier has been trained
-
-    __nr_classes = 0
-
-    __verbose = False
+    STATUS = 0
 
     # status
     STATUS_CLEAN = {
@@ -39,19 +20,55 @@ class MultiClassTree:
         1: 'running'
     }
 
+    # placeholder - implemented in specific classifier
+    CLASSIFIER = ''
+    VALID_CLASSIFIERS = {}
+
     # multi-threaded training
+    __verbose = False
     __tasks = Queue(maxsize=0)
     __num_threads = 3
     training_lock = Lock()
 
-    # database connection
-    p_user_db = None
+    def __init__(self, classifier_type):
 
-    # ---- class prediction threshold
-    # TODO: tune these parameters according to comparison with LFW - maybe adaptive threshold
-    __class_thresh = 0.75       # X% of samples must be identified positively to identify person
-    __confusion_thresh = 0.01   # 1% confusion chance
-    __novelty_thresh = 0.01     # 1% novelty missdetection
+        # define valid classifiers
+        self.define_classifiers()
+
+        print self.VALID_CLASSIFIERS
+        if classifier_type not in self.VALID_CLASSIFIERS:
+            raise ValueError('Invalid Classifier "{}". You can choose between: {}'.format(classifier_type, str(list(self.VALID_CLASSIFIERS))))
+
+        # perform classifier training in tasks
+        self.start_classifier_trainers()
+
+    # -------- threaded classifier training
+
+    def add_training_task(self, classifier_id):
+        self.__tasks.put(classifier_id)
+
+    def __classifier_trainer(self):
+        if self.__verbose is True:
+            log.info('cl', "Starting classifier training thread")
+
+        while self.STATUS == 1:
+            if self.__verbose is True:
+                log.info('cl', "Begin classifier training in thread")
+
+            # print "==== queue size: "+str(self.__tasks.qsize())
+            training_id = self.__tasks.get()
+            self.train_classifier(training_id)
+            self.__tasks.task_done()
+
+    def start_classifier_trainers(self):
+        self.STATUS = 1
+        for i in range(self.__num_threads):
+            t = Thread(target=self.__classifier_trainer)
+            t.daemon = True  # terminate if main thread ends
+            t.start()
+
+    def stop_classifier_trainers(self):
+        self.STATUS = 0
 
     # ----------------------- abstract methods
 
@@ -93,17 +110,39 @@ class MultiClassTree:
         """
         raise NotImplementedError("Stream processing must be implemented first.")
 
-    def __init__(self, user_db_, classifier_type):
-        # define valid classifiers
-        self.define_classifiers()
 
-        print self.VALID_CLASSIFIERS
-        if classifier_type not in self.VALID_CLASSIFIERS:
-            raise ValueError('Invalid Classifier "{}". You can choose between: {}'.format(classifier_type, str(list(self.VALID_CLASSIFIERS))))
+class MultiClassTree(MultiClassTreeBase):
+    """
+    Goal: labeled classes, user database
+    """
+
+    """
+    A Classifier needs the following methods:
+    - fit(samples) (partial or regular)
+    - predict(samples)
+
+    """
+
+    classifiers = {}    # classifier instances
+    classifier_states = {}
+    __nr_classes = 0
+    __verbose = False
+
+    # database connection
+    p_user_db = None
+
+    # ---- class prediction threshold
+    # TODO: tune these parameters according to comparison with LFW - maybe adaptive threshold
+    __min_valid_samples = 0.5
+    __class_thresh = 0.7       # at least X% of samples must uniquely identify a person
+    __novelty_thresh = 0.7     # at least X% of samples should uniquely hint a novelty
+
+
+
+    def __init__(self, user_db_, classifier_type):
+        MultiClassTreeBase.__init__(self, classifier_type)
         # link database
         self.p_user_db = user_db_
-        # perform classifier training in tasks
-        self.__deploy_classifier_trainers()
 
     def init_classifier(self, class_id, class_samples):
         """
@@ -118,7 +157,6 @@ class MultiClassTree:
             log.severe("Illegal reinitialization of classifier")
             return False
         self.classifiers[class_id] = self.generate_classifier()
-        self.training_counter[class_id] = 0
         self.__nr_classes += 1
         self.classifier_states[class_id] = 0
         # collect the samples
@@ -128,14 +166,16 @@ class MultiClassTree:
 
     # ------- ensemble prediction
 
-    def predict(self, samples):
+    def __predict(self, samples):
         """predict classes: for each sample on every class, tells whether or not (+1 or -1) it belongs to class"""
-        predictions = {}
+        predictions = []
+        class_ids = []
 
         with self.training_lock:
             for class_id, __clf in self.classifiers.iteritems():
-                predictions[class_id] = __clf.predict(samples)
-        return predictions
+                class_ids.append(class_id)
+                predictions.append(__clf.predict(samples))
+        return np.array(predictions), np.array(class_ids)
 
     def predict_proba(self, samples):
         """
@@ -143,16 +183,17 @@ class MultiClassTree:
         :param samples: list of samples
         :return: (np.array, np.array) probabilities (positive samples/total samples per class), class ids
         """
-        predictions = self.predict(samples)
+        predictions, class_ids = self.__predict(samples)
+
         # analyze
-        class_ids = []
         probabilities = []
+
         for class_id, p in predictions.iteritems():
             probabilities.append(len(p[p > 0])/float(len(samples)))
             class_ids.append(class_id)
         return np.array(probabilities), np.array(class_ids)
 
-    def predict_class(self, samples):
+    def predict(self, samples):
         """
         Prediction cases:
         - Only target class is identified with ratio X (high): Class
@@ -160,8 +201,40 @@ class MultiClassTree:
         - Multiple classes are identified with small ratios Ys: Novelty
         - No classes identified: Novelty
         :param samples:
-        :return: Class ID, -1 (Novelty), None invalid dataset (multiple detections)
+        :return: Class ID, -1 (Novelty), None invalid samples (multiple detections)
         """
+
+        # no classifiers yet, predict novelty
+        if not self.classifiers:
+            return -1
+
+        predictions, class_ids = self.__predict(samples)
+        cls_scores = np.sum(predictions, axis=1)
+        nr_samples = len(samples)
+
+        log.info('cl', "Classifier scores: {} | max: {}".format(cls_scores, nr_samples))
+
+        # no classes detected at all - novelty
+        novelty_mask = cls_scores <= self.__novelty_thresh * nr_samples
+        if len(cls_scores[novelty_mask]) == len(cls_scores):
+            return -1
+
+        identification_mask = cls_scores >= self.__class_thresh * nr_samples
+        ids = cls_scores[identification_mask]
+        if len(ids) > 0:
+
+            # multiple possible detection - invalid samples
+            if len(ids) > 1:
+                return None
+
+            # single person identified - return id
+            return int(class_ids[identification_mask][0])
+        else:
+            # samples unclear
+            return None
+
+    def __predict_ORIG(self, samples):
+
         proba, class_ids = self.predict_proba(samples)
         mask_0 = proba > 0
 
@@ -175,14 +248,24 @@ class MultiClassTree:
         if nr_classes > 0:
             # class detected
             if nr_classes > 1:
-                # multiple classes detected
+                # multiple classes detected - batch invalid
                 if self.__verbose:
-                    print "--- Multiple classes detected: {}".format(nr_classes)
+                    log.severe("Multiple classes detected: {}".format(nr_classes))
                 return None
 
+            confusion_mask = (self.__confusion_thresh < proba) & (proba < self.__class_thresh)
             # count if any element, except for class is above confusion ratio
-            if len(proba[(self.__confusion_thresh < proba) & (proba < self.__class_thresh)]) > 0:
-                return None
+            if len(proba[confusion_mask]) > 0:
+                log.warning("Class confusion - force re-identification: {}% confusion, {}% identification, {} samples"
+                            .format(proba[(self.__confusion_thresh < proba) & (proba < self.__class_thresh)],
+                                    proba[mask_class],
+                                    len(samples)))
+
+                # calc pairwise distance. If small then force re-identification
+                # for sample in proba[confusion_mask]:
+
+                # Todo: implement properly
+                # return None
 
             class_id_arr = class_ids[mask_class]
             return int(class_id_arr[0])
@@ -194,128 +277,12 @@ class MultiClassTree:
 
             return -1
 
-    # -------- threaded classifier training
-
-    def add_training_task(self, classifier_id):
-        self.__tasks.put(classifier_id)
-
-    def __classifier_trainer(self):
-        if self.__verbose is True:
-            log.info('cl', "Starting classifier training thread")
-        while True:
-
-            if self.__verbose is True:
-                log.info('cl', "Begin classifier training in thread")
-
-            # print "==== queue size: "+str(self.__tasks.qsize())
-            training_id = self.__tasks.get()
-            self.train_classifier(training_id)
-            # reset training counter
-            self.training_counter[training_id] = 0
-            self.__tasks.task_done()
-
-    def __deploy_classifier_trainers(self):
-        for i in range(self.__num_threads):
-            t = Thread(target=self.__classifier_trainer)
-            t.daemon = True  # terminate if main thread ends
-            t.start()
-
-
-class OfflineMultiClassTree(MultiClassTree):
-
-    __max_model_outliers = 1    # after x number of outlier features (per class), classifiers are retrained
-    __verbose = False
-
-    def define_classifiers(self):
-        self.VALID_CLASSIFIERS = {'OCSVM', 'OCSVM_RBF', 'RF'}
-        self.CLASSIFIER = 'OCSVM'
-
-    def __init__(self, user_db_, classifier='OCSVM'):
-        MultiClassTree.__init__(self, user_db_, classifier)
-
-    def generate_classifier(self):
-        if self.CLASSIFIER == 'OCSVM':
-            return svm.OneClassSVM(nu=0.1, kernel="linear", gamma=0.1)
-        elif self.CLASSIFIER == 'OCSVM_RBF':
-            return svm.OneClassSVM(nu=0.1, kernel="rbf", gamma=0.1)
-        elif self.CLASSIFIER == 'RF':
-            return IsolationForest(random_state=np.random.RandomState(42))
-
-    def train_classifier(self, class_id):
-        """Retrain One-Class Classifier"""
-
-        log.info('cl', "(Re-)training Classifier for user ID {}".format(class_id))
-
-        if class_id not in self.classifiers:
-            log.severe("Cannot train class {} without initialized classifier".format(class_id))
-            return False
-
-        samples = self.p_user_db.get_class_samples(class_id)
-
-        # TODO: empty check for arrays
-        # if not samples:
-        #     if self.__verbose:
-        #         print "--- Cannot train class {} without samples".format(class_id)
-        #     return False
-
-        start = time.time()
-        with self.training_lock:
-            self.classifiers[class_id].fit(samples)
-            self.training_counter[class_id] = 0
-            self.classifier_states[class_id] += 1
-            if self.__verbose:
-                log.info('cl', "fitting took {} seconds".format(time.time() - start))
-        return True
-
-    def process_labeled_stream_data(self, class_id, samples):
-        """
-        Incorporate labeled data into the classifiers. Classifier for {class_id} must be initialized already
-        (retraining is done once the samples can't be explained by the model anymore)
-        :param class_id: class id
-        :param samples: class samples
-        :return: -
-        """
-
-        log.info('cl', "Processing labeled stream data for user ID {}".format(class_id))
-        class_id = int(class_id)
-
-        if class_id not in self.training_counter:
-            print "--- Class {} has not been initialized yet!".format(class_id)
-            return
-
-        # collect samples
-        self.p_user_db.add_samples(class_id, samples)
-
-        # check if incoming data explains the current model
-        predictions = self.predict(samples)
-        self.training_counter[class_id] += self.__contradictive_predictions(predictions, class_id)
-
-        log.info('cl', "predictions: {}".format(predictions))
-        log.info('cl', "contradictive samples accumulated: " + str(self.training_counter[class_id]))
-
-        # trigger retraining
-        if self.training_counter[class_id] >= self.__max_model_outliers:
-            log.info('cl', "Retraining was triggered - adding training task")
-            # threaded training
-            self.add_training_task(class_id)
-
-    # ------- Utilities
-
-    def __contradictive_predictions(self, predictions, target_class):
-        """used to trigger retraining"""
-        nr_cont_samples = 0
-        for class_id, col in predictions.iteritems():
-            nr_dects = len(col[col > 0])
-            # if wrongly predicted: class is -1 or w
-            nr_samples = len(col)
-            if class_id == target_class:
-                nr_cont_samples += (nr_samples - nr_dects)
-            else:
-                nr_cont_samples += nr_dects
-        return nr_cont_samples
-
 
 class OnlineMultiClassTree(MultiClassTree):
+    """
+    - Processing Stream Data
+    - Evaluate incoming labeled data
+    """
 
     __verbose = True
     __max_model_outliers = 1
@@ -349,7 +316,6 @@ class OnlineMultiClassTree(MultiClassTree):
         start = time.time()
         with self.training_lock:
             self.classifiers[class_id].fit(samples)
-            self.training_counter[class_id] = 0
             self.classifier_states[class_id] += 1
             if self.__verbose:
                 log.info('cl', "fitting took {} seconds".format(time.time() - start))
@@ -367,25 +333,26 @@ class OnlineMultiClassTree(MultiClassTree):
         log.info('cl', "Processing labeled stream data for user ID {}".format(class_id))
         class_id = int(class_id)
 
-        if class_id not in self.training_counter:
+        if class_id not in self.classifiers:
             print "--- Class {} has not been initialized yet!".format(class_id)
+            return
+
+        prediction = self.predict(samples)
+
+        if prediction != class_id:
+            log.severe("Updating invalid class! Tracker must have switched!")
             return
 
         # collect samples
         self.p_user_db.add_samples(class_id, samples)
 
-        # check if incoming data explains the current model
-        predictions = self.predict(samples)
-        self.training_counter[class_id] += self.__contradictive_predictions(predictions, class_id)
+        if self.CLASSIFIER == 'ABOD':
 
-        log.info('cl', "predictions: {}".format(predictions))
-        log.info('cl', "contradicting samples accumulated: " + str(self.training_counter[class_id]))
-
-        # trigger retraining
-        if self.training_counter[class_id] >= self.__max_model_outliers:
-            log.info('cl', "Retraining was triggered - adding training task")
-            # threaded training
+            # add samples every time
             self.add_training_task(class_id)
+        else:
+            # TODO: implement
+            pass
 
     def __contradictive_predictions(self, predictions, target_class):
         """used to trigger retraining"""
