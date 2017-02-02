@@ -225,13 +225,12 @@ int SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxe
 
 		// check if coordinate mapping succeeded
 		if (
-			p1.X != -std::numeric_limits<float>::infinity() && p1.Y != -std::numeric_limits<float>::infinity() &&
-			p2.X != -std::numeric_limits<float>::infinity() && p2.Y != -std::numeric_limits<float>::infinity() &&
-			p3.X != -std::numeric_limits<float>::infinity() && p3.Y != -std::numeric_limits<float>::infinity() &&
-			p4.X != -std::numeric_limits<float>::infinity() && p4.Y != -std::numeric_limits<float>::infinity()
+			p1c.X != -std::numeric_limits<float>::infinity() && p1c.Y != -std::numeric_limits<float>::infinity() &&
+			p2c.X != -std::numeric_limits<float>::infinity() && p2c.Y != -std::numeric_limits<float>::infinity() &&
+			p3c.X != -std::numeric_limits<float>::infinity() && p3c.Y != -std::numeric_limits<float>::infinity() &&
+			p4c.X != -std::numeric_limits<float>::infinity() && p4c.Y != -std::numeric_limits<float>::infinity()
 			)
 		{
-
 			float head_size_colorspace = abs(p4c.X - p1c.X);
 			bounding_box = cv::Rect2f(p4c.X, p4c.Y, head_size_colorspace, head_size_colorspace);
 			// save
