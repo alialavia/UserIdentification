@@ -21,8 +21,15 @@
 	- Compare distance of fotos to assumed "optimal" front view
 	- Display outliers
 	
+**Problems to deal with**
+- ID changes during update (tracker id changes)
+- Tracker looses person (tracks object)
+- Client side: resize, then do facial detection
+	
 	
 ## Challenges/Problems
+
+- Cost of calculation of Convex Hull increases exponentially with number of dimensions
 
 ## Literature/Personal Notes
 
