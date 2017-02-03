@@ -71,6 +71,15 @@ def plot_separation_dist(ds1, metric='euclidean'):
 # ================================= #
 #              Data Analysis
 
+def ExtractMaxVarComponents(data, nr_components):
+    """"""
+    pca = PCA(n_components=np.size(data, 1))
+    pca.fit(data)
+    basis = pca.components_.T[:, 0:nr_components]
+    expl_variance = np.sum(pca.explained_variance_ratio_[0:nr_components])
+    return basis, pca.mean_, expl_variance
+
+
 def ExtractSubspace(data, explained_variance):
     """"""
     pca = PCA(n_components=np.size(data, 1))
