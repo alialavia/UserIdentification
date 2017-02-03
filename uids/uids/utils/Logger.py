@@ -59,7 +59,7 @@ class Logger:
 
     @classmethod
     def severe(self, msg):
-        print "\033[0;" + FontColor.white + ";" + BGColor.red + msg + self.endc
+        print "\033[0;" + FontColor.black + ";" + BGColor.red + msg + self.endc
 
     @classmethod
     def error(self, msg):
