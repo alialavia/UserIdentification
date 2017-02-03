@@ -190,11 +190,24 @@ def sample_weighting():
 def pairwise_subtract():
 
     # dim = 2
-    # ref cluster = 4pts
+    # ref data = 4pts
     ref = np.array([[1,2], [3.4,5], [9,0], [2,4]])
 
     # samples: 2
     samples = np.array([[2,1],[4,2]])
 
 
-pairwise_subtract()
+def index_deletion():
+    data = np.array([[1,2,3,4], [2,3,4,2], [4,5,23,2], [4,6,3,1], [4,6,2,6]])
+    indices = [0,3]
+    print np.delete(data, indices, axis=0)
+
+
+def list_iteration():
+    mylist = [1,2,3,4,5,6,7,8]
+    nr_extr = 3
+    step = 2
+    print mylist[0:(nr_extr*step):step]
+
+# list_iteration()
+print range(1,4)
