@@ -59,8 +59,7 @@ class ABOD:
         # calculate intra-cluster distances
         self.cluster_distances = pairwise_distances(self.data, self.data, metric='euclidean')
 
-        if self.__verbose:
-            log.info('cl', "Classifier initialized in {}s".format("%.4f"%(time.time()-start)))
+        log.info('cl', "New ABOD Classifier initialized in {}s".format("%.4f"%(time.time()-start)))
 
     def tune_threshold(self):
         pass
@@ -74,6 +73,12 @@ class ABOD:
         :param samples:
         :return: np.array of labels. 1: is-class, -1 is-not class, 0 sample is uncertain
         """
+
+        print "--- Start prediction of samples: {}".format(len(samples))
+
+        if len(self.data) == 0:
+            log.severe("ABOD Cluster is not initialized! Please use the 'fit' method first.")
+
         # project onto subspace
         if self.basis is not None:
             samples = ProjectOntoSubspace(samples, self.mean, self.basis)
@@ -121,10 +126,8 @@ class ABOD:
         """
         calculate the ABOF of A = (x1, x2, ..., xn)
         pt_list = self.data (cluster)
-        Todo: fix cosine dist weighting
         """
-
-        i = 0
+        # Todo: fix cosine dist weighting
         pt_list = self.data
 
         if knn is not None and knn < len(self.data):
@@ -149,6 +152,12 @@ class ABOD:
 
                     C = pt_list[j]
                     AC = dist_lookup[i_sample][j]
+
+                    if np.array_equal(B, C):
+                        log.error("Points are equal: B == C!")
+                        print "Bi/Cj: {}/{}".format(i, j)
+                        sys.exit('ERROR\tangleBAC\tmath domain ERROR, |cos<AB, AC>| <= 1')
+
                     angle_BAC = self.__angleBAC(A, B, C, AB, AC)
                     # compute each element of variance list
                     try:
@@ -178,9 +187,13 @@ class ABOD:
             sys.exit('ERROR\tangleBAC\tdistance can not be zero!')
 
         if math.fabs(cos_AB_AC_) > 1:
-            print 'A\n', A
-            print 'B\n', B
-            print 'C\n', C
+            if np.array_equal(B, C):
+                log.error("Points are equal: B == C")
+            elif np.array_equal(A, B):
+                log.error("Points are equal: A == B")
+            elif np.array_equal(A, C):
+                log.error("Points are equal: A == C")
+
             print 'AB = %f, AC = %f' % (AB, AC)
             print 'AB * AC = ', dotProduct
             print '|AB| * |AC| = ', AB * AC
