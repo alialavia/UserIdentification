@@ -8,6 +8,7 @@ from sklearn.preprocessing import LabelEncoder
 from uids.utils.Logger import Logger as log
 from abc import abstractmethod
 from uids.online_learning.ABOD import ABOD
+from uids.online_learning.IABOD import IABOD
 
 
 class MultiClassTreeBase:
@@ -30,17 +31,22 @@ class MultiClassTreeBase:
     __num_threads = 3
     training_lock = Lock()
 
+    classifier_update_stacks = {}   # store update data till trainer is available
+
     def __init__(self, classifier_type):
 
         # define valid classifiers
         self.define_classifiers()
 
-        print self.VALID_CLASSIFIERS
         if classifier_type not in self.VALID_CLASSIFIERS:
             raise ValueError('Invalid Classifier "{}". You can choose between: {}'.format(classifier_type, str(list(self.VALID_CLASSIFIERS))))
 
+        self.CLASSIFIER = classifier_type
+
         # perform classifier training in tasks
         self.start_classifier_trainers()
+
+        log.info('cl', "{} Classifier Tree initialized".format(self.CLASSIFIER))
 
     # -------- threaded classifier training
 
@@ -77,7 +83,6 @@ class MultiClassTreeBase:
         """
         e.g.
         self.VALID_CLASSIFIERS = {'OCSVM', 'OCSVM_RBF', 'RF'}
-        self.CLASSIFIER = 'OCSVM'
         """
         raise NotImplementedError("Classifier options must be defined first.")
 
@@ -137,8 +142,6 @@ class MultiClassTree(MultiClassTreeBase):
     __class_thresh = 0.7       # at least X% of samples must uniquely identify a person
     __novelty_thresh = 0.7     # at least X% of samples should uniquely hint a novelty
 
-
-
     def __init__(self, user_db_, classifier_type):
         MultiClassTreeBase.__init__(self, classifier_type)
         # link database
@@ -159,8 +162,9 @@ class MultiClassTree(MultiClassTreeBase):
         self.classifiers[class_id] = self.generate_classifier()
         self.__nr_classes += 1
         self.classifier_states[class_id] = 0
-        # collect the samples
-        self.p_user_db.add_samples(class_id, class_samples)
+
+        # add samples to update stack
+        self.classifier_update_stacks[class_id] = class_samples
         # train the classifier
         return self.train_classifier(class_id)
 
@@ -288,8 +292,7 @@ class OnlineMultiClassTree(MultiClassTree):
     __max_model_outliers = 1
 
     def define_classifiers(self):
-        self.VALID_CLASSIFIERS = {'ABOD'}
-        self.CLASSIFIER = 'ABOD'
+        self.VALID_CLASSIFIERS = {'ABOD', 'IABOD'}
 
     def __init__(self, user_db_, classifier='ABOD'):
         MultiClassTree.__init__(self, user_db_, classifier)
@@ -297,28 +300,75 @@ class OnlineMultiClassTree(MultiClassTree):
     def generate_classifier(self):
         if self.CLASSIFIER == 'ABOD':
             return ABOD()
+        elif self.CLASSIFIER == 'IABOD':
+            return IABOD()
 
     def train_classifier(self, class_id):
-        """Retrain One-Class Classifier"""
+        """
+        Retrain One-Class Classifiers (partial_fit)
+        """
 
         log.info('cl', "(Re-)training Classifier for user ID {}".format(class_id))
 
         if class_id not in self.classifiers:
-            log.severe("Cannot train class {} without initialized classifier".format(class_id))
+            log.severe("Cannot train class {} without creating the classifier first".format(class_id))
             return False
 
-        samples = self.p_user_db.get_class_samples(class_id)
-
-        if len(samples) > 100:
-            log.warning("Sample size exceeding 100. No refitting.")
-            return True
-
         start = time.time()
+
         with self.training_lock:
-            self.classifiers[class_id].fit(samples)
-            self.classifier_states[class_id] += 1
-            if self.__verbose:
-                log.info('cl', "fitting took {} seconds".format(time.time() - start))
+            # get update samples from stack
+
+            # if samples available: do update with all available update samples
+            # update_samples = self.classifier_update_stacks.get(class_id, []) or []
+
+            if class_id in self.classifier_update_stacks:
+                update_samples = self.classifier_update_stacks[class_id]
+            else:
+                update_samples = []
+
+            if len(update_samples) > 0:
+
+                if self.CLASSIFIER == 'ABOD':
+                    """
+                    OFFLINE Classifier: retrain with all available data
+                        - Samples: Stored in user db, reloaded upon every fit
+                    """
+                    # instead of partial fit: add samples and do refitting over complete data
+                    self.p_user_db.add_samples(class_id, update_samples)
+                    samples = self.p_user_db.get_class_samples(class_id)
+
+                    # stop
+                    if len(samples) > 100:
+                        log.warning("Sample size exceeding 100. No refitting.")
+                    else:
+                        # always use fit method (no partial fit available)
+                        self.classifiers[class_id].fit(samples)
+                        self.classifier_states[class_id] += 1
+
+                elif self.CLASSIFIER == 'IABOD':
+                    """
+                    INCREMENTAL Methods: Use partial fit with stored update data
+                        - Samples: Partially stored in ABOD Cluster
+                    """
+
+                    # first time: use fit
+                    if self.classifier_states[class_id] == 0:
+                        self.classifiers[class_id].fit(update_samples)
+                    else:
+                        # partial update: partial_fit
+                        self.classifiers[class_id].partial_fit(update_samples)
+
+                    self.classifier_states[class_id] += 1
+
+                # empty update list
+                self.classifier_update_stacks[class_id] = []
+            else:
+                log.warning("No training/update samples available")
+
+        if self.__verbose:
+            log.info('cl', "fitting took {} seconds".format(time.time() - start))
+
         return True
 
     def process_labeled_stream_data(self, class_id, samples):
@@ -334,25 +384,31 @@ class OnlineMultiClassTree(MultiClassTree):
         class_id = int(class_id)
 
         if class_id not in self.classifiers:
-            print "--- Class {} has not been initialized yet!".format(class_id)
-            return
+            log.severe("Class {} has not been initialized yet!".format(class_id))
+            return False    # force reidentification
 
         prediction = self.predict(samples)
 
         if prediction != class_id:
             log.severe("Updating invalid class! Tracker must have switched!")
-            return
+            return False    # force reidentification
 
-        # collect samples
-        self.p_user_db.add_samples(class_id, samples)
+        with self.training_lock:
+            # add update data to stack
+            if class_id not in self.classifier_update_stacks or len(self.classifier_update_stacks[class_id]) == 0:
+                # create new list
+                self.classifier_update_stacks[class_id] = samples
+            else:
+                # append
+                self.classifier_update_stacks[class_id] = np.concatenate((self.classifier_update_stacks[class_id], samples))
 
-        if self.CLASSIFIER == 'ABOD':
-
-            # add samples every time
+            # request classifier update
+            # Todo: only request update if available update data exceeds threshold
             self.add_training_task(class_id)
-        else:
-            # TODO: implement
-            pass
+
+        return True
+
+    # ----------- unused
 
     def __contradictive_predictions(self, predictions, target_class):
         """used to trigger retraining"""
