@@ -18,6 +18,12 @@ from uids.utils.DataAnalysis import *
 from uids.online_learning.ABOD import ABOD
 from scipy.spatial import ConvexHull
 from scipy.spatial import Delaunay
+from uids.utils.Logger import Logger as log
+from sklearn.neighbors import NearestNeighbors
+from uids.utils.lof import LocalOutlierFactor
+from uids.utils.KNFilter import KNFilter
+from uids.online_learning.IABOD import IABOD
+
 
 # path managing
 fileDir = os.path.dirname(os.path.realpath(__file__))
@@ -44,30 +50,6 @@ def load_labels(filename):
     return None
 
 
-class ABODOnline(ABOD):
-
-
-
-    def __init__(self):
-        ABOD.__init__(self)
-
-    def partial_fit(self, samples):
-        pass
-
-def in_hull(p, hull):
-    """
-    Test if points in `p` are in `hull`
-
-    `p` should be a `NxK` coordinates of `N` points in `K` dimensions
-    `hull` is either a scipy.spatial.Delaunay object or the `MxK` array of the
-    coordinates of `M` points in `K`dimensions for which Delaunay triangulation
-    will be computed
-    """
-    from scipy.spatial import Delaunay
-    if not isinstance(hull, Delaunay):
-        hull = Delaunay(hull)
-
-    return hull.find_simplex(p) >= 0
 
 
 # ================================= #
@@ -173,53 +155,6 @@ def test_ABOD_2():
     print "elements: {} | time: {}".format(min_nr_elems, time.time() - start)
 
 
-class OnlineHull():
-
-    cluster = []
-
-    def __init__(self):
-        pass
-
-    def init(self, samples):
-        self.cluster = samples
-
-    def partial_fit(self, samples):
-
-        if len(self.cluster) == 0:
-            print "NOT INITIALIZED YET! INITIALIZING USING INPUT SAMPLES"
-            self.clusster = samples
-            return
-
-        # reduce cluster/sample data
-        basis, mean = ExtractSubspace(self.cluster, 0.8)
-        cluster_reduced = ProjectOntoSubspace(self.cluster, mean, basis)
-        samples_reduced = ProjectOntoSubspace(samples, mean, basis)
-        dims = np.shape(cluster_reduced)
-
-        # select minimum data to build convex hull
-        min_nr_elems = dims[1] + 4
-
-        print "Recuding dimension: {}->{}".format(np.shape(self.cluster)[1], dims[1])
-
-        data_hull = cluster_reduced     # take all samples of cluster
-        print "Calculating cluster hull using {}/{} points".format(len(data_hull), len(self.cluster))
-        hull = Delaunay(data_hull)
-
-        print "Points included in hull: {}".format(np.unique(hull.convex_hull))
-
-        # test original samples if inside convex hull
-        elems_in_hull = np.sum([1 if hull.find_simplex(sample) >= 0 else 0 for sample in data_hull])
-        print "Cluster elements INSIDE hull (to throw): {}/{}".format(elems_in_hull, len(data_hull))
-
-        # include samples outside convex hull
-        elems_in_hull = np.sum([1 if hull.find_simplex(sample) >= 0 else 0 for sample in samples_reduced])
-        print "Elements INSIDE hull (to throw): {}/{}".format(elems_in_hull, len(samples))
-
-
-
-        # reevaluate data (delete points inside hull)
-
-
 def test_ABOD_3():
     emb1 = load_embeddings("embeddings_elias.pkl")
     emb2 = load_embeddings("embeddings_matthias.pkl")
@@ -229,16 +164,58 @@ def test_ABOD_3():
     emb_lfw = load_embeddings("embeddings_lfw.pkl")
 
     # randomize data
+    np.random.shuffle(emb3)
     np.random.shuffle(emb2)
 
-    cl = OnlineHull()
+    cl = IABOD()
 
     # initialize with 10 samples
-    cl.init(emb2[0:10,:])
+    cl.fit(emb2[0:10,:])
 
-    # partial update, check which samples are valuable
-    cl.partial_fit(emb2[20:30,:])
-    cl.partial_fit(emb2[30:40,:])
+
+    # partial update from different scene, check which samples are valuable
+    training_data = emb3[0:1000]
+    test_data = emb3[1000:1100]
+    test_data2 = emb5[0:100]
+    batch_size = 10
+    nr_steps = int(len(training_data/batch_size))
+    nr_steps = 200
+
+    cl_errors = []
+    cl_unknowns = []
+    cl_errors2 = []
+    cl_unknowns2 = []
+
+    for step in range(0, nr_steps):
+        start = (batch_size*step)
+        stop = start + batch_size
+
+
+        # prediction = cl.predict(test_data)
+        # cl_errors.append(len(prediction[prediction < 0]))
+        # cl_unknowns.append(len(prediction[prediction == 0]))
+        # # test outlier
+        # prediction = cl.predict(test_data2)
+        # cl_errors2.append(len(prediction[prediction > 0]))
+        # cl_unknowns2.append(len(prediction[prediction == 0]))
+
+
+        cl.partial_fit(training_data[start:stop, :])
+
+
+    # plt.figure()
+    # plt.plot(range(0, nr_steps), cl_errors, label="Error1")
+    # plt.plot(range(0, nr_steps), cl_unknowns, label="Unkowns1")
+    # plt.plot(range(0, nr_steps), cl_errors2, label="Error2")
+    # plt.plot(range(0, nr_steps), cl_unknowns2, label="Unkowns2")
+    # plt.title("Classification Error")
+    # plt.xlabel("Iteration")
+    # plt.ylabel("Error [nr samples]")
+    # plt.legend()
+
+    # plot classification performance
+
+    cl.disp_log()
 
 # ================================= #
 #              Main
