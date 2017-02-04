@@ -26,7 +26,7 @@ class CollectEmbeddingsByName:
         # generate embeddings
         embeddings = server.embedding_gen.get_embeddings(images)
 
-        if not embeddings:
+        if not embeddings.any():
             r.Error(server, conn, "No embeddings could be generated off the images")
             return
 
@@ -74,7 +74,7 @@ class ImageIdentification:
         # generate embedding
         embeddings = server.embedding_gen.get_embeddings(images)
 
-        if not embeddings:
+        if not embeddings.any():
             r.Error(server, conn, "Could not generate face embeddings.")
             return
 

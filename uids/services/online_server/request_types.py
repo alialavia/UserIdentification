@@ -16,7 +16,7 @@ class ImageIdentification:
         # generate embedding
         embeddings = server.embedding_gen.get_embeddings(images)
 
-        if not embeddings:
+        if not embeddings.any():
             r.Error(server, conn, "Could not generate face embeddings.")
             return
 
@@ -31,7 +31,7 @@ class ImageIdentification:
             log.info('db', "Creating new user")
             user_id = server.user_db.create_new_user("a_user")
             server.user_db.print_users()
-            # add classifier
+            # add new classifier
             server.classifier.init_classifier(user_id, embeddings)
 
         # get user nice name
@@ -59,7 +59,7 @@ class ImageIdentificationUpdate:
         # generate embedding
         embeddings = server.embedding_gen.get_embeddings(images)
 
-        if not embeddings:
+        if not embeddings.any():
             r.Error(server, conn, "Could not generate face embeddings.")
             return
 
@@ -79,7 +79,7 @@ class ImageIdentificationAligned:
         # generate embedding
         embeddings = server.embedding_gen.get_embeddings(images, False)
 
-        if not embeddings:
+        if not embeddings.any():
             r.Error(server, conn, "Could not generate face embeddings.")
             return
 
@@ -110,6 +110,10 @@ class ImageIdentificationAligned:
 
 
 class ImageIdentificationUpdateAligned:
+    """
+    Pure Update
+    - Assumes given label/id is correct
+    """
 
     def __init__(self, server, conn):
         # receive user id
@@ -123,7 +127,7 @@ class ImageIdentificationUpdateAligned:
         # generate embedding
         embeddings = server.embedding_gen.get_embeddings(images, False)
 
-        if not embeddings:
+        if not embeddings.any():
             r.Error(server, conn, "Could not generate face embeddings.")
             return
 
@@ -133,6 +137,41 @@ class ImageIdentificationUpdateAligned:
         server.classifier.process_labeled_stream_data(user_id, embeddings)
 
         r.OK(server, conn)
+
+
+class ImageIdentificationUpdateAlignedRobust:
+    """
+    Pure Update
+    - Checks
+    """
+
+    def __init__(self, server, conn):
+        # receive user id
+        user_id = server.receive_uint(conn)
+
+        log.info('server', 'User Update for ID {}'.format(user_id))
+
+        # receive images
+        images = server.receive_image_batch_squared_same_size(conn)
+
+        # generate embedding
+        embeddings = server.embedding_gen.get_embeddings(images, False)
+
+        if not embeddings.any():
+            r.Error(server, conn, "Could not generate face embeddings.")
+            return
+
+        log.info('cl', "Start to process stream data...")
+
+        # submit data
+        succ = server.classifier.process_labeled_stream_data(user_id, embeddings)
+
+        if succ:
+            r.OK(server, conn)
+        else:
+            # update was not classified as the labeled class
+            # force reidentification
+            r.Reidentification(server, conn)
 
 
 class SaveDatabase:

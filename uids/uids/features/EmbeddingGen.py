@@ -1,6 +1,7 @@
 #!/usr/bin/env python2
 import os
 import time
+import numpy as np
 import openface
 import openface.helper
 from openface.data import iterImgs
@@ -42,6 +43,12 @@ class EmbeddingGen:
 
     #  ----------- EMBEDDING GENERATION
     def get_embeddings(self, input_images, align=True):
+        """
+        Calculate deep face embeddings for input images
+        :param input_images:
+        :param align:
+        :return: np.array embedding vectors
+        """
 
         images_normalized = []
         embeddings = []
@@ -62,7 +69,7 @@ class EmbeddingGen:
                     log.debug('cnn', "Alignment took {} seconds - {}/{} images suitable".format(time.time() - start, len(images_normalized), len(input_images)))
                 else:
                     log.warning("No suitable images (no faces detected)")
-                    return embeddings
+                    return np.array(embeddings)
         else:
             images_normalized = input_images
 
@@ -75,7 +82,7 @@ class EmbeddingGen:
         # if self.verbose:
         #     print("--- Neural network forward pass took {} seconds.".format(time.time() - start))
 
-        return embeddings
+        return np.array(embeddings)
 
     def get_embedding(self, user_img, align=True):
         # align image
