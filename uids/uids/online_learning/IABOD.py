@@ -69,12 +69,14 @@ class IABOD(ABOD):
 
         # 3 ---------- select new samples from outside convex hull
 
-        outside_mask = [False if hull.find_simplex(sample) >= 0 else True for sample in samples_reduced]
+        outside_mask = np.array([False if hull.find_simplex(sample) >= 0 else True for sample in samples_reduced])
+        # Todo: use outside mask counting
         nr_elems_outside_hull = np.sum([0 if hull.find_simplex(sample) >= 0 else 1 for sample in samples_reduced])
         if self.__verbose:
             log.severe("3. Include new samples from outside hull")
             print "Elements OUTSIDE hull (to include): {}/{}".format(nr_elems_outside_hull, len(samples))
-        # add samples
+
+        # add samples (samples need to be np.array)
         self.data = np.concatenate((self.data, samples[outside_mask]))
 
         # ===================================================================

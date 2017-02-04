@@ -294,7 +294,7 @@ class OnlineMultiClassTree(MultiClassTree):
     def define_classifiers(self):
         self.VALID_CLASSIFIERS = {'ABOD', 'IABOD'}
 
-    def __init__(self, user_db_, classifier='ABOD'):
+    def __init__(self, user_db_, classifier='IABOD'):
         MultiClassTree.__init__(self, user_db_, classifier)
 
     def generate_classifier(self):
