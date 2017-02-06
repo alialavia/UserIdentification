@@ -130,6 +130,7 @@ class MultiClassTree(MultiClassTreeBase):
 
     classifiers = {}    # classifier instances
     classifier_states = {}
+    __decision_function = []
     __nr_classes = 0
     __verbose = False
 
@@ -139,8 +140,8 @@ class MultiClassTree(MultiClassTreeBase):
     # ---- class prediction threshold
     # TODO: tune these parameters according to comparison with LFW - maybe adaptive threshold
     __min_valid_samples = 0.5
-    __class_thresh = 0.7       # at least X% of samples must uniquely identify a person
-    __novelty_thresh = 0.7     # at least X% of samples should uniquely hint a novelty
+    __class_thresh = 0.4       # at least X% of samples must uniquely identify a person
+    __novelty_thresh = 0.4     # at least X% of samples should uniquely hint a novelty
 
     def __init__(self, user_db_, classifier_type):
         MultiClassTreeBase.__init__(self, classifier_type)
@@ -197,6 +198,13 @@ class MultiClassTree(MultiClassTreeBase):
             class_ids.append(class_id)
         return np.array(probabilities), np.array(class_ids)
 
+    def decision_function(self):
+        """
+        Use "predict" first and then "decision_function" to extract the classifier votes
+        :return: tree votes: min = -nr_samples, max = nr_samples
+        """
+        return self.__decision_function
+
     def predict(self, samples):
         """
         Prediction cases:
@@ -214,6 +222,7 @@ class MultiClassTree(MultiClassTreeBase):
 
         predictions, class_ids = self.__predict(samples)
         cls_scores = np.sum(predictions, axis=1)
+        self.__decision_function = cls_scores
         nr_samples = len(samples)
 
         log.info('cl', "Classifier scores: {} | max: {}".format(cls_scores, nr_samples))
