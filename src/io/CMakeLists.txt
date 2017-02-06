@@ -25,9 +25,9 @@ SET(TARGET_SRC
 # --------------------------------------------
 
 # link internally (other project libraries)
-# SET(TARGET_LIBRARIES
-
-# )
+SET(TARGET_LIBRARIES
+	Math
+)
 # link externally (library paths included over "find_library(${libname})")
 SET(TARGET_EXTERNAL_LIBRARIES
 	${KINECTSDK2_LIBRARIES}	# Kinect SDK 2.0

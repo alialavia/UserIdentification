@@ -4,11 +4,11 @@
 #include <algorithm>
 #include <math\Math.h>
 
-int main(int argc, char** argv)
-{
+
+void integer_test() {
 	math::SequentialContainer<int> c;
 
-	for (int i = 0; i < 10;i++) {
+	for (int i = 0; i < 10; i++) {
 		c.push(i);
 	}
 
@@ -27,6 +27,31 @@ int main(int argc, char** argv)
 		std::cout << c.front() << std::endl;
 		c.pop();
 	}
+}
 
+void reference_test() {
+
+	int a, b, c;
+	a = 1;
+	b = 2;
+	c = 3;
+
+	math::SequentialContainer<int*> cont;
+	cont.push(&a);
+	cont.push(&b);
+	cont.push(&c);
+
+	cont.erase(&b);
+
+	while (!cont.empty()) {
+		std::cout << *cont.front() << std::endl;
+		cont.pop();
+	}
+}
+
+
+int main(int argc, char** argv)
+{
+	reference_test();
 	return 0;
 } 

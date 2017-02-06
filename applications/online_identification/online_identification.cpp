@@ -118,7 +118,7 @@ int main(int argc, char** argv)
 
 				// Process responses
 				// - update user ids
-				um.ApplyUserIdentification();
+				um.ProcessResponses();
 
 				// draw users
 				um.DrawUsers(color_image);

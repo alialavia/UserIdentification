@@ -58,6 +58,12 @@ namespace user
 			}
 		}
 
+		void ResetUser() {
+			mUserID = -1;
+			mIDStatus = IDStatus_Unknown;
+			mActionStatus = ActionStatus_Idle;
+		}
+
 		// ------ getters
 		// status/id getters
 		void GetStatus(IdentificationStatus &s1, ActionStatus &s2);
@@ -94,6 +100,7 @@ namespace user
 
 		// features: might be present or not
 		tracking::Face* mFaceData;
+		cv::Mat mProfilePicture;
 
 	public:
 		// temporal model data (images, accumulated status)

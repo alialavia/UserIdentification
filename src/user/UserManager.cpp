@@ -61,27 +61,27 @@ void UserManager::RefreshUserTracking(
 	// update users infos - remove non tracked
 	for (auto it = mFrameIDToUser.begin(); it != mFrameIDToUser.end();)
 	{
-		int user_index = find(user_scene_ids.begin(), user_scene_ids.end(), it->first) - user_scene_ids.begin();
+		int user_frame_id = it->first;
+		User* target_user = it->second;
+		int user_index = find(user_scene_ids.begin(), user_scene_ids.end(), user_frame_id) - user_scene_ids.begin();
 
 		// check if user is in scene
 		if (user_index < user_scene_ids.size())
 		{
 			// user is in scene - update scene data (bounding box, position etc.)
-			it->second->SetFaceBoundingBox(bounding_boxes[user_index]);
+			target_user->SetFaceBoundingBox(bounding_boxes[user_index]);
 			// reset feature tracking
-			it->second->ResetSceneFeatures();
+			target_user->ResetSceneFeatures();
 			++it;
 		}
 		// remove user if he has left scene
 		else
 		{
-			// remove request mapping
-			RemovePointerMapping(it->second);
-
-			// TODO: cancel requests
+			// cancel and unlink all pending requests for a user
+			CancelAllUserRequests(target_user);
 
 			// user has left scene - delete tracking instance
-			delete(it->second);
+			delete(target_user);
 
 #ifdef _DEBUG_USERMANAGER
 			std::cout << "=== User has left scene - removing UserSceneID " << it->first << std::endl;
@@ -94,13 +94,16 @@ void UserManager::RefreshUserTracking(
 }
 
 // incorporate processed requests: update user ids
-void UserManager::ApplyUserIdentification()
+void UserManager::ProcessResponses()
 {
-	// handle all processed identification requests
-	io::IdentificationResponse response;
+
 	io::NetworkRequest* request = nullptr;
 	io::NetworkRequestType req_type;
 
+	// ============================================= //
+	// 1. handle identification responses
+	// ============================================= //
+	io::IdentificationResponse response;
 	while (pRequestHandler->PopResponse(&response, request))
 	{
 #ifdef _DEBUG_USERMANAGER
@@ -109,56 +112,73 @@ void UserManager::ApplyUserIdentification()
 		std::cout << "--- User ID: " << response.mUserID << std::endl;
 #endif
 
+		if (request == nullptr) {
+			std::cout << "--------------- USER NOT IN SCENE - REQUEST HAS BEEN DELETED ------------- " << std::endl;
+			continue;
+		}
+
 		// locate user for which request was sent
 		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request);
 
 		if (it != mRequestToUser.end()) {
 			// extract user
 			User* target_user = it->second;
+			io::NetworkRequest* target_request = it->first;
+
 			// remove request mapping
-			RemovePointerMapping(it->second);
+			RemoveRequestUserLinking(target_request);
 
-			bool user_in_scene = false;
-			int tmp_id = 0;
+			bool duplicate_user = false;
+			int duplicate_id = -1;
 
-			// check if other user in scene has same id
+			// Check for duplicate IDs
 			for (auto its = mFrameIDToUser.begin(); its != mFrameIDToUser.end(); ++its)
 			{
 				// check if has assigned id - equals identified
-				if((tmp_id = its->second->GetUserID()) > 0 && tmp_id == response.mUserID)
+				if((duplicate_id = its->second->GetUserID()) > 0 && duplicate_id == response.mUserID)
 				{
-					user_in_scene = true;
+					// person with same id is already in scene
+					// reset both tracking instances and force reidentification
+					its->second->ResetUser();
+					target_user->ResetUser();
+					duplicate_user = true;
 					break;
 				}
 			}
 			
-			if(!user_in_scene)
+			if(duplicate_user)
 			{
-				std::cout << "......... assigning ID to user: " << response.mUserID << std::endl;
-				// apply user identification
-				target_user->SetUserID(response.mUserID, response.mUserNiceName);
+				std::cout << "-------------- DUPLICATE USER - RESETTING ID " << response.mUserID << std::endl;
+				
 			}else
 			{
-				// person with same id is already in scene
-				// do nothing and force reinitialization
-				// TODO: maybe send retraining request for target classes
+				// apply user identification
+				target_user->SetUserID(response.mUserID, response.mUserNiceName);
 			}
 
 			// reset action status
 			target_user->SetActionStatus(ActionStatus_Idle);
 		}
 		else {
-			// user corresponding to request not found (may have left scene) - drop response
-
+			// user corresponding to request not found - nothing to unlink - drop response
+			// e.g. User has left scene and all requests and linking where deleted
+			throw std::invalid_argument("User unspecific requests are not implemented yet!");
 		}
 	}
 
-	// ok status
-	io::OKResponse ok_response;
-	while (pRequestHandler->PopResponse(&ok_response, request, &req_type))
+	// ============================================= //
+	// 2. Default successful tasks
+	// ============================================= //
+	io::ReidentificationResponse reid_response;
+	while (pRequestHandler->PopResponse(&reid_response, request, &req_type))
 	{
 		// display response
-		std::cout << "--- Ok response: " << ok_response.mMessage << std::endl;
+		std::cout << "--- Forced reidentification (e.g. update does not explain model)" << std::endl;
+
+		if (request == nullptr) {
+			std::cout << "--------------- USER NOT IN SCENE - REQUEST HAS BEEN DELETED ------------- " << std::endl;
+			continue;
+		}
 
 		// locate user for which request was sent
 		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request);
@@ -166,9 +186,45 @@ void UserManager::ApplyUserIdentification()
 		if (it != mRequestToUser.end()) {
 			// extract user
 			User* target_user = it->second;
+			io::NetworkRequest* target_request = it->first;
 
 			// remove request mapping
-			RemovePointerMapping(it->second);
+			RemoveRequestUserLinking(target_request);
+
+			// reset target user
+			target_user->ResetUser();
+		}
+		else {
+			// user corresponding to request not found - nothing to unlink - drop response
+			// e.g. User has left scene and all requests and linking where deleted
+			throw std::invalid_argument("User unspecific requests are not implemented yet!");
+		}
+	}
+
+	// ============================================= //
+	// 3. Default successful tasks
+	// ============================================= //
+	io::OKResponse ok_response;
+	while (pRequestHandler->PopResponse(&ok_response, request, &req_type))
+	{
+		// display response
+		std::cout << "--- Ok response: " << ok_response.mMessage << std::endl;
+
+		if (request == nullptr) {
+			std::cout << "--------------- USER NOT IN SCENE - REQUEST HAS BEEN DELETED ------------- " << std::endl;
+			continue;
+		}
+
+		// locate user for which request was sent
+		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request);
+
+		if (it != mRequestToUser.end()) {
+			// extract user
+			User* target_user = it->second;
+			io::NetworkRequest* target_request = it->first;
+
+			// remove request mapping
+			RemoveRequestUserLinking(target_request);
 
 			// reset action status
 			target_user->SetActionStatus(ActionStatus_Idle);
@@ -179,45 +235,60 @@ void UserManager::ApplyUserIdentification()
 			//}
 		}
 		else {
-			// user corresponding to request not found (may have left scene) - drop response
-
+			// user corresponding to request not found - nothing to unlink - drop response
+			// e.g. User has left scene and all requests and linking where deleted
+			throw std::invalid_argument("User unspecific requests are not implemented yet!");
 		}
 	}
 
-
-	// handle erronomous requests
+	// ============================================= //
+	// 4. Default erronomous tasks
+	// ============================================= //
 	io::ErrorResponse err_response;
-
 	while (pRequestHandler->PopResponse(&err_response, request, &req_type))
 	{
 		// display response
-		std::cout << "--- Error response: " << err_response.mMessage << std::endl;
+		std::cout << "--- Error response | RequestID (" << req_type  << "): " << err_response.mMessage << std::endl;
+
+		if (request == nullptr) {
+			std::cout << "--------------- USER NOT IN SCENE - REQUEST HAS BEEN DELETED ------------- " << std::endl;
+			continue;
+		}
 
 		// locate user for which request was sent
 		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request);
 
-#ifdef _DEBUG_USERMANAGER
-		std::cout << "--- RequestID (type): " << req_type << std::endl;
-#endif
-
 		if (it != mRequestToUser.end()) {
 			// extract user
 			User* target_user = it->second;
+			io::NetworkRequest* target_request = it->first;
 
+			// error during identification (e.g. no faces detected) - try again
 			if (req_type == io::NetworkRequest_ImageIdentification) {
 				target_user->SetIDStatus(user::IDStatus_Unknown);
 				target_user->SetActionStatus(ActionStatus_Idle);
 			}
+			// error during update - not enough "good"/destinctive feature vectors (most vectors are around threshold)
+			// trash update and start again
+			else if (req_type == io::NetworkRequest_EmbeddingCollectionByIDAligned
+				|| io::NetworkRequest_EmbeddingCollectionByID
+				|| io::NetworkRequest_EmbeddingCollectionByName) 
+			{
+				target_user->SetActionStatus(ActionStatus_Idle);
+			}
 
 			// remove request mapping
-			RemovePointerMapping(it->second);
+			RemoveRequestUserLinking(target_request);
 			// reset user identification status if it was an identification request
 
 		}
 		else {
-			// user corresponding to request not found (may have left scene) - drop response
-
+			// user corresponding to request not found (may have left scene or the request is not user specific) - drop response
+			// unprocessed requests are already deleted when user leaves scene
+			throw std::invalid_argument("User unspecific requests are not implemented yet!");
 		}
+
+
 	}
 
 }
@@ -253,10 +324,8 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 				tracking::Face face;
 				if (it->second->GetFaceData(face)) {
 
-					std::cout << ".";
 					// collect another image
 					cv::Mat face_snap = scene_rgb(it->second->GetFaceBoundingBox());
-					std::cout << ",\n";
 
 					// resize
 					cv::resize(face_snap, face_snap, cv::Size(96, 96));
@@ -287,7 +356,7 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 
 						// update linking
 						mRequestToUser[new_request] = it->second;
-						mUserToRequest[it->second] = new_request;
+						mUserToRequests[it->second].insert(new_request);
 
 						// set user action status
 						it->second->SetActionStatus(ActionStatus_IDPending);
@@ -335,20 +404,19 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 						// TODO: debug why face bb is nan
 						std::cout << "............ Face bb: " << facebb.height << " | " << facebb.width << std::endl;
 
-						std::cout << ".";
 						// collect another image
 						cv::Mat face_snap = scene_rgb(facebb);
-						std::cout << ",\n";
 
 						// detect and warp face
 						cv::Mat aligned;
-
 						
 #ifdef _DLIB_PREALIGN
 							if (mDlibAligner->AlignImage(96, face_snap, aligned)) 
 
 #else
 						aligned = face_snap;
+						// resize (requests needs all squared with same size)
+						cv::resize(aligned, aligned, cv::Size(120, 120));
 #endif
 							{
 							std::cout << "cols: " << aligned.cols << std::endl;
@@ -402,7 +470,7 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 
 						// update linking
 						mRequestToUser[new_request] = it->second;
-						mUserToRequest[it->second] = new_request;
+						mUserToRequests[it->second].insert(new_request);
 
 						// set user action status
 						it->second->SetActionStatus(ActionStatus_UpdatePending);
@@ -423,6 +491,24 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 
 }
 
+void UserManager::CancelAllUserRequests(User* user) {
+	// user->requests
+	if (mUserToRequests.find(user) != mUserToRequests.end()) {
+
+		// iterate over requests
+		for (auto req : mUserToRequests[user]) {
+			// unlink: requests->user
+			mRequestToUser.erase(req);
+			// delete: requests from queue
+			pRequestHandler->cancelRequest(req);
+		}
+		// unlink: user->request
+		mUserToRequests.erase(user);
+	}
+	else {
+		// not found
+	}
+}
 
 // ----------------- helper functions
 

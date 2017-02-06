@@ -167,6 +167,7 @@ namespace math {
 			: c(_Right.c)
 		{	// construct by copying _Right container
 		}
+
 		SequentialContainer<value_type>& operator=(const _ClassType& _Right)
 		{	// assign by copying _Right
 			c = _Right.c;
