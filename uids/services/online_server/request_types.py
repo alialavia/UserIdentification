@@ -51,7 +51,7 @@ class ImageIdentificationUpdate:
         # receive user id
         user_id = server.receive_uint(conn)
 
-        log.info('server', 'User Update for ID {}'.format(user_id))
+        log.info('server', 'User Update (Robust) for ID {}'.format(user_id))
 
         # receive images
         images = server.receive_image_batch_squared_same_size(conn)
@@ -59,14 +59,25 @@ class ImageIdentificationUpdate:
         # generate embedding
         embeddings = server.embedding_gen.get_embeddings(images)
 
+        if embeddings.shape[0] < 5:
+            r.Error(server, conn, "Not enough images for update quality check.")
+            return
+
         if not embeddings.any():
             r.Error(server, conn, "Could not generate face embeddings.")
             return
 
-        # submit data
-        server.classifier.process_labeled_stream_data(user_id, embeddings)
+        log.info('cl', "Starting to process stream data...")
 
-        r.OK(server, conn)
+        # submit data
+        succ = server.classifier.process_labeled_stream_data(user_id, embeddings)
+
+        if succ:
+            r.OK(server, conn)
+        else:
+            # update was not classified as the labeled class
+            # force reidentification
+            r.Reidentification(server, conn)
 
 
 class ImageIdentificationAligned:
@@ -119,7 +130,7 @@ class ImageIdentificationUpdateAligned:
         # receive user id
         user_id = server.receive_uint(conn)
 
-        log.info('server', 'User Update for ID {}'.format(user_id))
+        log.info('server', 'User Update (Aligned) for ID {}'.format(user_id))
 
         # receive images
         images = server.receive_image_batch_squared_same_size(conn)
@@ -133,8 +144,8 @@ class ImageIdentificationUpdateAligned:
 
         log.info('cl', "Start to process stream data...")
 
-        # submit data
-        server.classifier.process_labeled_stream_data(user_id, embeddings)
+        # submit data (ignore if prediction of samples does not fit model)
+        succ = server.classifier.process_labeled_stream_data(user_id, embeddings)
 
         r.OK(server, conn)
 
@@ -149,7 +160,7 @@ class ImageIdentificationUpdateAlignedRobust:
         # receive user id
         user_id = server.receive_uint(conn)
 
-        log.info('server', 'User Update for ID {}'.format(user_id))
+        log.info('server', 'User Update (Aligned, Robust) for ID {}'.format(user_id))
 
         # receive images
         images = server.receive_image_batch_squared_same_size(conn)
@@ -161,7 +172,7 @@ class ImageIdentificationUpdateAlignedRobust:
             r.Error(server, conn, "Could not generate face embeddings.")
             return
 
-        log.info('cl', "Start to process stream data...")
+        log.info('cl', "Starting to process stream data...")
 
         # submit data
         succ = server.classifier.process_labeled_stream_data(user_id, embeddings)
