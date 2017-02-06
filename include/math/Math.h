@@ -148,6 +148,89 @@ namespace math {
 		}
 	};
 
+
+	// Sequential container like Queue but with option to delete specific elements
+	template <class value_type>
+	class SequentialContainer {
+
+	public:
+
+		typedef typename std::vector<value_type> _Container;
+		typedef typename SequentialContainer<value_type> _ClassType;
+		typedef typename value_type& reference;
+		typedef typename const value_type& const_reference;
+
+		SequentialContainer<value_type>() {
+		}
+
+		SequentialContainer<value_type>(const _ClassType& _Right)
+			: c(_Right.c)
+		{	// construct by copying _Right container
+		}
+		SequentialContainer<value_type>& operator=(const _ClassType& _Right)
+		{	// assign by copying _Right
+			c = _Right.c;
+			return (*this);
+		}
+
+		void erase(const value_type &_Val) {
+			auto pr = std::equal_range(std::begin(c), std::end(c), _Val);
+			c.erase(pr.first, pr.second);
+		}
+
+		bool empty() const
+		{	// test if queue is empty
+			return (c.empty());
+		}
+
+		size_t size() const
+		{	// return length of queue
+			return (c.size());
+		}
+
+		reference front()
+		{	// return first element of mutable queue
+			return (c.front());
+		}
+
+		const_reference front() const
+		{	// return first element of nonmutable queue
+			return (c.front());
+		}
+
+		reference back()
+		{	// return last element of mutable queue
+			return (c.back());
+		}
+
+		const_reference back() const
+		{	// return last element of nonmutable queue
+			return (c.back());
+		}
+
+		void push(const value_type& _Val)
+		{	// insert element at beginning (=end of vector)
+			c.push_back(_Val);
+		}
+
+		void pop()
+		{	// erase element at end (vector[0])
+			if (!c.empty()) {
+				// = c.pop_front();
+				c.erase(c.begin());
+			}
+		}
+
+		const _Container& _Get_container() const
+		{	// get reference to container
+			return (c);
+		}
+
+	private:
+		_Container c;
+
+	};
+
 } // namespace
 
 #endif
