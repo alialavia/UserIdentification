@@ -5,6 +5,7 @@
 #include <map>
 #include <mutex>
 #include <thread>
+#include <math\Math.h>
 
 #include <opencv2/core.hpp>
 #include "ResponseTypes.h"
@@ -61,6 +62,8 @@ namespace io {
 
 		void addRequest(io::NetworkRequest* request);
 
+		void cancelRequest(io::NetworkRequest* request);
+
 		template<class T>
 		bool PopResponse(T *response_container, NetworkRequest* &req_ptr_val, NetworkRequestType* request_type = nullptr)
 		{
@@ -86,23 +89,80 @@ namespace io {
 				memcpy(response_container, response, sizeof(T));
 
 				mMappingLock.lock();
-				// delete corresponding request and mapping
-				std::map<NetworkResponse*, NetworkRequest*>::iterator it1 = mResponseToRequest.find(response);
 
-				// ------ returns
-				req_ptr_val = it1->second; // share request pointer
-				if (request_type != nullptr) {
-					*request_type = it1->second->cRequestType;	// share request type
+				if (mResponseToRequest.count(response) == 0) {
+					std::cout << "We got a problem here! Response > Request mapping is corrupted." << std::endl;
+					throw std::invalid_argument("We got a problem here! Response > Request mapping is corrupted.");
 				}
 
-				// ------ cleanup
-				delete(it1->second);			// delete request
-				mResponseToRequest.erase(it1);	// delete map item
+				req_ptr_val = mResponseToRequest[response];
+
+				// check if request is not deleted yet
+				if (req_ptr_val != nullptr) {
+					if (request_type != nullptr) {
+						*request_type = req_ptr_val->cRequestType;	// share request type
+					}
+					// ------ remove request
+					delete(req_ptr_val);
+					mRequestToResponse.erase(req_ptr_val);
+				}
+				else {
+					std::cout << "--- Request already deleted!" << std::endl;
+				}
+
+				// delete mapping
+				mResponseToRequest.erase(response);
+
+				// open lock
 				mMappingLock.unlock();
 
 				// delete original response container
 				delete(response);
 				status = true;
+
+				// --------------------------------------------------
+
+				
+				//// delete corresponding request and mapping
+				//std::map<NetworkResponse*, NetworkRequest*>::iterator it1 = mResponseToRequest.find(response);
+
+				//if (it1 == mResponseToRequest.end()) {
+				//	std::cout << "We got a problem here!" << std::endl;
+				//	throw std::invalid_argument("We got a problem here!");
+				//}
+
+				//// TODO: fix situation, when request is already deleted (User has left the scene)
+
+				//// ------ returns
+				//req_ptr_val = it1->second; // share request pointer
+
+				//// check if request is not deleted yet
+				//if (req_ptr_val != nullptr) {
+
+				//	std::cout << "--- request pointer is not zero but!!!" << std::endl;
+
+				//	if (request_type != nullptr) {
+				//		*request_type = it1->second->cRequestType;	// share request type
+				//	}
+				//	// ------ cleanup
+				//	delete(req_ptr_val);
+				//}
+				//else {
+				//	std::cout << "--- Request already deleted!" << std::endl;
+				//}
+
+
+				//if (mResponseToRequest.count(response)==0) {
+				//	std::cout << "--- Key (response pointers) is not in map!" << std::endl;
+				//}
+				//
+				//// delete request
+				//mResponseToRequest.erase(it1);	// delete map item
+				//mMappingLock.unlock();
+
+				//// delete original response container
+				//delete(response);
+				//status = true;
 			}
 
 			mRespondsLock.unlock();
@@ -121,13 +181,14 @@ namespace io {
 		std::thread mThread;	// processing thread
 
 		// unprocessed requests in submit order
-		std::queue<NetworkRequest*> mRequests;
+		math::SequentialContainer<NetworkRequest*> mRequests;
 		// processed requests ordered by request type in processing order (stacked)
 		std::map<std::type_index, std::queue<NetworkResponse*>> mResponds;
 
 		// linking
 		// TODO: use smart pointers
 		std::map<NetworkResponse*, NetworkRequest*> mResponseToRequest;
+		std::map<NetworkRequest*, NetworkResponse*> mRequestToResponse;	// helps during cleanup
 
 		std::mutex mMappingLock;
 		std::mutex mRequestsLock;

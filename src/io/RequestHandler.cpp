@@ -69,6 +69,24 @@ void NetworkRequestHandler::addRequest(io::NetworkRequest* request)
 	mRequestsLock.unlock();
 }
 
+void NetworkRequestHandler::cancelRequest(io::NetworkRequest* request) {
+
+	// remove from task queue
+	mRequests.erase(request);
+
+	io::NetworkResponse* resp = mRequestToResponse[request];
+	
+	// remove response > request linking (set request to nullptr)
+	mResponseToRequest[resp] = nullptr;
+	// remove request > response linking (delete map entry)
+	mRequestToResponse.erase(request);
+
+	// delete request itself
+	if (request != nullptr) {
+		delete(request);
+	}
+}
+
 void NetworkRequestHandler::processRequests()
 {
 
@@ -112,13 +130,17 @@ void NetworkRequestHandler::processRequests()
 			// allocate response
 			std::type_index response_type_id = ResponseFactory::AllocateAndLoad((io::NetworkResponseType)response_identifier, socket, response_ptr);
 
-			// add linking
-			mResponseToRequest[response_ptr] = request_ptr;
-
 			// move to processed stack - sort by response type identifier
+			
+			// add linking
 			mMappingLock.lock();
-			mResponds[response_type_id].push(response_ptr);
+			mResponseToRequest[response_ptr] = request_ptr;
+			mRequestToResponse[request_ptr] = response_ptr;
 			mMappingLock.unlock();
+
+			mRespondsLock.lock();
+			mResponds[response_type_id].push(response_ptr);
+			mRespondsLock.unlock();
 
 			// disconnect from server
 			socket->Close();
