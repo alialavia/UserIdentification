@@ -17,6 +17,7 @@ namespace io {
 		NetworkResponse_Embedding = 2,
 		NetworkResponse_Image = 3,
 		NetworkResponse_ImageQuadratic = 4,
+		NetworkResponse_Reidentification = 10,
 		NetworkResponse_Error = 999,
 		NetworkResponse_OK = 111,
 	};
@@ -131,6 +132,13 @@ namespace io {
 		QuadraticImageResponse(io::TCPClient* conn = nullptr) :NetworkResponse(conn, NetworkResponse_ImageQuadratic) {}
 		void GetPayload() { pConn->ReceiveRGBImageQuadratic(mImage); };
 		cv::Mat mImage;
+	};
+
+	class ReidentificationResponse : public NetworkResponse
+	{
+	public:
+		ReidentificationResponse(io::TCPClient* conn = nullptr) :NetworkResponse(conn, NetworkResponse_Reidentification) {}
+		void GetPayload() {};
 	};
 
 }
