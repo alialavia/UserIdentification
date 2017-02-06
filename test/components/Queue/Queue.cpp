@@ -12,6 +12,9 @@ int main(int argc, char** argv)
 		c.push(i);
 	}
 
+	int duplicate = 4;
+	c.push(duplicate);
+
 	// element not in container
 	int to_erase = 22;
 	c.erase(to_erase);

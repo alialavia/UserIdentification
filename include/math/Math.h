@@ -174,8 +174,15 @@ namespace math {
 		}
 
 		void erase(const value_type &_Val) {
-			auto pr = std::equal_range(std::begin(c), std::end(c), _Val);
-			c.erase(pr.first, pr.second);
+			// remove all elements that have value _Val
+			c.erase(
+				std::remove(            // returns iterator on
+					c.begin(),      // first element to
+					c.end(),        // be removed
+					_Val
+				),
+				c.end()
+			);
 		}
 
 		bool empty() const
