@@ -36,6 +36,10 @@ class FontColor:
 
 class Logger:
 
+    """
+    Todo: Add logging to harddrive
+    """
+
     # output format \033[ text_style text_color bg_color
     endc = '\033[0m'
     thresh = 0

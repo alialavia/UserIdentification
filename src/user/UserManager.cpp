@@ -550,6 +550,13 @@ void UserManager::DrawUsers(cv::Mat &img)
 			color = cv::Scalar(0, 0, 255);
 			
 		}
+
+		int baseline = 0;
+		cv::Size textSize = cv::getTextSize(text1, cv::FONT_HERSHEY_SIMPLEX, font_size, 1, &baseline);
+
+		cv::Rect bg_patch = cv::Rect(bb.x, bb.y, textSize.width + 20, textSize.height + 15);
+		img(bg_patch) = cv::Scalar(0, 0, 0);
+
 		cv::putText(img, text1, cv::Point(bb.x+10, bb.y+20), cv::FONT_HERSHEY_SIMPLEX, font_size, color, 1, 8);
 		cv::putText(img, text2, cv::Point(bb.x+10, bb.y+40), cv::FONT_HERSHEY_SIMPLEX, font_size, color, 1, 8);
 
