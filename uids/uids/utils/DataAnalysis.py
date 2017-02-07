@@ -79,6 +79,9 @@ def ExtractMaxVarComponents(data, nr_components):
     expl_variance = np.sum(pca.explained_variance_ratio_[0:nr_components])
     return basis, pca.mean_, expl_variance
 
+def ReduceToSubspace(data, explained_variance):
+    basis, mean = ExtractSubspace(data, explained_variance)
+    return ProjectOntoSubspace(data, mean, basis)
 
 def ExtractSubspace(data, explained_variance):
     """"""
@@ -100,7 +103,7 @@ def ExtractSubspace(data, explained_variance):
 
 
 def ProjectOntoSubspace(data, mean, basis):
-    """Applie simension reduction"""
+    """Applie dimension reduction"""
     reduced = data - mean
     reduced = fast_dot(reduced, basis)
     reduced = reduced + fast_dot(mean, basis)
