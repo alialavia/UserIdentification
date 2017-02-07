@@ -185,6 +185,10 @@ namespace math {
 				c.end()
 			);
 		}
+		bool contains(const value_type _Val)
+		{
+			return std::find(c.begin(), c.end(), _Val) != c.end();
+		}
 
 		bool empty() const
 		{	// test if queue is empty
