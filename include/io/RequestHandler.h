@@ -62,10 +62,10 @@ namespace io {
 
 		void addRequest(io::NetworkRequest* request);
 
-		void cancelRequest(io::NetworkRequest* request);
+		void cancelPendingRequest(io::NetworkRequest* request);
 
 		template<class T>
-		bool PopResponse(T *response_container, NetworkRequest* &req_ptr_val, NetworkRequestType* request_type = nullptr)
+		bool PopResponse(T *response_container, NetworkRequest* &req_lookup, NetworkRequestType* request_type = nullptr)
 		{
 			bool status = false;
 			mRespondsLock.lock();
@@ -85,40 +85,62 @@ namespace io {
 				// remove from queue - pop front
 				mResponds[typeid(T)].pop();
 
-				// copy response to response container
+				// copy response to specific response container
 				memcpy(response_container, response, sizeof(T));
 
 				mMappingLock.lock();
+				NetworkRequest* request = mResponseToRequest[response];
 
-				if (mResponseToRequest.count(response) == 0) {
-					std::cout << "We got a problem here! Response > Request mapping is corrupted." << std::endl;
-					throw std::invalid_argument("We got a problem here! Response > Request mapping is corrupted.");
+				// provide req lookup key
+				req_lookup = request;
+				if(request_type != nullptr)
+				{
+					*request_type = request->cRequestType;	// share request type
 				}
-
-				req_ptr_val = mResponseToRequest[response];
-
-				// check if request is not deleted yet
-				if (req_ptr_val != nullptr) {
-					if (request_type != nullptr) {
-						*request_type = req_ptr_val->cRequestType;	// share request type
-					}
-					// ------ remove request
-					delete(req_ptr_val);
-					mRequestToResponse.erase(req_ptr_val);
-				}
-				else {
-					std::cout << "--- Request already deleted!" << std::endl;
-				}
-
-				// delete mapping
+				
+				// delete req>resp linking
 				mResponseToRequest.erase(response);
-
-				// open lock
+				mRequestToResponse.erase(request);
 				mMappingLock.unlock();
 
-				// delete original response container
+				// delete response
 				delete(response);
+				// delete request
+				delete(request);
+
 				status = true;
+
+				// ---------------------------
+
+				//if (mResponseToRequest.count(response) == 0) {
+				//	std::cout << "We got a problem here! Response > Request mapping is corrupted." << std::endl;
+				//	throw std::invalid_argument("We got a problem here! Response > Request mapping is corrupted.");
+				//}
+
+				//req_lookup = mResponseToRequest[response];
+
+				//// check if request is not deleted yet
+				//if (req_lookup != nullptr) {
+				//	if (request_type != nullptr) {
+				//		*request_type = req_lookup->cRequestType;	// share request type
+				//	}
+				//	// ------ remove request
+				//	delete(req_lookup);
+				//	mRequestToResponse.erase(req_lookup);
+				//}
+				//else {
+				//	std::cout << "--- Request already deleted!" << std::endl;
+				//}
+
+				//// delete mapping
+				//mResponseToRequest.erase(response);
+
+				//// open lock
+				//mMappingLock.unlock();
+
+				//// delete original response container
+				//delete(response);
+				//status = true;
 
 				// --------------------------------------------------
 
@@ -134,10 +156,10 @@ namespace io {
 				//// TODO: fix situation, when request is already deleted (User has left the scene)
 
 				//// ------ returns
-				//req_ptr_val = it1->second; // share request pointer
+				//req_lookup = it1->second; // share request pointer
 
 				//// check if request is not deleted yet
-				//if (req_ptr_val != nullptr) {
+				//if (req_lookup != nullptr) {
 
 				//	std::cout << "--- request pointer is not zero but!!!" << std::endl;
 
@@ -145,7 +167,7 @@ namespace io {
 				//		*request_type = it1->second->cRequestType;	// share request type
 				//	}
 				//	// ------ cleanup
-				//	delete(req_ptr_val);
+				//	delete(req_lookup);
 				//}
 				//else {
 				//	std::cout << "--- Request already deleted!" << std::endl;
@@ -190,6 +212,7 @@ namespace io {
 		std::map<NetworkResponse*, NetworkRequest*> mResponseToRequest;
 		std::map<NetworkRequest*, NetworkResponse*> mRequestToResponse;	// helps during cleanup
 
+		// TODO: use single lock (processRequests might cause problems otherwise)
 		std::mutex mMappingLock;
 		std::mutex mRequestsLock;
 		std::mutex mRespondsLock;

@@ -78,16 +78,23 @@ namespace user
 			std::map<io::NetworkRequest*, User*>::iterator it1 = mRequestToUser.find(req);
 			if (it1 != mRequestToUser.end()) {
 				// User -> Request
-				int succ = mUserToRequests.erase(it1->second);
+				int succ = mUserToRequests[it1->second].erase(it1->first);
+				//int succ = mUserToRequests.erase(it1->second);
 
 #ifdef _DEBUG_USERMANAGER
 				if (succ == 0) {
-					throw std::invalid_argument("Request was not correctly linked with a user.");
+					throw std::invalid_argument("Request was not correctly linked with a user (1).");
 				}
 #endif
 				// request -> User
 				mRequestToUser.erase(it1);
 			}
+#ifdef _DEBUG_USERMANAGER
+			else
+			{
+				throw std::invalid_argument("Request was not correctly linked with a user (2).");
+			}
+#endif
 		}
 
 		//void RemoveRequestUserLinking(User* user) {
@@ -111,7 +118,7 @@ namespace user
 		//	}
 		//}
 
-		void CancelAllUserRequests(User* user);
+		void CancelAndDropAllUserRequests(User* user);
 
 	private:
 		io::TCPClient* pServerConn;

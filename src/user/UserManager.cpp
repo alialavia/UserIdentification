@@ -78,7 +78,8 @@ void UserManager::RefreshUserTracking(
 		else
 		{
 			// cancel and unlink all pending requests for a user
-			CancelAllUserRequests(target_user);
+			// already processed requests are ignored when response is popped from request handler
+			CancelAndDropAllUserRequests(target_user);
 
 			// user has left scene - delete tracking instance
 			delete(target_user);
@@ -97,14 +98,14 @@ void UserManager::RefreshUserTracking(
 void UserManager::ProcessResponses()
 {
 
-	io::NetworkRequest* request = nullptr;
+	io::NetworkRequest* request_lookup = nullptr;	// careful! the request corresponding to this pointer is already deleted!
 	io::NetworkRequestType req_type;
 
 	// ============================================= //
 	// 1. handle identification responses
 	// ============================================= //
 	io::IdentificationResponse response;
-	while (pRequestHandler->PopResponse(&response, request))
+	while (pRequestHandler->PopResponse(&response, request_lookup))
 	{
 #ifdef _DEBUG_USERMANAGER
 		std::cout << "--- Processing io::IdentificationResponse" << std::endl;
@@ -112,13 +113,8 @@ void UserManager::ProcessResponses()
 		std::cout << "--- User ID: " << response.mUserID << std::endl;
 #endif
 
-		if (request == nullptr) {
-			std::cout << "--------------- USER NOT IN SCENE - REQUEST HAS BEEN DELETED ------------- " << std::endl;
-			continue;
-		}
-
-		// locate user for which request was sent
-		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request);
+		// check if response can be allocated with a request or if it should be dropped
+		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request_lookup);
 
 		if (it != mRequestToUser.end()) {
 			// extract user
@@ -141,6 +137,10 @@ void UserManager::ProcessResponses()
 					// reset both tracking instances and force reidentification
 					its->second->ResetUser();
 					target_user->ResetUser();
+					// cancel all requests for the two users
+					CancelAndDropAllUserRequests(its->second);
+					CancelAndDropAllUserRequests(target_user);
+
 					duplicate_user = true;
 					break;
 				}
@@ -162,7 +162,9 @@ void UserManager::ProcessResponses()
 		else {
 			// user corresponding to request not found - nothing to unlink - drop response
 			// e.g. User has left scene and all requests and linking where deleted
-			throw std::invalid_argument("User unspecific requests are not implemented yet!");
+			//throw std::invalid_argument("User unspecific requests are not implemented yet!");
+
+			std::cout << "------ USER HAS LEFT SCENE. IGNORE THIS RESPONSE." << std::endl;
 		}
 	}
 
@@ -170,18 +172,13 @@ void UserManager::ProcessResponses()
 	// 2. Default successful tasks
 	// ============================================= //
 	io::ReidentificationResponse reid_response;
-	while (pRequestHandler->PopResponse(&reid_response, request, &req_type))
+	while (pRequestHandler->PopResponse(&reid_response, request_lookup, &req_type))
 	{
 		// display response
 		std::cout << "--- Forced reidentification (e.g. update does not explain model)" << std::endl;
 
-		if (request == nullptr) {
-			std::cout << "--------------- USER NOT IN SCENE - REQUEST HAS BEEN DELETED ------------- " << std::endl;
-			continue;
-		}
-
 		// locate user for which request was sent
-		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request);
+		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request_lookup);
 
 		if (it != mRequestToUser.end()) {
 			// extract user
@@ -191,13 +188,17 @@ void UserManager::ProcessResponses()
 			// remove request mapping
 			RemoveRequestUserLinking(target_request);
 
+			// calcel all requests
+			CancelAndDropAllUserRequests(target_user);
+
 			// reset target user
 			target_user->ResetUser();
 		}
 		else {
 			// user corresponding to request not found - nothing to unlink - drop response
 			// e.g. User has left scene and all requests and linking where deleted
-			throw std::invalid_argument("User unspecific requests are not implemented yet!");
+			//throw std::invalid_argument("User unspecific requests are not implemented yet!");
+			std::cout << "------ USER HAS LEFT SCENE. IGNORE THIS RESPONSE." << std::endl;
 		}
 	}
 
@@ -205,18 +206,13 @@ void UserManager::ProcessResponses()
 	// 3. Default successful tasks
 	// ============================================= //
 	io::OKResponse ok_response;
-	while (pRequestHandler->PopResponse(&ok_response, request, &req_type))
+	while (pRequestHandler->PopResponse(&ok_response, request_lookup, &req_type))
 	{
 		// display response
 		std::cout << "--- Ok response: " << ok_response.mMessage << std::endl;
 
-		if (request == nullptr) {
-			std::cout << "--------------- USER NOT IN SCENE - REQUEST HAS BEEN DELETED ------------- " << std::endl;
-			continue;
-		}
-
 		// locate user for which request was sent
-		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request);
+		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request_lookup);
 
 		if (it != mRequestToUser.end()) {
 			// extract user
@@ -237,7 +233,8 @@ void UserManager::ProcessResponses()
 		else {
 			// user corresponding to request not found - nothing to unlink - drop response
 			// e.g. User has left scene and all requests and linking where deleted
-			throw std::invalid_argument("User unspecific requests are not implemented yet!");
+			//throw std::invalid_argument("User unspecific requests are not implemented yet!");
+			std::cout << "------ USER HAS LEFT SCENE. IGNORE THIS RESPONSE." << std::endl;
 		}
 	}
 
@@ -245,18 +242,13 @@ void UserManager::ProcessResponses()
 	// 4. Default erronomous tasks
 	// ============================================= //
 	io::ErrorResponse err_response;
-	while (pRequestHandler->PopResponse(&err_response, request, &req_type))
+	while (pRequestHandler->PopResponse(&err_response, request_lookup, &req_type))
 	{
 		// display response
 		std::cout << "--- Error response | RequestID (" << req_type  << "): " << err_response.mMessage << std::endl;
 
-		if (request == nullptr) {
-			std::cout << "--------------- USER NOT IN SCENE - REQUEST HAS BEEN DELETED ------------- " << std::endl;
-			continue;
-		}
-
 		// locate user for which request was sent
-		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request);
+		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request_lookup);
 
 		if (it != mRequestToUser.end()) {
 			// extract user
@@ -279,13 +271,13 @@ void UserManager::ProcessResponses()
 
 			// remove request mapping
 			RemoveRequestUserLinking(target_request);
-			// reset user identification status if it was an identification request
 
 		}
 		else {
 			// user corresponding to request not found (may have left scene or the request is not user specific) - drop response
 			// unprocessed requests are already deleted when user leaves scene
-			throw std::invalid_argument("User unspecific requests are not implemented yet!");
+			//throw std::invalid_argument("User unspecific requests are not implemented yet!");
+			std::cout << "------ USER HAS LEFT SCENE. IGNORE THIS RESPONSE." << std::endl;
 		}
 
 
@@ -316,8 +308,6 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 
 			// collect images for identification
 			if (action == ActionStatus_Initialization) {
-
-
 
 #ifdef FACEGRID_RECORDING
 				// check if face should be recorded
@@ -485,13 +475,16 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 			}
 
 
+
 		}
 		
 	}
-
 }
 
-void UserManager::CancelAllUserRequests(User* user) {
+void UserManager::CancelAndDropAllUserRequests(User* user) {
+	// delete pending requests and delete all linking
+	// processed requests without linking are dropped
+
 	// user->requests
 	if (mUserToRequests.find(user) != mUserToRequests.end()) {
 
@@ -500,13 +493,13 @@ void UserManager::CancelAllUserRequests(User* user) {
 			// unlink: requests->user
 			mRequestToUser.erase(req);
 			// delete: requests from queue
-			pRequestHandler->cancelRequest(req);
+			pRequestHandler->cancelPendingRequest(req);
 		}
 		// unlink: user->request
 		mUserToRequests.erase(user);
 	}
 	else {
-		// not found
+		// no pending/processed requests found
 	}
 }
 

@@ -69,22 +69,18 @@ void NetworkRequestHandler::addRequest(io::NetworkRequest* request)
 	mRequestsLock.unlock();
 }
 
-void NetworkRequestHandler::cancelRequest(io::NetworkRequest* request) {
+void NetworkRequestHandler::cancelPendingRequest(io::NetworkRequest* request) {
+	mRequestsLock.lock();
 
-	// remove from task queue
-	mRequests.erase(request);
-
-	io::NetworkResponse* resp = mRequestToResponse[request];
-	
-	// remove response > request linking (set request to nullptr)
-	mResponseToRequest[resp] = nullptr;
-	// remove request > response linking (delete map entry)
-	mRequestToResponse.erase(request);
-
-	// delete request itself
-	if (request != nullptr) {
+	// check if request really is pending (may already be processed)
+	if(mRequests.contains(request))
+	{
+		// remove from task queue
+		mRequests.erase(request);
+		// delete request itself
 		delete(request);
 	}
+	mRequestsLock.unlock();
 }
 
 void NetworkRequestHandler::processRequests()
