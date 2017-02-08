@@ -68,24 +68,6 @@ namespace io {
 		void cancelPendingRequest(io::NetworkRequest* request);
 
 
-		template<class T, class U>
-		struct is_same { static const bool value = false; };
-
-		template<class T>
-		struct is_same<T, T> { static const bool value = true; };
-
-		template<class T>
-		void copyImageContainer(std::true_type, NetworkResponse* response, T *response_container)
-		{
-			QIR* qir_pointer = dynamic_cast<QIR*>(response);
-			response_container->mImage = qir_pointer->mImage.clone();
-		}
-		template<class T>
-		void copyImageContainer(std::false_type, NetworkResponse* response, T *response_container)
-		{
-			memcpy(response_container, response, sizeof(T));
-		}
-
 		template<class T>
 		bool PopResponse(T *response_container, NetworkRequest* &req_lookup, NetworkRequestType* request_type = nullptr)
 		{
@@ -107,7 +89,14 @@ namespace io {
 				// remove from queue - pop front
 				mResponds[typeid(T)].pop();
 
-				copyImageContainer(std::integral_constant<bool, is_same<QIR, T>::value>(), response, response_container);
+				// variant 1 ---------------- type specific
+				//copyImageContainer(std::integral_constant<bool, is_same<QIR, T>::value>(), response, response_container);
+
+				// variant 2 ---------------- custom assignement operator
+				// 1. cast to container class
+				T* spec_resp = dynamic_cast<T*>(response);
+				// 2. copy by copy constructor
+				*response_container = T(*spec_resp);
 
 				mMappingLock.lock();
 				NetworkRequest* request = mResponseToRequest[response];
@@ -137,6 +126,29 @@ namespace io {
 		}
 
 		void processRequests();
+
+		// ------------------------- deprecated
+
+		template<class T, class U>
+		struct is_same { static const bool value = false; };
+
+		template<class T>
+		struct is_same<T, T> { static const bool value = true; };
+
+		template<class T>
+		void copyImageContainer(std::true_type, NetworkResponse* response, T *response_container)
+		{
+			// copy individual fields manually
+			QIR* qir_pointer = dynamic_cast<QIR*>(response);
+			response_container->mImage = qir_pointer->mImage.clone();
+
+		}
+		template<class T>
+		void copyImageContainer(std::false_type, NetworkResponse* response, T *response_container)
+		{
+			// copy all data
+			memcpy(response_container, response, sizeof(T));
+		}
 
 	private:
 

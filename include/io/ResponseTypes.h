@@ -130,6 +130,7 @@ namespace io {
 	{
 	public:
 		QuadraticImageResponse(io::TCPClient* conn = nullptr) :NetworkResponse(conn, NetworkResponse_ImageQuadratic) {}
+		QuadraticImageResponse(const QuadraticImageResponse& other) :NetworkResponse(other) { mImage = other.mImage.clone(); }
 		void GetPayload() { pConn->ReceiveRGBImageQuadratic(mImage); };
 		cv::Mat mImage;
 	};
