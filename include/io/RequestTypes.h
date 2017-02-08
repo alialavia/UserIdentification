@@ -25,7 +25,8 @@ namespace io {
 		NetworkRequest_ClassifierTraining = 5,
 		NetworkRequest_ImageIdentificationAligned = 6,
 		NetworkRequest_EmbeddingCollectionByIDAligned = 7,
-		NetworkRequest_ImageAlignment = 8
+		NetworkRequest_ImageAlignment = 8,
+		NetworkRequest_ProfilePictureUpdate = 9
 	};
 
 	// request type
@@ -269,6 +270,7 @@ namespace io {
 
 		// payload: quadratic(!) images of same size
 		std::vector<cv::Mat> mImages;
+		// Todo: careful! Int sent as Uint
 		int mUserID;
 	};
 
@@ -289,6 +291,31 @@ namespace io {
 			pServerConn->SendRGBImageQuadratic(mImage);
 		}
 
+		// payload: quadratic(!) image
+		cv::Mat mImage;
+	};
+
+	class ProfilePictureUpdate : public NetworkRequest
+	{
+	public:
+		ProfilePictureUpdate(
+			io::TCPClient* server_conn,
+			int user_id,
+			cv::Mat img
+		) :
+			NetworkRequest(server_conn, NetworkRequest_ProfilePictureUpdate), mUserID(user_id), mImage(img)
+		{
+		}
+	protected:
+
+		// submit specific payload
+		void SubmitPayload() {
+			pServerConn->SendUInt(mUserID);	// user id
+			pServerConn->SendRGBImageQuadratic(mImage);
+		}
+
+		// Todo: careful! Int sent as Uint
+		int mUserID;
 		// payload: quadratic(!) image
 		cv::Mat mImage;
 	};

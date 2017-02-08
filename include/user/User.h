@@ -26,7 +26,7 @@ namespace user
 
 	public:
 		User() : mUserID(-1), mUserNiceName(""), mIDStatus(IDStatus_Unknown), mActionStatus(ActionStatus_Idle),
-			mFaceData(nullptr)
+			mFaceData(nullptr), mUpdatingProfilePicture(false)
 		{
 #ifdef FACEGRID_RECORDING
 			pGrid = new tracking::RadialFaceGrid(2, 15, 15);
@@ -88,6 +88,72 @@ namespace user
 			std::cout << "--- id_status: " << mIDStatus << " | action: " << mActionStatus << std::endl;
 		}
 
+		/*
+		 *
+		// Client Side Picture Taking
+		- During update (when person has been identified)
+		- If person has no profile picture yet (nothing received from server)
+		- Evaluate the face (bb) in each frame if the orientation is frontal
+		- if it is approx. frontal: optionally rotate
+		- save picture to user instance
+		- send profilePictureUpdate Request to server
+
+		// difficulties
+		- profile picture taken, when tracking switches
+
+		// solutions
+		- also classify profile picture and reject if it does not comply with corresponding ID
+		 */
+
+		bool IsViewedFromFront()
+		{
+			// get face orientation
+			if (mFaceData != nullptr) {
+				// calc euler angles
+				int roll, pitch, yaw;
+				mFaceData->GetEulerAngles(roll, pitch, yaw);
+				// optional: rotate image
+
+				if(pitch >= 15 || pitch <= -15)
+				{
+					return false;
+				}
+				if (roll >= 15 || roll <= -15)
+				{
+					return false;
+				}
+				if (yaw >= 15 || yaw <= -15)
+				{
+					return false;
+				}
+
+				return true;
+			}
+			return false;
+		}
+
+		bool NeedsProfilePicture()
+		{
+			return (mUpdatingProfilePicture ? false : mProfilePicture.empty());
+		}
+		void AssignProfilePicture(cv::Mat picture)
+		{
+			mProfilePicture = picture;
+		}
+		void SetPendingProfilePicture(bool status)
+		{
+			mUpdatingProfilePicture = status;
+		}
+		bool GetProfilePicture(cv::Mat &pic)
+		{
+			if(mProfilePicture.empty())
+			{
+				return false;
+			}
+			pic = mProfilePicture;
+			return true;
+		}
+
 	private:
 		// user id
 		int mUserID;
@@ -100,7 +166,9 @@ namespace user
 
 		// features: might be present or not
 		tracking::Face* mFaceData;
+
 		cv::Mat mProfilePicture;
+		bool mUpdatingProfilePicture;
 
 	public:
 		// temporal model data (images, accumulated status)

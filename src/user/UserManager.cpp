@@ -169,7 +169,7 @@ void UserManager::ProcessResponses()
 	}
 
 	// ============================================= //
-	// 2. Default successful tasks
+	// 2. Reidentification
 	// ============================================= //
 	io::ReidentificationResponse reid_response;
 	while (pRequestHandler->PopResponse(&reid_response, request_lookup, &req_type))
@@ -201,6 +201,43 @@ void UserManager::ProcessResponses()
 			std::cout << "------ USER HAS LEFT SCENE. IGNORE THIS RESPONSE." << std::endl;
 		}
 	}
+
+
+	// ============================================= //
+	// Profile Picture Update
+	// ============================================= //
+	io::QuadraticImageResponse img_response;
+	while (pRequestHandler->PopResponse(&img_response, request_lookup, &req_type))
+	{
+		// display response
+		std::cout << "--- Image response" << std::endl;
+
+		// locate user for which request was sent
+		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request_lookup);
+
+		if (it != mRequestToUser.end()) {
+			// extract user
+			User* target_user = it->second;
+			io::NetworkRequest* target_request = it->first;
+
+			// remove request mapping
+			RemoveRequestUserLinking(target_request);
+
+			// check request type
+			if(req_type == io::NetworkRequest_ProfilePictureUpdate)
+			{
+				// update profile picture
+				target_user->AssignProfilePicture(img_response.mImage);
+				target_user->SetPendingProfilePicture(false);
+			}
+		}
+		else {
+			// user corresponding to request not found - nothing to unlink - drop response
+			// e.g. User has left scene and all requests and linking where deleted
+			std::cout << "------ USER HAS LEFT SCENE. IGNORE THIS RESPONSE." << std::endl;
+		}
+	}
+
 
 	// ============================================= //
 	// 3. Default successful tasks
@@ -279,8 +316,6 @@ void UserManager::ProcessResponses()
 			//throw std::invalid_argument("User unspecific requests are not implemented yet!");
 			std::cout << "------ USER HAS LEFT SCENE. IGNORE THIS RESPONSE." << std::endl;
 		}
-
-
 	}
 
 }
@@ -292,7 +327,8 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 	{
 		IdentificationStatus id_status;
 		ActionStatus action;
-		it->second->GetStatus(id_status, action);
+		user::User* target_user = it->second;
+		target_user->GetStatus(id_status, action);
 
 		//std::cout << "--- id_Status: "<< id_status << " | action: "<< action << std::endl;
 
@@ -302,7 +338,7 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 
 			// new user in scene
 			if (action == ActionStatus_Idle) {
-				it->second->SetActionStatus(ActionStatus_Initialization);
+				target_user->SetActionStatus(ActionStatus_Initialization);
 				action = ActionStatus_Initialization;
 			}
 
@@ -312,10 +348,10 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 #ifdef FACEGRID_RECORDING
 				// check if face should be recorded
 				tracking::Face face;
-				if (it->second->GetFaceData(face)) {
+				if (target_user->GetFaceData(face)) {
 
 					// collect another image
-					cv::Mat face_snap = scene_rgb(it->second->GetFaceBoundingBox());
+					cv::Mat face_snap = scene_rgb(target_user->GetFaceBoundingBox());
 
 					// resize
 					cv::resize(face_snap, face_snap, cv::Size(96, 96));
@@ -325,8 +361,8 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 					try
 					{
 						// add face if not yet capture from this angle
-						if (it->second->pGrid->IsFree(roll, pitch, yaw)) {
-							it->second->pGrid->StoreSnapshot(roll, pitch, yaw, face_snap);
+						if (target_user->pGrid->IsFree(roll, pitch, yaw)) {
+							target_user->pGrid->StoreSnapshot(roll, pitch, yaw, face_snap);
 							std::cout << "-- take snapshot" << std::endl;
 						}
 					}
@@ -335,22 +371,22 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 					}
 
 					// if enough images, request identification
-					if (it->second->pGrid->nr_images() > 9) {
+					if (target_user->pGrid->nr_images() > 9) {
 
 						// extract images
-						std::vector<cv::Mat*> face_patches = it->second->pGrid->ExtractGrid();
+						std::vector<cv::Mat*> face_patches = target_user->pGrid->ExtractGrid();
 
 						// make new identification request
 						IDReq* new_request = new IDReq(pServerConn, face_patches);
 						pRequestHandler->addRequest(new_request);
 
 						// update linking
-						mRequestToUser[new_request] = it->second;
-						mUserToRequests[it->second].insert(new_request);
+						mRequestToUser[new_request] = target_user;
+						mUserToRequests[target_user].insert(new_request);
 
 						// set user action status
-						it->second->SetActionStatus(ActionStatus_IDPending);
-						it->second->pGrid->Clear();
+						target_user->SetActionStatus(ActionStatus_IDPending);
+						target_user->pGrid->Clear();
 					}
 				}
 #endif
@@ -367,30 +403,43 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 
 		}
 		else if (id_status == IDStatus_Identified) {
-			// send model updates - reinforced learning
-			// TODO: implement
+			
+			// Update/assign profile picture
+			if(target_user->NeedsProfilePicture() &&
+				target_user->IsViewedFromFront())
+			{
+				target_user->SetPendingProfilePicture(true);
+				cv::Mat profile_picture = scene_rgb(target_user->GetFaceBoundingBox());
+				// scale
+				cv::resize(profile_picture, profile_picture, cv::Size(120, 120));
+				// make request
+				io::ProfilePictureUpdate* new_request = new io::ProfilePictureUpdate(pServerConn, target_user->GetUserID(), profile_picture);
+				pRequestHandler->addRequest(new_request);
+				// update linking
+				mRequestToUser[new_request] = target_user;
+				mUserToRequests[target_user].insert(new_request);
+			}
+
+
 			if (action == ActionStatus_Idle) {
-				it->second->SetActionStatus(ActionStatus_DataCollection);
+				target_user->SetActionStatus(ActionStatus_DataCollection);
 				action = ActionStatus_DataCollection;
 			}
 
+			// send model updates - reinforced learning
 			if (action == ActionStatus_DataCollection) {
-
-
 #ifdef FACEGRID_RECORDING
-
-
 				// check if face should be recorded
 				tracking::Face face;
-				if (it->second->GetFaceData(face)) {
+				if (target_user->GetFaceData(face)) {
 
 					int roll, pitch, yaw;
 					face.GetEulerAngles(roll, pitch, yaw);
 
 					// face from this pose not yet recorded
-					if (it->second->pGrid->IsFree(roll, pitch, yaw)) {
+					if (target_user->pGrid->IsFree(roll, pitch, yaw)) {
 
-						cv::Rect2f facebb = it->second->GetFaceBoundingBox();
+						cv::Rect2f facebb = target_user->GetFaceBoundingBox();
 						// TODO: debug why face bb is nan
 						std::cout << "............ Face bb: " << facebb.height << " | " << facebb.width << std::endl;
 
@@ -415,13 +464,13 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 								try
 								{
 									// add face if not yet capture from this angle
-									it->second->pGrid->StoreSnapshot(roll, pitch, yaw, aligned);
-									std::cout << "--- take snapshot: " << it->second->pGrid->nr_images() << std::endl;
+									target_user->pGrid->StoreSnapshot(roll, pitch, yaw, aligned);
+									std::cout << "--- take snapshot: " << target_user->pGrid->nr_images() << std::endl;
 									/*cv::imshow("aligned", aligned);
 									cv::waitKey(2);*/
 
 							/*		cv::Mat grid;
-									it->second->pGrid->GetFaceGridPitchYaw(grid);
+									target_user->pGrid->GetFaceGridPitchYaw(grid);
 									cv::imshow("Grid", grid);
 									cv::waitKey(3);*/
 								}
@@ -435,10 +484,10 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 					}	// /free pose position
 
 						// if enough images, request identification
-					if (it->second->pGrid->nr_images() > 9) {
+					if (target_user->pGrid->nr_images() > 9) {
 
 						// extract images
-						std::vector<cv::Mat*> face_patches = it->second->pGrid->ExtractGrid();
+						std::vector<cv::Mat*> face_patches = target_user->pGrid->ExtractGrid();
 
 						if(face_patches[0]->cols == 0)
 						{
@@ -448,7 +497,7 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 
 						// TODO: DEBUG HERE
 						// ID -1
-						it->second->GetUserID(user_id, user_name);
+						target_user->GetUserID(user_id, user_name);
 
 						// make new identification request
 #ifdef _DLIB_PREALIGN
@@ -459,12 +508,12 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 						pRequestHandler->addRequest(new_request);
 
 						// update linking
-						mRequestToUser[new_request] = it->second;
-						mUserToRequests[it->second].insert(new_request);
+						mRequestToUser[new_request] = target_user;
+						mUserToRequests[target_user].insert(new_request);
 
 						// set user action status
-						it->second->SetActionStatus(ActionStatus_UpdatePending);
-						it->second->pGrid->Clear();
+						target_user->SetActionStatus(ActionStatus_UpdatePending);
+						target_user->pGrid->Clear();
 					}
 				}	//	/end face data available
 #endif
@@ -509,7 +558,39 @@ void UserManager::DrawUsers(cv::Mat &img)
 {
 	for (auto it = mFrameIDToUser.begin(); it != mFrameIDToUser.end(); ++it)
 	{
-		cv::Rect bb = it->second->GetFaceBoundingBox();
+		user::User* target_user = it->second;
+		
+		cv::Rect bb = target_user->GetFaceBoundingBox();
+
+		// render user profile image
+		cv::Mat profile_image;
+		if (target_user->GetProfilePicture(profile_image))
+		{
+
+		/*	cv::imshow("profile", profile_image);
+			cv::waitKey(2);*/
+			// calc display area
+
+			//int y_left = bb.y;
+			//int x_left = img.cols- bb.x -bb.width;
+
+			//if(y_left < profile_image.cols)
+			//{
+			//	// crop in height
+			//	profile_image = profile_image(cv::Rect(0, y_left, profile_image.cols-1, profile_image.rows-1));
+
+			//}
+
+			//int y_start = bb.y - profile_image.rows;
+			//	if(y_start<0)
+			//	{
+			//		y_start = 0;
+			//	}
+
+			cv::Rect picture_patch = cv::Rect(bb.x, bb.y, profile_image.cols, profile_image.rows);
+			profile_image.copyTo(img(picture_patch));
+			//img(picture_patch) = profile_image;
+		}
 
 		// draw identification status
 		float font_size = 0.5;
@@ -518,13 +599,13 @@ void UserManager::DrawUsers(cv::Mat &img)
 
 		IdentificationStatus id_status;
 		ActionStatus action;
-		it->second->GetStatus(id_status, action);
+		target_user->GetStatus(id_status, action);
 
 		if (id_status == IDStatus_Identified)
 		{
 			int user_id = 0;
 			std::string nice_name = "";
-			it->second->GetUserID(user_id, nice_name);
+			target_user->GetUserID(user_id, nice_name);
 			text1 = "Status: " + nice_name + " - ID" + std::to_string(user_id);
 			color = cv::Scalar(0, 255, 0);
 		}

@@ -8,11 +8,14 @@
 #include <math\Math.h>
 
 #include <opencv2/core.hpp>
-#include "ResponseTypes.h"
+#include <io/ResponseTypes.h>
+#include <io/RequestTypes.h>
 
 #define _DEBUG_REQUESTHANDLER
 
 namespace io {
+
+	typedef io::QuadraticImageResponse QIR;
 
 	// forward declarations
 	class TCPClient;
@@ -64,6 +67,25 @@ namespace io {
 
 		void cancelPendingRequest(io::NetworkRequest* request);
 
+
+		template<class T, class U>
+		struct is_same { static const bool value = false; };
+
+		template<class T>
+		struct is_same<T, T> { static const bool value = true; };
+
+		template<class T>
+		void copyImageContainer(std::true_type, NetworkResponse* response, T *response_container)
+		{
+			QIR* qir_pointer = dynamic_cast<QIR*>(response);
+			response_container->mImage = qir_pointer->mImage.clone();
+		}
+		template<class T>
+		void copyImageContainer(std::false_type, NetworkResponse* response, T *response_container)
+		{
+			memcpy(response_container, response, sizeof(T));
+		}
+
 		template<class T>
 		bool PopResponse(T *response_container, NetworkRequest* &req_lookup, NetworkRequestType* request_type = nullptr)
 		{
@@ -85,8 +107,7 @@ namespace io {
 				// remove from queue - pop front
 				mResponds[typeid(T)].pop();
 
-				// copy response to specific response container
-				memcpy(response_container, response, sizeof(T));
+				copyImageContainer(std::integral_constant<bool, is_same<QIR, T>::value>(), response, response_container);
 
 				mMappingLock.lock();
 				NetworkRequest* request = mResponseToRequest[response];
@@ -109,82 +130,6 @@ namespace io {
 				delete(request);
 
 				status = true;
-
-				// ---------------------------
-
-				//if (mResponseToRequest.count(response) == 0) {
-				//	std::cout << "We got a problem here! Response > Request mapping is corrupted." << std::endl;
-				//	throw std::invalid_argument("We got a problem here! Response > Request mapping is corrupted.");
-				//}
-
-				//req_lookup = mResponseToRequest[response];
-
-				//// check if request is not deleted yet
-				//if (req_lookup != nullptr) {
-				//	if (request_type != nullptr) {
-				//		*request_type = req_lookup->cRequestType;	// share request type
-				//	}
-				//	// ------ remove request
-				//	delete(req_lookup);
-				//	mRequestToResponse.erase(req_lookup);
-				//}
-				//else {
-				//	std::cout << "--- Request already deleted!" << std::endl;
-				//}
-
-				//// delete mapping
-				//mResponseToRequest.erase(response);
-
-				//// open lock
-				//mMappingLock.unlock();
-
-				//// delete original response container
-				//delete(response);
-				//status = true;
-
-				// --------------------------------------------------
-
-				
-				//// delete corresponding request and mapping
-				//std::map<NetworkResponse*, NetworkRequest*>::iterator it1 = mResponseToRequest.find(response);
-
-				//if (it1 == mResponseToRequest.end()) {
-				//	std::cout << "We got a problem here!" << std::endl;
-				//	throw std::invalid_argument("We got a problem here!");
-				//}
-
-				//// TODO: fix situation, when request is already deleted (User has left the scene)
-
-				//// ------ returns
-				//req_lookup = it1->second; // share request pointer
-
-				//// check if request is not deleted yet
-				//if (req_lookup != nullptr) {
-
-				//	std::cout << "--- request pointer is not zero but!!!" << std::endl;
-
-				//	if (request_type != nullptr) {
-				//		*request_type = it1->second->cRequestType;	// share request type
-				//	}
-				//	// ------ cleanup
-				//	delete(req_lookup);
-				//}
-				//else {
-				//	std::cout << "--- Request already deleted!" << std::endl;
-				//}
-
-
-				//if (mResponseToRequest.count(response)==0) {
-				//	std::cout << "--- Key (response pointers) is not in map!" << std::endl;
-				//}
-				//
-				//// delete request
-				//mResponseToRequest.erase(it1);	// delete map item
-				//mMappingLock.unlock();
-
-				//// delete original response container
-				//delete(response);
-				//status = true;
 			}
 
 			mRespondsLock.unlock();

@@ -6,6 +6,42 @@ from config import ROUTING
 r.ROUTING = ROUTING
 
 
+class ProfilePictureUpdate:
+
+    def __init__(self, server, conn):
+        # receive user id
+        user_id = server.receive_uint(conn)
+
+        log.info('server', 'Updating profile picture for user with ID {}'.format(user_id))
+
+        # receive images
+        image = server.receive_image_squared(conn)
+
+        # generate embedding
+        embedding = server.embedding_gen.get_embeddings([image])
+
+        if not embedding.any():
+            r.Error(server, conn, "Could not generate face embeddings.")
+            return
+
+        # predict user id
+        user_id_predicted = server.classifier.predict(embedding)
+
+        # check if correct user
+        if user_id_predicted is None:
+            r.Error(server, conn, "Label could not be predicted - Face cannot be detected.")
+            return
+        elif user_id_predicted != user_id:
+            # unknown user
+            r.Error(server, conn, "The profile image does not come from the same person!")
+            return
+
+        server.user_db.set_profile_picture(user_id, image)
+
+        # send back image
+        r.QuadraticImage(server, conn, image)
+
+
 class ImageIdentification:
 
     def __init__(self, server, conn):

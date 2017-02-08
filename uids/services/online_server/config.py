@@ -8,14 +8,16 @@ ROUTING = {
            "ImageIdentificationUpdate": 2,  # collect embeddings from images for user with ID XY
            "ImageIdentificationAligned": 6,
            "ImageIdentificationUpdateAligned": 7,
-           "ImageAlignment": 8
+           "ImageAlignment": 8,
+           "ProfilePictureUpdate": 9
        },
        "NAME": {
            1: "ImageIdentification",
            2: "ImageIdentificationUpdate",
            6: "ImageIdentificationAligned",
            7: "ImageIdentificationUpdateAligned",
-           8: "ImageAlignment"
+           8: "ImageAlignment",
+           9: "ProfilePictureUpdate"
         }
    },
    "RESPONSE": {  # response id range: integer

@@ -256,6 +256,11 @@ class TCPServer:
 
         return images
 
+    def receive_image_squared(self, client_socket):
+        size = self.receive_short(client_socket)
+        img = self.receive_rgb_image(client_socket, size, size)
+        return img
+
     #  ----------- RECEIVE PRIMITIVES
     def receive_string(self, client_socket):
         # get message size
