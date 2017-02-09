@@ -120,13 +120,13 @@ int main(int argc, char** argv)
 				// - update user ids
 				um.ProcessResponses();
 
-				// draw users
-				um.DrawUsers(color_image);
-
 				// Generate requests
 				// - request identification for unknown users
 				// - update classifiers for known users
 				um.GenerateRequests(color_image);
+
+				// draw users
+				um.DrawUsers(color_image);
 			}
 
 			// display image

@@ -358,25 +358,33 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 				tracking::Face face;
 				if (target_user->GetFaceData(face)) {
 
-					// collect another image
-					cv::Mat face_snap = scene_rgb(target_user->GetFaceBoundingBox());
-
-					// resize
-					cv::resize(face_snap, face_snap, cv::Size(96, 96));
-
 					int roll, pitch, yaw;
 					face.GetEulerAngles(roll, pitch, yaw);
-					try
-					{
-						// add face if not yet capture from this angle
-						if (target_user->pGrid->IsFree(roll, pitch, yaw)) {
-							target_user->pGrid->StoreSnapshot(roll, pitch, yaw, face_snap);
-							std::cout << "-- take snapshot" << std::endl;
+					// face from this pose not yet recorded
+					if (target_user->pGrid->IsFree(roll, pitch, yaw)) {
+						cv::Rect2f facebb = target_user->GetFaceBoundingBox();
+						cv::Mat face_snap = scene_rgb(facebb);
+						cv::Mat aligned;
+#ifdef _DLIB_PREALIGN
+						if (mDlibAligner->AlignImage(96, face_snap, aligned))
+#else
+						aligned = face_snap;
+						// resize (requests needs all squared with same size)
+						cv::resize(aligned, aligned, cv::Size(120, 120));
+#endif
+						{
+							try
+							{
+								target_user->pGrid->StoreSnapshot(roll, pitch, yaw, aligned);
+							}
+							catch (...)
+							{
+							}
 						}
-					}
-					catch (...)
-					{
-					}
+					}	// /free pose position
+
+
+
 
 					// if enough images, request identification
 					if (target_user->pGrid->nr_images() > 9) {
@@ -385,7 +393,11 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 						std::vector<cv::Mat*> face_patches = target_user->pGrid->ExtractGrid();
 
 						// make new identification request
+#ifdef _DLIB_PREALIGN
+						io::ImageIdentificationAligned* new_request = new io::ImageIdentificationAligned(pServerConn, face_patches);
+#else
 						IDReq* new_request = new IDReq(pServerConn, face_patches);
+#endif
 						pRequestHandler->addRequest(new_request);
 
 						// update linking
@@ -460,36 +472,23 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 						
 #ifdef _DLIB_PREALIGN
 							if (mDlibAligner->AlignImage(96, face_snap, aligned)) 
-
 #else
 						aligned = face_snap;
 						// resize (requests needs all squared with same size)
 						cv::resize(aligned, aligned, cv::Size(120, 120));
 #endif
 							{
-							std::cout << "cols: " << aligned.cols << std::endl;
-
 								// save
 								try
 								{
 									// add face if not yet capture from this angle
 									target_user->pGrid->StoreSnapshot(roll, pitch, yaw, aligned);
 									std::cout << "--- take snapshot: " << target_user->pGrid->nr_images() << std::endl;
-									/*cv::imshow("aligned", aligned);
-									cv::waitKey(2);*/
-
-							/*		cv::Mat grid;
-									target_user->pGrid->GetFaceGridPitchYaw(grid);
-									cv::imshow("Grid", grid);
-									cv::waitKey(3);*/
 								}
 								catch (...)
 								{
 								}
 							}
-
-
-
 					}	// /free pose position
 
 						// if enough images, request identification
@@ -575,30 +574,44 @@ void UserManager::DrawUsers(cv::Mat &img)
 		cv::Mat profile_image;
 		if (target_user->GetProfilePicture(profile_image))
 		{
+			cv::resize(profile_image, profile_image, cv::Size(100, 100));
 
-		/*	cv::imshow("profile", profile_image);
-			cv::waitKey(2);*/
-			// calc display area
+			if(bb.y > 0 && bb.x < img.cols)
+			{
+				// check if roi overlapps image borders
+				cv::Rect target_roi = cv::Rect(bb.x, bb.y - profile_image.rows, profile_image.cols, profile_image.rows);
+				cv::Rect src_roi = cv::Rect(0, 0, profile_image.cols, profile_image.rows);
 
-			//int y_left = bb.y;
-			//int x_left = img.cols- bb.x -bb.width;
+				if(target_roi.y < 0)
+				{
+					src_roi.y = -target_roi.y;
+					src_roi.height += target_roi.y;
+					target_roi.height += target_roi.y;
+					target_roi.y = 0;
+				}
 
-			//if(y_left < profile_image.cols)
-			//{
-			//	// crop in height
-			//	profile_image = profile_image(cv::Rect(0, y_left, profile_image.cols-1, profile_image.rows-1));
+				if (target_roi.x + profile_image.cols > img.cols)
+				{
+					src_roi.width = target_roi.x + profile_image.cols - img.cols;
+					target_roi.width = target_roi.x + profile_image.cols - img.cols;
+				}
 
-			//}
+				try {
+					profile_image = profile_image(src_roi);
+					profile_image.copyTo(img(target_roi));
+				}
+				catch (...) {
+					// ...
+				}
 
-			//int y_start = bb.y - profile_image.rows;
-			//	if(y_start<0)
-			//	{
-			//		y_start = 0;
-			//	}
+			}
 
-			cv::Rect picture_patch = cv::Rect(bb.x, bb.y, profile_image.cols, profile_image.rows);
-			profile_image.copyTo(img(picture_patch));
-			//img(picture_patch) = profile_image;
+			// render inside bb
+			if(false)
+			{
+				cv::Rect picture_patch = cv::Rect(bb.x, bb.y, profile_image.cols, profile_image.rows);
+				profile_image.copyTo(img(picture_patch));
+			}
 		}
 
 		// draw identification status

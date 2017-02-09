@@ -12,7 +12,7 @@
 #include <features\Face.h>
 
 #define _DEBUG_USERMANAGER
-//#define _DLIB_PREALIGN // use dlib on client side for face alignment
+#define _DLIB_PREALIGN // use dlib on client side for face alignment
 
 namespace io{
 class TCPClient;

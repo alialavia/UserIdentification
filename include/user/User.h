@@ -62,6 +62,11 @@ namespace user
 			mUserID = -1;
 			mIDStatus = IDStatus_Unknown;
 			mActionStatus = ActionStatus_Idle;
+			// release profile image
+			if(!mProfilePicture.empty())
+			{
+				mProfilePicture.release();
+			}
 		}
 
 		// ------ getters
@@ -114,15 +119,15 @@ namespace user
 				mFaceData->GetEulerAngles(roll, pitch, yaw);
 				// optional: rotate image
 
-				if(pitch >= 15 || pitch <= -15)
+				if(pitch >= 30 || pitch <= -30)
 				{
 					return false;
 				}
-				if (roll >= 15 || roll <= -15)
+				if (roll >= 30 || roll <= -30)
 				{
 					return false;
 				}
-				if (yaw >= 15 || yaw <= -15)
+				if (yaw >= 30 || yaw <= -30)
 				{
 					return false;
 				}
