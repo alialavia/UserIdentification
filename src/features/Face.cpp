@@ -345,8 +345,27 @@ bool DlibFaceAligner::DrawFacePoints(int imgDim, const cv::Mat &src, cv::Mat &ds
 }
 
 // aling image using facial landmarks
-bool DlibFaceAligner::AlignImage(int imgDim, const cv::Mat &src, cv::Mat &dst)
+bool DlibFaceAligner::AlignImage(int imgDim, cv::Mat src, cv::Mat &dst)
 {
+
+	// standard min. face size: 80px
+	if(src.cols < 110)
+	{
+		// allows to detect faces with min 40px size
+		cv::resize(src, src, cv::Size(src.cols*2, src.rows*2));
+
+	}else if(src.cols > 200)
+	{
+		// downscale image for performance boost
+		if(imgDim < 160)
+		{
+			cv::resize(src, src, cv::Size(160, 160));
+		}else
+		{
+			// we loose some accuracy here!
+		}
+	}
+
 	// extract face bounding box
 	dlib::rectangle face_bounding_box;
 	if (!GetLargestFaceBoundingBox(src, face_bounding_box))

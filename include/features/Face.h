@@ -139,7 +139,7 @@ namespace features{
 		bool DrawFacePoints(int imgDim, const cv::Mat &src, cv::Mat &dst);
 
 		// aling image using facial landmarks
-		bool AlignImage(int imgDim, const cv::Mat &src, cv::Mat &dst);
+		bool AlignImage(int imgDim, cv::Mat src, cv::Mat &dst);
 	};
 
 
