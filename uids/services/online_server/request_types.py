@@ -6,41 +6,7 @@ from config import ROUTING
 r.ROUTING = ROUTING
 
 
-class ProfilePictureUpdate:
-
-    def __init__(self, server, conn):
-        # receive user id
-        user_id = server.receive_uint(conn)
-
-        log.info('server', 'Updating profile picture for user with ID {}'.format(user_id))
-
-        # receive images
-        image = server.receive_image_squared(conn)
-
-        # generate embedding
-        embedding = server.embedding_gen.get_embeddings([image])
-
-        if not embedding.any():
-            r.Error(server, conn, "Could not generate face embeddings.")
-            return
-
-        # predict user id
-        user_id_predicted = server.classifier.predict(embedding)
-
-        # check if correct user
-        if user_id_predicted is None:
-            r.Error(server, conn, "Label could not be predicted - Face cannot be detected.")
-            return
-        elif user_id_predicted != user_id:
-            # unknown user
-            r.Error(server, conn, "The profile image does not come from the same person!")
-            return
-
-        server.user_db.set_profile_picture(user_id, image)
-
-        # send back image
-        r.QuadraticImage(server, conn, image)
-
+# --------------- IDENTIFICATION
 
 class ImageIdentification:
 
@@ -78,48 +44,11 @@ class ImageIdentification:
 
         # get profile picture
         profile_picture = server.user_db.get_profile_picture(user_id)
-
         log.info('server', "User identification complete: {} [ID], {} [Username]".format(user_id, user_name))
-
         r.Identification(server, conn, int(user_id), user_name, profile_picture=profile_picture)
 
 
-class ImageIdentificationUpdate:
-
-    def __init__(self, server, conn):
-        # receive user id
-        user_id = server.receive_uint(conn)
-
-        log.info('server', 'User Update (Robust) for ID {}'.format(user_id))
-
-        # receive images
-        images = server.receive_image_batch_squared_same_size(conn)
-
-        # generate embedding
-        embeddings = server.embedding_gen.get_embeddings(images)
-
-        if embeddings.shape[0] < 5:
-            r.Error(server, conn, "Not enough images for update quality check.")
-            return
-
-        if not embeddings.any():
-            r.Error(server, conn, "Could not generate face embeddings.")
-            return
-
-        log.info('cl', "Starting to process stream data...")
-
-        # submit data
-        succ = server.classifier.process_labeled_stream_data(user_id, embeddings)
-
-        if succ:
-            r.OK(server, conn)
-        else:
-            # update was not classified as the labeled class
-            # force reidentification
-            r.Reidentification(server, conn)
-
-
-class ImageIdentificationAligned:
+class ImageIdentificationPrealigned:
 
     def __init__(self, server, conn):
 
@@ -154,12 +83,48 @@ class ImageIdentificationAligned:
         if user_name is None:
             user_name = "unnamed"
 
+        profile_picture = server.user_db.get_profile_picture(user_id)
         log.info('server', "User identification complete: {} [ID], {} [Username]".format(user_id, user_name))
+        r.Identification(server, conn, int(user_id), user_name, profile_picture=profile_picture)
 
-        r.Identification(server, conn, int(user_id), user_name)
+# --------------- UPDATE
+
+class Update:
+
+    def __init__(self, server, conn):
+        # receive user id
+        user_id = server.receive_uint(conn)
+
+        log.info('server', 'User Update (Robust) for ID {}'.format(user_id))
+
+        # receive images
+        images = server.receive_image_batch_squared_same_size(conn)
+
+        # generate embedding
+        embeddings = server.embedding_gen.get_embeddings(images)
+
+        if embeddings.shape[0] < 5:
+            r.Error(server, conn, "Not enough images for update quality check.")
+            return
+
+        if not embeddings.any():
+            r.Error(server, conn, "Could not generate face embeddings.")
+            return
+
+        log.info('cl', "Starting to process stream data...")
+
+        # submit data
+        succ = server.classifier.process_labeled_stream_data(user_id, embeddings)
+
+        if succ:
+            r.OK(server, conn)
+        else:
+            # update was not classified as the labeled class
+            # force reidentification
+            r.Reidentification(server, conn)
 
 
-class ImageIdentificationUpdateAligned:
+class UpdatePrealigned:
     """
     Pure Update
     - Assumes given label/id is correct
@@ -189,7 +154,7 @@ class ImageIdentificationUpdateAligned:
         r.OK(server, conn)
 
 
-class ImageIdentificationUpdateAlignedRobust:
+class UpdatePrealignedRobust:
     """
     Pure Update
     - Checks
@@ -223,6 +188,7 @@ class ImageIdentificationUpdateAlignedRobust:
             # force reidentification
             r.Reidentification(server, conn)
 
+# --------------- MISC
 
 class SaveDatabase:
 
@@ -253,3 +219,39 @@ class ImageAlignment:
 
         # send aligned image back
         r.QuadraticImage(server, conn, aligned)
+
+
+class ProfilePictureUpdate:
+
+    def __init__(self, server, conn):
+        # receive user id
+        user_id = server.receive_uint(conn)
+
+        log.info('server', 'Updating profile picture for user with ID {}'.format(user_id))
+
+        # receive images
+        image = server.receive_image_squared(conn)
+
+        # generate embedding
+        embedding = server.embedding_gen.get_embeddings([image])
+
+        if not embedding.any():
+            r.Error(server, conn, "Could not generate face embeddings.")
+            return
+
+        # predict user id
+        user_id_predicted = server.classifier.predict(embedding)
+
+        # check if correct user
+        if user_id_predicted is None:
+            r.Error(server, conn, "Label could not be predicted - Face cannot be detected.")
+            return
+        elif user_id_predicted != user_id:
+            # unknown user
+            r.Error(server, conn, "The profile image does not come from the same person!")
+            return
+
+        server.user_db.set_profile_picture(user_id, image)
+
+        # send back image
+        r.QuadraticImage(server, conn, image)

@@ -5,17 +5,17 @@ ROUTING = {
    "REQUEST": {  # request id range: 0-255
        "ID": {
            "ImageIdentification": 1,  # identify user from image
-           "ImageIdentificationUpdate": 2,  # collect embeddings from images for user with ID XY
-           "ImageIdentificationAligned": 6,
-           "ImageIdentificationUpdateAligned": 7,
+           "Update": 2,  # collect embeddings from images for user with ID XY
+           "ImageIdentificationPrealigned": 6,
+           "UpdatePrealignedRobust": 7,
            "ImageAlignment": 8,
            "ProfilePictureUpdate": 9
        },
        "NAME": {
            1: "ImageIdentification",
-           2: "ImageIdentificationUpdate",
-           6: "ImageIdentificationAligned",
-           7: "ImageIdentificationUpdateAligned",
+           2: "Update",
+           6: "ImageIdentificationPrealigned",
+           7: "UpdatePrealignedRobust",
            8: "ImageAlignment",
            9: "ProfilePictureUpdate"
         }
