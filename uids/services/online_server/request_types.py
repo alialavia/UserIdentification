@@ -76,9 +76,12 @@ class ImageIdentification:
         if user_name is None:
             user_name = "unnamed"
 
+        # get profile picture
+        profile_picture = server.user_db.get_profile_picture(user_id)
+
         log.info('server', "User identification complete: {} [ID], {} [Username]".format(user_id, user_name))
 
-        r.Identification(server, conn, int(user_id), user_name)
+        r.Identification(server, conn, int(user_id), user_name, profile_picture=profile_picture)
 
 
 class ImageIdentificationUpdate:

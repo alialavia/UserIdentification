@@ -19,7 +19,7 @@ class OK:
 
 class Identification:
 
-    def __init__(self, server, conn, user_id, user_name):
+    def __init__(self, server, conn, user_id, user_name, profile_picture=None):
 
         # send back response identifier
         resp_id = ROUTING['RESPONSE']['ID'][self.__class__.__name__]
@@ -30,6 +30,14 @@ class Identification:
 
         # send back nice name
         server.send_string(conn, user_name)
+
+        # profile picture
+        if profile_picture is None:
+            server.send_bool(conn, False)
+        else:
+            server.send_bool(conn, True)
+            # send image
+            server.send_rgb_image_squared(conn, profile_picture)
 
 
 class Reidentification:

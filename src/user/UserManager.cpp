@@ -154,9 +154,17 @@ void UserManager::ProcessResponses()
 			{
 				// apply user identification
 				target_user->SetUserID(response.mUserID, response.mUserNiceName);
+				if(!response.mImage.empty())
+				{
+					target_user->AssignProfilePicture(response.mImage);
+				}else
+				{
+					//std::cout << "------ no profile picture was taken before\n";
+				}
 			}
 
 			// reset action status
+			target_user->SetPendingProfilePicture(false);
 			target_user->SetActionStatus(ActionStatus_Idle);
 		}
 		else {
@@ -385,6 +393,7 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 						mUserToRequests[target_user].insert(new_request);
 
 						// set user action status
+						target_user->SetPendingProfilePicture(true);
 						target_user->SetActionStatus(ActionStatus_IDPending);
 						target_user->pGrid->Clear();
 					}

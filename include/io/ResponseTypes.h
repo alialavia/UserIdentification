@@ -92,13 +92,25 @@ namespace io {
 		IdentificationResponse(io::TCPClient* conn = nullptr):NetworkResponse(conn, NetworkResponse_Identification)
 		{
 		}
+		IdentificationResponse(const IdentificationResponse& other) :NetworkResponse(other)
+		{
+			mImage = other.mImage.clone();	// make deep copy
+			mUserID = other.mUserID;
+			mUserNiceName = other.mUserNiceName;
+		}
 		void GetPayload() {
 			mUserID = pConn->Receive32bit<int>();
 			mUserNiceName = pConn->ReceiveStringWithVarLength();
+			bool hasProfilePicture = pConn->Receive8bit<bool>();
+			if(hasProfilePicture)
+			{
+				pConn->ReceiveRGBImageQuadratic(mImage);
+			}
 		};
 		int mUserID = -1;
 		std::string mUserNiceName = "";
-		float mProbability = 0.0f;	// todo:  implement in classifier
+		cv::Mat mImage;	// profile picture
+		//float mProbability = 0.0f;	// todo:  implement in classifier
 	};
 
 	class EmbeddingResponse : public NetworkResponse
