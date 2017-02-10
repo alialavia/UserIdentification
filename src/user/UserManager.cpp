@@ -154,6 +154,7 @@ void UserManager::ProcessResponses()
 			{
 				// apply user identification
 				target_user->SetUserID(response.mUserID, response.mUserNiceName);
+				// profile picture
 				if(!response.mImage.empty())
 				{
 					target_user->AssignProfilePicture(response.mImage);
@@ -161,6 +162,8 @@ void UserManager::ProcessResponses()
 				{
 					//std::cout << "------ no profile picture was taken before\n";
 				}
+				// update confidence
+				target_user->SetConfidence(response.mConfidence);
 			}
 
 			// reset action status
@@ -628,8 +631,12 @@ void UserManager::DrawUsers(cv::Mat &img)
 			int user_id = 0;
 			std::string nice_name = "";
 			target_user->GetUserID(user_id, nice_name);
-			text1 = "Status: " + nice_name + " - ID" + std::to_string(user_id);
+			text1 = "Status: ID" + std::to_string(user_id);
+			//text1 = "Status: " + nice_name + " - ID" + std::to_string(user_id);
 			color = cv::Scalar(0, 255, 0);
+
+			// confidence
+			text1 += " Confidence: " + std::to_string(target_user->GetConfidence());
 		}
 		else
 		{
@@ -657,6 +664,6 @@ void UserManager::DrawUsers(cv::Mat &img)
 		cv::putText(img, text2, cv::Point(bb.x+10, bb.y+40), cv::FONT_HERSHEY_SIMPLEX, font_size, color, 1, 8);
 
 		// draw face bounding box
-		cv::rectangle(img, bb, color, 2, cv::LINE_4);
+		//cv::rectangle(img, bb, color, 2, cv::LINE_4);
 	}
 }

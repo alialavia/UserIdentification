@@ -97,10 +97,12 @@ namespace io {
 			mImage = other.mImage.clone();	// make deep copy
 			mUserID = other.mUserID;
 			mUserNiceName = other.mUserNiceName;
+			mConfidence = other.mConfidence;
 		}
 		void GetPayload() {
 			mUserID = pConn->Receive32bit<int>();
 			mUserNiceName = pConn->ReceiveStringWithVarLength();
+			mConfidence = (int)pConn->Receive8bit<uint8_t>();
 			bool hasProfilePicture = pConn->Receive8bit<bool>();
 			if(hasProfilePicture)
 			{
@@ -110,7 +112,7 @@ namespace io {
 		int mUserID = -1;
 		std::string mUserNiceName = "";
 		cv::Mat mImage;	// profile picture
-		//float mProbability = 0.0f;	// todo:  implement in classifier
+		int mConfidence = 0;	// current confidence value in [%]
 	};
 
 	class EmbeddingResponse : public NetworkResponse

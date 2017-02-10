@@ -68,7 +68,11 @@ class ImageIdentificationPrealigned:
         if user_id is None:
             r.Error(server, conn, "Label could not be predicted - Face cannot be detected.")
             return
-        elif user_id < 0:
+
+        # calculate confidence
+        confidence = server.classifier.prediction_proba(user_id)
+
+        if user_id < 0:
             # unknown user
             print "--- creating new user"
             log.info('db', "Creating new User")
@@ -83,9 +87,10 @@ class ImageIdentificationPrealigned:
         if user_name is None:
             user_name = "unnamed"
 
+        # get profile picture
         profile_picture = server.user_db.get_profile_picture(user_id)
         log.info('server', "User identification complete: {} [ID], {} [Username]".format(user_id, user_name))
-        r.Identification(server, conn, int(user_id), user_name, profile_picture=profile_picture)
+        r.Identification(server, conn, int(user_id), user_name, confidence=confidence, profile_picture=profile_picture)
 
 # --------------- UPDATE
 

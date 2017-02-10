@@ -131,6 +131,7 @@ class MultiClassTree(MultiClassTreeBase):
     classifiers = {}    # classifier instances
     classifier_states = {}
     __decision_function = []
+    __decision_nr_samples = 0
     __nr_classes = 0
     __verbose = False
 
@@ -182,6 +183,7 @@ class MultiClassTree(MultiClassTreeBase):
                 predictions.append(__clf.predict(samples))
         return np.array(predictions), np.array(class_ids)
 
+    # DEPRECATED
     def predict_proba(self, samples):
         """
         Predict class probabilites from samples
@@ -198,12 +200,51 @@ class MultiClassTree(MultiClassTreeBase):
             class_ids.append(class_id)
         return np.array(probabilities), np.array(class_ids)
 
-    def decision_function(self):
+    def prediction_proba(self, user_id):
+
+        total_proba = 1
+        # is new user
+        if user_id == -1:
+            for uid in range(1, self.__nr_classes + 1):
+                dec_fn = self.decision_function(uid)
+                if dec_fn < 0:
+                    total_proba *= abs(dec_fn / float(self.__decision_nr_samples))
+                else:
+                    total_proba *= 1 - dec_fn / float(self.__decision_nr_samples)
+            return total_proba
+
+        # is regular user
+        for uid in range(1, self.__nr_classes+1):
+            if uid == user_id:
+                # target classifier
+                total_proba *= self.decision_function(uid) / float(self.__decision_nr_samples)
+            else:
+                dec_fn = self.decision_function(uid)
+
+                if dec_fn < 0:
+                    total_proba *= abs(dec_fn / float(self.__decision_nr_samples))
+                else:
+                    total_proba *= 1 - dec_fn / float(self.__decision_nr_samples)
+                    log.severe("Duplicate detection.")
+                    raise ValueError
+
+        # loop through other classifiers
+        return total_proba
+
+    def decision_function(self, user_id=0):
         """
         Use "predict" first and then "decision_function" to extract the classifier votes
         :return: tree votes: min = -nr_samples, max = nr_samples
         """
-        return self.__decision_function
+        if user_id != 0:
+            cls_scores, class_ids = self.__decision_function
+            try:
+                index = np.where(class_ids == user_id)
+                return cls_scores[index]
+            except:
+                return -self.__decision_nr_samples
+        else:
+            return self.__decision_function
 
     def predict(self, samples):
         """
@@ -218,21 +259,28 @@ class MultiClassTree(MultiClassTreeBase):
 
         # no classifiers yet, predict novelty
         if not self.classifiers:
+            # 100% confidence
+            self.__decision_function = np.array([len(samples)]), np.array([-1])
             return -1
 
         predictions, class_ids = self.__predict(samples)
         cls_scores = np.sum(predictions, axis=1)
-        self.__decision_function = cls_scores
+        self.__decision_function = cls_scores, class_ids
         nr_samples = len(samples)
+        self.__decision_nr_samples = nr_samples
 
         log.info('cl', "Classifier scores: {} | max: {}".format(cls_scores, nr_samples))
 
         # no classes detected at all - novelty
-        novelty_mask = cls_scores <= self.__novelty_thresh * nr_samples
+        # novelty_mask = cls_scores <= self.__novelty_thresh * nr_samples
+        novelty_mask = cls_scores < 0
+
         if len(cls_scores[novelty_mask]) == len(cls_scores):
             return -1
 
-        identification_mask = cls_scores >= self.__class_thresh * nr_samples
+        # identification_mask = cls_scores >= self.__class_thresh * nr_samples
+
+        identification_mask = cls_scores >= 0
         ids = cls_scores[identification_mask]
         if len(ids) > 0:
 
@@ -298,7 +346,7 @@ class OnlineMultiClassTree(MultiClassTree):
     """
 
     __verbose = True
-    __max_model_outliers = 1
+    # __max_model_outliers = 1
 
     def define_classifiers(self):
         self.VALID_CLASSIFIERS = {'ABOD', 'IABOD'}

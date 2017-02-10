@@ -26,7 +26,7 @@ namespace user
 
 	public:
 		User() : mUserID(-1), mUserNiceName(""), mIDStatus(IDStatus_Unknown), mActionStatus(ActionStatus_Idle),
-			mFaceData(nullptr), mUpdatingProfilePicture(false)
+			mFaceData(nullptr), mUpdatingProfilePicture(false), mConfidence(0)
 		{
 #ifdef FACEGRID_RECORDING
 			pGrid = new tracking::RadialFaceGrid(2, 15, 15);
@@ -159,6 +159,15 @@ namespace user
 			return true;
 		}
 
+		int GetConfidence()
+		{
+			return mConfidence;
+		}
+		void SetConfidence(const int &conf)
+		{
+			mConfidence = conf;
+		}
+
 	private:
 		// user id
 		int mUserID;
@@ -174,6 +183,8 @@ namespace user
 
 		cv::Mat mProfilePicture;
 		bool mUpdatingProfilePicture;
+
+		int mConfidence;
 
 	public:
 		// temporal model data (images, accumulated status)
