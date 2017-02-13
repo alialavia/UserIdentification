@@ -105,7 +105,7 @@ void SkeletonTracker::reset()
 
 // --------------- data access
 
-int SkeletonTracker::GetJoints(std::vector<std::vector<cv::Point2f>>& joint_coords, DWORD joints, base::ImageSpace space,
+size_t SkeletonTracker::GetJoints(std::vector<std::vector<cv::Point2f>>& joint_coords, DWORD joints, base::ImageSpace space,
 	int outputWidth, int outputHeight) const
 {
 	joint_coords.clear();
@@ -171,7 +171,7 @@ int SkeletonTracker::GetJoints(std::vector<std::vector<cv::Point2f>>& joint_coor
 	return mUserIDs.size();
 }
 
-int SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, std::vector<int> &user_ids, base::ImageSpace space, float box_size) const
+size_t SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, std::vector<int> &user_ids, base::ImageSpace space, float box_size) const
 {
 	int srcWidth, srcHeight;
 	if ((base::ImageSpace_Color & space) == base::ImageSpace_Color)
@@ -208,14 +208,14 @@ int SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxe
 		p2 = head_center;
 		p3 = head_center;
 		p4 = head_center;
-		p1.X += box_size / 2.;
-		p1.Y += box_size / 2.;
-		p2.X += box_size / 2.;
-		p2.Y -= box_size / 2.;
-		p3.X -= box_size / 2.;
-		p3.Y -= box_size / 2.;
-		p4.X -= box_size / 2.;
-		p4.Y += box_size / 2.;
+		p1.X += box_size / 2;
+		p1.Y += box_size / 2;
+		p2.X += box_size / 2;
+		p2.Y -= box_size / 2;
+		p3.X -= box_size / 2;
+		p3.Y -= box_size / 2;
+		p4.X -= box_size / 2;
+		p4.Y += box_size / 2;
 
 		//m_pCoordinateMapper->MapCameraPointToColorSpace(cameraspace_pt, &colorspace_pt);
 		m_pCoordinateMapper->MapCameraPointToColorSpace(p1, &p1c);
@@ -234,7 +234,7 @@ int SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxe
 			float head_size_colorspace = abs(p4c.X - p1c.X);
 			bounding_box = cv::Rect2f(p4c.X, p4c.Y, head_size_colorspace, head_size_colorspace);
 			// save
-			user_ids.push_back(iUser);
+			user_ids.push_back(static_cast<int>(iUser));
 			bounding_boxes.push_back(bounding_box);
 		}
 	}
@@ -244,7 +244,7 @@ int SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxe
 }
 
 // TODO: fix boundaries
-int SkeletonTracker::GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& bounding_boxes, std::vector<int> &user_ids, base::ImageSpace space, float box_size) const
+size_t SkeletonTracker::GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& bounding_boxes, std::vector<int> &user_ids, base::ImageSpace space, float box_size) const
 {
 
 	std::vector<int> u_ids;
@@ -279,7 +279,7 @@ int SkeletonTracker::GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& boundin
 	return bounding_boxes.size();
 }
 
-int SkeletonTracker::GetUserSceneIDs(std::vector<int> &ids) const
+size_t SkeletonTracker::GetUserSceneIDs(std::vector<int> &ids) const
 {
 	ids = mUserIDs;
 	return mUserIDs.size();
@@ -307,12 +307,13 @@ HRESULT SkeletonTracker::RenderFaceBoundingBoxes(cv::Mat &target, base::ImageSpa
 
 	// get joints
 	std::vector<std::vector<cv::Point2f>> user_joints;
-	int nr_users = 0;
+	size_t nr_users = 0;
 	static const DWORD joints =
 		base::JointType_Head
 		| base::JointType_Neck;
 
 	nr_users = GetJoints(user_joints, joints, space, output_width, output_height);
+
 	// draw joints
 	for (size_t i = 0; i < user_joints.size(); i++)
 	{
@@ -342,7 +343,7 @@ HRESULT SkeletonTracker::RenderFaceBoundingBoxes(cv::Mat &target, base::ImageSpa
 				px = 0.;
 			}
 			//draw
-			cv::rectangle(target, cv::Point(0, (nr_users - 1)* rect_height), cv::Point(px, nr_users * rect_height), cv::Scalar(0,0,255),3);
+			cv::rectangle(target, cv::Point(0, (nr_users - 1)* rect_height), cv::Point(static_cast<int>(px), nr_users * rect_height), cv::Scalar(0,0,255),3);
 		}
 	}
 

@@ -39,7 +39,7 @@ namespace tracking
 		/// <param name="outputWidth">Width of the output space.</param>
 		/// <param name="outputHeight">Height of the output space.</param>
 		/// <returns>int.</returns>
-		int GetJoints(std::vector<std::vector<cv::Point2f>>& joint_coords, DWORD joints, base::ImageSpace space,
+		size_t GetJoints(std::vector<std::vector<cv::Point2f>>& joint_coords, DWORD joints, base::ImageSpace space,
 							   int outputWidth, int outputHeight) const;
 
 		/// <summary>
@@ -51,11 +51,11 @@ namespace tracking
 		/// <param name="outputHeight">Height of the output space.</param>
 		/// <param name="box_size">Size of the box in meter.</param>
 		/// <returns>Number of faces.</returns>
-		int GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, std::vector<int> &user_ids, base::ImageSpace space, float box_size = 0.35) const;
+		size_t GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, std::vector<int> &user_ids, base::ImageSpace space, float box_size = 0.35) const;
 
-		int GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& bounding_boxes, std::vector<int> &user_ids, base::ImageSpace space, float box_size = 0.35) const;
+		size_t GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& bounding_boxes, std::vector<int> &user_ids, base::ImageSpace space, float box_size = 0.35) const;
 
-		int GetUserSceneIDs(std::vector<int> &ids) const;
+		size_t GetUserSceneIDs(std::vector<int> &ids) const;
 		// --------------- drawing methods
 		
 		/// <summary>
