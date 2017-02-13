@@ -3,12 +3,15 @@ from sklearn.ensemble import IsolationForest
 from sklearn import svm
 import time
 from Queue import Queue
+import os
+import pickle
 from threading import Thread, Lock
 from sklearn.preprocessing import LabelEncoder
 from uids.utils.Logger import Logger as log
 from abc import abstractmethod
 from uids.online_learning.ABOD import ABOD
 from uids.online_learning.IABOD import IABOD
+from uids.online_learning.ISVM import ISVM
 
 
 class MultiClassTreeBase:
@@ -141,8 +144,8 @@ class MultiClassTree(MultiClassTreeBase):
     # ---- class prediction threshold
     # TODO: tune these parameters according to comparison with LFW - maybe adaptive threshold
     __min_valid_samples = 0.5
-    __class_thresh = 0.4       # at least X% of samples must uniquely identify a person
-    __novelty_thresh = 0.4     # at least X% of samples should uniquely hint a novelty
+    __class_thresh = 0.6       # at least X% of samples must uniquely identify a person
+    __novelty_thresh = 0.2
 
     def __init__(self, user_db_, classifier_type):
         MultiClassTreeBase.__init__(self, classifier_type)
@@ -172,6 +175,61 @@ class MultiClassTree(MultiClassTreeBase):
 
     # ------- ensemble prediction
 
+    def prediction_proba(self, user_id):
+
+        # loop through all classifiers and get individual
+        # if self.CLASSIFIER == 'ABOD' or self.CLASSIFIER == 'IABOD':
+        total_proba = 1
+        cls_scores, class_ids = self.__decision_function
+
+        # new user
+        if user_id == -1:
+            # probability that it is none of the users
+            if self.__nr_classes == 0:
+                return 1
+
+            for uid, clf in self.classifiers.iteritems():
+                total_proba *= 1.-clf.get_proba()
+            return total_proba
+
+        for uid, clf in self.classifiers.iteritems():
+            if uid == user_id:
+                total_proba *= clf.get_proba()
+            else:
+                total_proba *= (1.-clf.get_proba())
+
+        # loop through other classifiers
+        return total_proba
+
+    # def prediction_proba(self, user_id):
+    #
+    #     # loop through all classifiers and get individual
+    #     # if self.CLASSIFIER == 'ABOD' or self.CLASSIFIER == 'IABOD':
+    #     total_proba = 1
+    #     cls_scores, class_ids = self.__decision_function
+    #
+    #     # new user
+    #     if user_id == -1:
+    #         # probability that it is none of the users
+    #         if self.__nr_classes == 0:
+    #             return 1
+    #
+    #         for s in cls_scores:
+    #             total_proba *= (self.__decision_nr_samples - s) / float(self.__decision_nr_samples)
+    #         return total_proba
+    #
+    #     # is regular user
+    #     for index, uid in enumerate(class_ids):
+    #         if uid == user_id:
+    #             # target classifier: probability that it is this class
+    #             total_proba *= cls_scores[index] / float(self.__decision_nr_samples)
+    #         else:
+    #             # probability that it is not this class
+    #             total_proba *= (self.__decision_nr_samples - cls_scores[index]) / float(self.__decision_nr_samples)
+    #
+    #     # loop through other classifiers
+    #     return total_proba
+
     def __predict(self, samples):
         """predict classes: for each sample on every class, tells whether or not (+1 or -1) it belongs to class"""
         predictions = []
@@ -183,53 +241,52 @@ class MultiClassTree(MultiClassTreeBase):
                 predictions.append(__clf.predict(samples))
         return np.array(predictions), np.array(class_ids)
 
-    # DEPRECATED
-    def predict_proba(self, samples):
+    def predict(self, samples):
         """
-        Predict class probabilites from samples
-        :param samples: list of samples
-        :return: (np.array, np.array) probabilities (positive samples/total samples per class), class ids
+        Prediction cases:
+        - Only target class is identified with ratio X (high): Class
+        - Target and other class is identified with ration X (high) and Y (small): Class with small confusion
+        - Multiple classes are identified with small ratios Ys: Novelty
+        - No classes identified: Novelty
+        :param samples:
+        :return: Class ID, -1 (Novelty), None invalid samples (multiple detections)
         """
+
+        # no classifiers yet, predict novelty
+        if not self.classifiers:
+            # 100% confidence
+            self.__decision_function = np.array([len(samples)]), np.array([-1])
+            return -1
+
         predictions, class_ids = self.__predict(samples)
 
-        # analyze
-        probabilities = []
+        # calc nr of positive class detections
+        cls_scores = (predictions > 0).sum(axis=1)
+        self.__decision_function = cls_scores, class_ids
+        nr_samples = len(samples)
+        self.__decision_nr_samples = nr_samples
 
-        for class_id, p in predictions.iteritems():
-            probabilities.append(len(p[p > 0])/float(len(samples)))
-            class_ids.append(class_id)
-        return np.array(probabilities), np.array(class_ids)
+        log.info('cl', "Classifier scores: {} | max: {}".format(cls_scores, nr_samples))
 
-    def prediction_proba(self, user_id):
+        # no classes detected at all - novelty
+        if len(cls_scores[cls_scores <= self.__novelty_thresh*nr_samples]) == len(cls_scores):
+            return -1
 
-        total_proba = 1
-        # is new user
-        if user_id == -1:
-            for uid in range(1, self.__nr_classes + 1):
-                dec_fn = self.decision_function(uid)
-                if dec_fn < 0:
-                    total_proba *= abs(dec_fn / float(self.__decision_nr_samples))
-                else:
-                    total_proba *= 1 - dec_fn / float(self.__decision_nr_samples)
-            return total_proba
+        identification_mask = cls_scores >= self.__class_thresh * nr_samples
+        ids = cls_scores[identification_mask]
+        if len(ids) > 0:
 
-        # is regular user
-        for uid in range(1, self.__nr_classes+1):
-            if uid == user_id:
-                # target classifier
-                total_proba *= self.decision_function(uid) / float(self.__decision_nr_samples)
-            else:
-                dec_fn = self.decision_function(uid)
+            # multiple possible detection - invalid samples
+            if len(ids) > 1:
+                return None
 
-                if dec_fn < 0:
-                    total_proba *= abs(dec_fn / float(self.__decision_nr_samples))
-                else:
-                    total_proba *= 1 - dec_fn / float(self.__decision_nr_samples)
-                    log.severe("Duplicate detection.")
-                    raise ValueError
+            # single person identified - return id
+            return int(class_ids[identification_mask][0])
+        else:
+            # samples unclear
+            return None
 
-        # loop through other classifiers
-        return total_proba
+    # ------- parameters
 
     def decision_function(self, user_id=0):
         """
@@ -246,7 +303,9 @@ class MultiClassTree(MultiClassTreeBase):
         else:
             return self.__decision_function
 
-    def predict(self, samples):
+    # ------- deprecated
+
+    def __dep_predict_sum(self, samples):
         """
         Prediction cases:
         - Only target class is identified with ratio X (high): Class
@@ -294,6 +353,7 @@ class MultiClassTree(MultiClassTreeBase):
             # samples unclear
             return None
 
+
     def __predict_ORIG(self, samples):
 
         proba, class_ids = self.predict_proba(samples)
@@ -338,6 +398,52 @@ class MultiClassTree(MultiClassTreeBase):
 
             return -1
 
+    def predict_proba(self, samples):
+        """
+        Predict class probabilites from samples
+        :param samples: list of samples
+        :return: (np.array, np.array) probabilities (positive samples/total samples per class), class ids
+        """
+        predictions, class_ids = self.__predict(samples)
+
+        # analyze
+        probabilities = []
+
+        for class_id, p in predictions.iteritems():
+            probabilities.append(len(p[p > 0]) / float(len(samples)))
+            class_ids.append(class_id)
+        return np.array(probabilities), np.array(class_ids)
+
+    def prediction_proba_old(self, user_id):
+        total_proba = 1
+        # is new user
+        if user_id == -1:
+            for uid in range(1, self.__nr_classes + 1):
+                dec_fn = self.decision_function(uid)
+                if dec_fn < 0:
+                    total_proba *= abs(dec_fn / float(self.__decision_nr_samples))
+                else:
+                    total_proba *= 1 - dec_fn / float(self.__decision_nr_samples)
+            return total_proba
+
+        # is regular user
+        for uid in range(1, self.__nr_classes + 1):
+            if uid == user_id:
+                # target classifier
+                total_proba *= self.decision_function(uid) / float(self.__decision_nr_samples)
+            else:
+                dec_fn = self.decision_function(uid)
+
+                if dec_fn < 0:
+                    total_proba *= abs(dec_fn / float(self.__decision_nr_samples))
+                else:
+                    total_proba *= 1 - dec_fn / float(self.__decision_nr_samples)
+                    log.severe("Duplicate detection.")
+                    raise ValueError
+
+        # loop through other classifiers
+        return total_proba
+
 
 class OnlineMultiClassTree(MultiClassTree):
     """
@@ -346,19 +452,37 @@ class OnlineMultiClassTree(MultiClassTree):
     """
 
     __verbose = True
-    # __max_model_outliers = 1
+    # unknown class data for One-VS-Rest fitting (ISVM)
+    __unknown_class_data = None
 
     def define_classifiers(self):
-        self.VALID_CLASSIFIERS = {'ABOD', 'IABOD'}
+        self.VALID_CLASSIFIERS = {'ABOD', 'IABOD', 'ISVM'}
 
     def __init__(self, user_db_, classifier='IABOD'):
         MultiClassTree.__init__(self, user_db_, classifier)
+        if classifier == 'ISVM':
+            # load lfw embeddings
+            log.info('clf', 'Loading unknown class samples for ISVM classifier...')
+            fileDir = os.path.dirname(os.path.realpath(__file__))
+            modelDir = os.path.join(fileDir, '../..', 'models', 'embedding_samples')  # path to the model directory
+            filename = "{}/{}".format(modelDir, "embeddings_lfw.pkl")
+            if os.path.isfile(filename):
+                # print filename
+                with open(filename, 'r') as f:
+                    embeddings = pickle.load(f)
+                    f.close()
+
+                self.__unknown_class_data = embeddings
+            else:
+                log.severe("Missing unknown class data... File {} not found in {}!".format(filename, modelDir))
 
     def generate_classifier(self):
         if self.CLASSIFIER == 'ABOD':
             return ABOD()
         elif self.CLASSIFIER == 'IABOD':
             return IABOD()
+        elif self.CLASSIFIER == 'ISVM':
+            return ISVM(self.__unknown_class_data)
 
     def train_classifier(self, class_id):
         """
@@ -386,6 +510,8 @@ class OnlineMultiClassTree(MultiClassTree):
 
             if len(update_samples) > 0:
 
+                training_before = self.classifier_states[class_id]
+
                 if self.CLASSIFIER == 'ABOD':
                     """
                     OFFLINE Classifier: retrain with all available data
@@ -408,18 +534,21 @@ class OnlineMultiClassTree(MultiClassTree):
                     INCREMENTAL Methods: Use partial fit with stored update data
                         - Samples: Partially stored in ABOD Cluster
                     """
-
-                    # first time: use fit
-                    if self.classifier_states[class_id] == 0:
-                        self.classifiers[class_id].fit(update_samples)
-                    else:
-                        # partial update: partial_fit
-                        self.classifiers[class_id].partial_fit(update_samples)
-
+                    # partial update: partial_fit
+                    self.classifiers[class_id].partial_fit(update_samples)
                     self.classifier_states[class_id] += 1
 
-                # empty update list
-                self.classifier_update_stacks[class_id] = []
+                elif self.CLASSIFIER == 'ISVM':
+                    """
+                    INCREMENTAL Methods: Use partial fit with stored update data
+                        - Samples: Partially stored in Cluster
+                    """
+                    self.classifiers[class_id].partial_fit(update_samples)
+                    self.classifier_states[class_id] += 1
+
+                # empty update list if training was performed
+                if self.classifier_states[class_id] - training_before == 1:
+                    self.classifier_update_stacks[class_id] = []
             else:
                 log.warning("No training/update samples available")
 
@@ -442,13 +571,21 @@ class OnlineMultiClassTree(MultiClassTree):
 
         if class_id not in self.classifiers:
             log.severe("Class {} has not been initialized yet!".format(class_id))
-            return False    # force reidentification
+            return False, 1    # force reidentification
 
         prediction = self.predict(samples)
 
+        # samples are not certain enough
+        if prediction == None:
+            return None, 1
+
+        # calculate confidence
+        confidence = self.prediction_proba(class_id)
+
+        # detected different class
         if prediction != class_id:
             log.severe("Updating invalid class! Tracker must have switched!")
-            return False    # force reidentification
+            return False, confidence    # force reidentification
 
         with self.training_lock:
             # add update data to stack
@@ -463,7 +600,7 @@ class OnlineMultiClassTree(MultiClassTree):
             # Todo: only request update if available update data exceeds threshold
             self.add_training_task(class_id)
 
-        return True
+        return True, confidence
 
     # ----------- unused
 

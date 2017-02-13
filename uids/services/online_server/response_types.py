@@ -45,14 +45,14 @@ class Identification:
 
 class UpdateFeedback:
 
-    def __init__(self, server, conn, confidence=1):
+    def __init__(self, server, conn, confidence=100):
 
         # send back response identifier
         resp_id = ROUTING['RESPONSE']['ID'][self.__class__.__name__]
         server.send_int(conn, int(resp_id))
 
-        # send update confidence
-        server.send_uint(conn, confidence)
+        # send update confidence (uint8)
+        server.send_uchar(conn, confidence)
 
 class Reidentification:
 

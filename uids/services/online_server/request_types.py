@@ -28,7 +28,11 @@ class ImageIdentification:
         if user_id is None:
             r.Error(server, conn, "Label could not be predicted - Face cannot be detected.")
             return
-        elif user_id < 0:
+
+        # calculate confidence
+        confidence = int(server.classifier.prediction_proba(user_id)*100)
+
+        if user_id < 0:
             # unknown user
             log.info('db', "Creating new user")
             user_id = server.user_db.create_new_user("a_user")
@@ -45,7 +49,7 @@ class ImageIdentification:
         # get profile picture
         profile_picture = server.user_db.get_profile_picture(user_id)
         log.info('server', "User identification complete: {} [ID], {} [Username]".format(user_id, user_name))
-        r.Identification(server, conn, int(user_id), user_name, profile_picture=profile_picture)
+        r.Identification(server, conn, int(user_id), user_name, confidence=confidence, profile_picture=profile_picture)
 
 
 class ImageIdentificationPrealigned:
@@ -70,7 +74,7 @@ class ImageIdentificationPrealigned:
             return
 
         # calculate confidence
-        confidence = server.classifier.prediction_proba(user_id)
+        confidence = int(server.classifier.prediction_proba(user_id)*100)
 
         if user_id < 0:
             # unknown user
@@ -119,10 +123,10 @@ class Update:
         log.info('cl', "Starting to process stream data...")
 
         # submit data
-        succ = server.classifier.process_labeled_stream_data(user_id, embeddings)
+        succ, conf = server.classifier.process_labeled_stream_data(user_id, embeddings)
 
         if succ:
-            r.OK(server, conn)
+            r.UpdateFeedback(server, conn, int(conf*100))
         else:
             # update was not classified as the labeled class
             # force reidentification
@@ -154,9 +158,14 @@ class UpdatePrealigned:
         log.info('cl', "Start to process stream data...")
 
         # submit data (ignore if prediction of samples does not fit model)
-        succ = server.classifier.process_labeled_stream_data(user_id, embeddings)
+        succ, conf = server.classifier.process_labeled_stream_data(user_id, embeddings)
 
-        r.OK(server, conn)
+
+        if succ == None:
+            r.Error(server, conn, "Update samples are not certain enough.")
+        else:
+            r.OK(server, conn)
+            # r.UpdateFeedback(server, conn, conf)
 
 
 class UpdatePrealignedRobust:
@@ -184,14 +193,17 @@ class UpdatePrealignedRobust:
         log.info('cl', "Starting to process stream data...")
 
         # submit data
-        succ = server.classifier.process_labeled_stream_data(user_id, embeddings)
+        succ, conf = server.classifier.process_labeled_stream_data(user_id, embeddings)
 
-        if succ:
-            r.OK(server, conn)
-        else:
+        if succ == None:
+            log.info('cls', "Update samples are not certain enough.")
+            r.Error(server, conn, "Update samples are not certain enough.")
+        elif succ == False:
             # update was not classified as the labeled class
             # force reidentification
             r.Reidentification(server, conn)
+        else:
+            r.UpdateFeedback(server, conn, int(conf*100))
 
 # --------------- MISC
 

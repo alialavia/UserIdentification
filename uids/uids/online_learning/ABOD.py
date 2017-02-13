@@ -21,6 +21,9 @@ class ABOD:
     mean = None
     __verbose = False
 
+    # prediction
+    prediction = None
+
     # thresholding
     threshold = 0.2
     uncertainty_bandwidth = 0.1 # uncertain region: T-b/2 ... T+b/2
@@ -67,6 +70,11 @@ class ABOD:
     def decision_function(self, samples):
         return self.__predict(samples)
 
+    def get_proba(self):
+        # probability that it is the class (uncertain samples not counted)
+        cls_scores = (self.prediction > 0).sum()
+        return cls_scores / float(len(self.prediction[self.prediction != 0]))
+
     def predict(self, samples):
         """
         One Class prediction
@@ -84,11 +92,12 @@ class ABOD:
             samples = ProjectOntoSubspace(samples, self.mean, self.basis)
 
         variance = self.__predict(samples)
-
-        return np.array([-1 if v < (self.threshold-self.uncertainty_bandwidth/2)
+        self.prediction = np.array([-1 if v < (self.threshold-self.uncertainty_bandwidth/2)
                          else 1 if v > (self.threshold+self.uncertainty_bandwidth/2)
                          else 0
                          for v in variance])
+
+        return self.prediction
 
     def __predict(self, samples):
         start = time.time()
