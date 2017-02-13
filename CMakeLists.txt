@@ -184,6 +184,11 @@ SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 # use facegrid recording (pose dependent image capturing)
 add_definitions(-DFACEGRID_RECORDING)
+# only check update for inconsistency if bounding boxes touch
+add_definitions(-D_CHECK_BB_SWAP)
+# use dlib to prealign the face images before they are beeing sent to the server
+add_definitions(-D_DLIB_PREALIGN)
+
 
 #-------------------------------------------------
 # Config Header

@@ -18,5 +18,3 @@ class IABOD(ABOD):
             self.fit(samples)
         self.data_cluster.update(samples)
         self.data = self.data_cluster.get_data()
-        log.severe("IABOD cluster: {}".format(len(self.data)))
-

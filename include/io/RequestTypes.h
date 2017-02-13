@@ -19,14 +19,15 @@ namespace io {
 	enum NetworkRequestType
 	{
 		NetworkRequest_ImageIdentification = 1,
-		NetworkRequest_EmbeddingCollectionByID = 2,
-		NetworkRequest_EmbeddingCollectionByName = 3,
-		NetworkRequest_EmbeddingCalculation = 4,
-		NetworkRequest_ClassifierTraining = 5,
-		NetworkRequest_ImageIdentificationAligned = 6,
-		NetworkRequest_EmbeddingCollectionByIDAligned = 7,
-		NetworkRequest_ImageAlignment = 8,
-		NetworkRequest_ProfilePictureUpdate = 9
+		NetworkRequest_ImageIdentificationAligned = 2,
+		NetworkRequest_EmbeddingCollectionByID = 10,
+		NetworkRequest_EmbeddingCollectionByIDAligned = 11,
+		NetworkRequest_EmbeddingCollectionByIDAlignedRobust = 12,
+		NetworkRequest_EmbeddingCollectionByName = 13,
+		NetworkRequest_EmbeddingCalculation = 20,
+		NetworkRequest_ClassifierTraining = 21,
+		NetworkRequest_ImageAlignment = 22,
+		NetworkRequest_ProfilePictureUpdate = 23
 	};
 
 	// request type
@@ -93,46 +94,6 @@ namespace io {
 
 	};
 
-	class EmbeddingCollectionByID : public NetworkRequest
-	{
-	public:
-		EmbeddingCollectionByID(
-			io::TCPClient* server_conn,
-			std::vector<cv::Mat> images,
-			int user_id
-		) :
-			NetworkRequest(server_conn, NetworkRequest_EmbeddingCollectionByID),
-			mImages(images),
-			mUserID(user_id)
-		{
-		}
-		EmbeddingCollectionByID(
-			io::TCPClient* server_conn,
-			std::vector<cv::Mat*> images,
-			int user_id
-		) :
-			NetworkRequest(server_conn, NetworkRequest_EmbeddingCollectionByID),
-			mUserID(user_id)
-		{
-			// make deep copy of images
-			for (size_t i = 0; i < images.size(); i++) {
-				mImages.push_back((*images[i]).clone());
-			}
-		}
-
-	protected:
-
-		// submit specific payload
-		void SubmitPayload() {
-			pServerConn->SendUInt(mUserID);
-			pServerConn->SendImageBatchQuadraticSameSize(mImages);
-		}
-
-		// payload: quadratic(!) images of same size
-		std::vector<cv::Mat> mImages;
-		int mUserID;
-	};
-
 	class EmbeddingCollectionByName : public NetworkRequest
 	{
 	public:
@@ -174,10 +135,10 @@ namespace io {
 	};
 
 
-	class EmbeddingCallculation : public NetworkRequest
+	class EmbeddingCalculation : public NetworkRequest
 	{
 	public:
-		EmbeddingCallculation(
+		EmbeddingCalculation(
 			io::TCPClient* server_conn,
 			cv::Mat img
 		) :
@@ -234,15 +195,18 @@ namespace io {
 
 	};
 
-	class EmbeddingCollectionByIDAligned : public NetworkRequest
+
+	class EmbeddingCollectionByID : public NetworkRequest
 	{
 	public:
-		EmbeddingCollectionByIDAligned(
+		EmbeddingCollectionByID(
 			io::TCPClient* server_conn,
 			std::vector<cv::Mat*> images,
-			int user_id
+			int user_id,
+			// specify sub type (prealigned, robust)
+			NetworkRequestType sub_type = NetworkRequest_EmbeddingCollectionByID
 		) :
-			NetworkRequest(server_conn, NetworkRequest_EmbeddingCollectionByIDAligned),
+			NetworkRequest(server_conn, sub_type),
 			mUserID(user_id)
 		{
 			// make deep copy of images
@@ -250,12 +214,13 @@ namespace io {
 				mImages.push_back((*images[i]).clone());
 			}
 		}
-		EmbeddingCollectionByIDAligned(
+		EmbeddingCollectionByID(
 			io::TCPClient* server_conn,
 			std::vector<cv::Mat> images,
-			int user_id
+			int user_id,
+			NetworkRequestType sub_type = NetworkRequest_EmbeddingCollectionByID
 		) :
-			NetworkRequest(server_conn, NetworkRequest_EmbeddingCollectionByIDAligned),
+			NetworkRequest(server_conn, sub_type),
 			mUserID(user_id)
 		{
 			mImages = images;
@@ -273,6 +238,9 @@ namespace io {
 		// Todo: careful! Int sent as Uint
 		int mUserID;
 	};
+
+
+
 
 	class ImageAlignment : public NetworkRequest
 	{

@@ -47,7 +47,7 @@ int main(int argc, char** argv)
 		server_conn.Connect();
 
 		// generate request
-		io::EmbeddingCallculation req(&server_conn, image);
+		io::EmbeddingCalculation req(&server_conn, image);
 		req.SubmitRequest();
 
 		// get reponse

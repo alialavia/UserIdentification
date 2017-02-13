@@ -26,7 +26,7 @@ namespace user
 
 	public:
 		User() : mUserID(-1), mUserNiceName(""), mIDStatus(IDStatus_Unknown), mActionStatus(ActionStatus_Idle),
-			mFaceData(nullptr), mUpdatingProfilePicture(false), mConfidence(0)
+			mFaceData(nullptr), mUpdatingProfilePicture(false), mConfidence(0), mTrackingIsSafe(true)
 		{
 #ifdef FACEGRID_RECORDING
 			pGrid = new tracking::RadialFaceGrid(2, 15, 15);
@@ -62,6 +62,7 @@ namespace user
 			mUserID = -1;
 			mIDStatus = IDStatus_Unknown;
 			mActionStatus = ActionStatus_Idle;
+			mTrackingIsSafe = true;
 			// release profile image
 			if(!mProfilePicture.empty())
 			{
@@ -167,6 +168,12 @@ namespace user
 		{
 			mConfidence = conf;
 		}
+		void SetTrackingIsSafe(bool is_save) {
+			mTrackingIsSafe = is_save;
+		}
+		bool TrackingIsSafe() {
+			return mTrackingIsSafe;
+		}
 
 	private:
 		// user id
@@ -184,7 +191,10 @@ namespace user
 		cv::Mat mProfilePicture;
 		bool mUpdatingProfilePicture;
 
+		// current confidence of the identification in %
 		int mConfidence;
+		// if the tracking is confident (no bounding boxes overlap)
+		bool mTrackingIsSafe;
 
 	public:
 		// temporal model data (images, accumulated status)

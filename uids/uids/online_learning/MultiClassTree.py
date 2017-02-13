@@ -458,7 +458,7 @@ class OnlineMultiClassTree(MultiClassTree):
     def define_classifiers(self):
         self.VALID_CLASSIFIERS = {'ABOD', 'IABOD', 'ISVM'}
 
-    def __init__(self, user_db_, classifier='IABOD'):
+    def __init__(self, user_db_, classifier='ISVM'):
         MultiClassTree.__init__(self, user_db_, classifier)
         if classifier == 'ISVM':
             # load lfw embeddings
@@ -557,12 +557,13 @@ class OnlineMultiClassTree(MultiClassTree):
 
         return True
 
-    def process_labeled_stream_data(self, class_id, samples):
+    def process_labeled_stream_data(self, class_id, samples, check_update=False):
         """
         Incorporate labeled data into the classifiers. Classifier for {class_id} must be initialized already
         (retraining is done once the samples can't be explained by the model anymore)
         :param class_id: class id
         :param samples: class samples
+        :param check_update: Evaluate update on the current model before using it (robust to sample pollution)
         :return: -
         """
 
@@ -573,19 +574,19 @@ class OnlineMultiClassTree(MultiClassTree):
             log.severe("Class {} has not been initialized yet!".format(class_id))
             return False, 1    # force reidentification
 
-        prediction = self.predict(samples)
+        confidence = 1
 
-        # samples are not certain enough
-        if prediction == None:
-            return None, 1
-
-        # calculate confidence
-        confidence = self.prediction_proba(class_id)
-
-        # detected different class
-        if prediction != class_id:
-            log.severe("Updating invalid class! Tracker must have switched!")
-            return False, confidence    # force reidentification
+        if check_update:
+            prediction = self.predict(samples)
+            # samples are not certain enough
+            if prediction == None:
+                return None, 1
+            # calculate confidence
+            confidence = self.prediction_proba(class_id)
+            # detected different class
+            if prediction != class_id:
+                log.severe("Updating invalid class! Tracker must have switched!")
+                return False, confidence    # force reidentification
 
         with self.training_lock:
             # add update data to stack

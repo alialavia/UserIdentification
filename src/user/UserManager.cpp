@@ -92,6 +92,12 @@ void UserManager::RefreshUserTracking(
 			mFrameIDToUser.erase(it++);	// increment after deletion
 		}
 	}
+
+#ifdef _CHECK_BB_SWAP
+	// update the tracking safety status
+	UpdateTrackingSafetyMeasure();
+#endif
+
 }
 
 // incorporate processed requests: update user ids
@@ -530,7 +536,7 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 						// extract images
 						std::vector<cv::Mat*> face_patches = target_user->pGrid->ExtractGrid();
 
-						if(face_patches[0]->cols == 0)
+						if (face_patches[0]->cols == 0)
 						{
 							std::cout << "----------- WHY? -----------" << std::endl;
 						}
@@ -540,11 +546,27 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 						// ID -1
 						target_user->GetUserID(user_id, user_name);
 
-						// make new identification request
+						io::EmbeddingCollectionByID* new_request;
 #ifdef _DLIB_PREALIGN
-						io::EmbeddingCollectionByIDAligned* new_request = new io::EmbeddingCollectionByIDAligned(pServerConn, face_patches, user_id);
+#ifdef _CHECK_BB_SWAP
+
+					// robust update: check update for model consistency
+					if (!target_user->TrackingIsSafe()) {
+						new_request = new io::EmbeddingCollectionByID(
+							pServerConn, face_patches, user_id,
+							io::NetworkRequest_EmbeddingCollectionByIDAlignedRobust	// specified request type
+						);
+					}else
+#endif
+					
+						{new_request = new io::EmbeddingCollectionByID(
+							pServerConn, face_patches, user_id, 
+							io::NetworkRequest_EmbeddingCollectionByIDAligned	// specified request type
+						);}
+
 #else
-						io::EmbeddingCollectionByID* new_request = new io::EmbeddingCollectionByID(pServerConn, face_patches, user_id);
+						// standard update
+						new_request = new io::EmbeddingCollectionByID(pServerConn, face_patches, user_id);
 #endif
 						pRequestHandler->addRequest(new_request);
 
@@ -592,6 +614,30 @@ void UserManager::CancelAndDropAllUserRequests(User* user) {
 		// no pending/processed requests found
 	}
 }
+
+#ifdef _CHECK_BB_SWAP
+void UserManager::UpdateTrackingSafetyMeasure() {
+	std::map<int, User*>::iterator it1;
+	std::map<int, User*>::iterator it2;
+	for (it1 = mFrameIDToUser.begin(); it1 != mFrameIDToUser.end(); it1++)
+	{
+		// choose pair
+		if (it1 != mFrameIDToUser.end()) {
+			for (it2 = ++it1; it2 != mFrameIDToUser.end(); it2++) {
+				cv::Rect r1 = it1->second->GetFaceBoundingBox();
+				cv::Rect r2 = it2->second->GetFaceBoundingBox();
+				// bbs intersect if area > 0
+				bool intersect = ((r1 & r2).area() > 0);
+				if (intersect) {
+					// set safety status
+					it1->second->SetTrackingIsSafe(false);
+					it2->second->SetTrackingIsSafe(false);
+				}
+			}
+		}
+	}
+}
+#endif
 
 // ----------------- helper functions
 

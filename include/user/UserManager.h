@@ -12,7 +12,6 @@
 #include <features\Face.h>
 
 #define _DEBUG_USERMANAGER
-#define _DLIB_PREALIGN // use dlib on client side for face alignment
 
 namespace io{
 class TCPClient;
@@ -119,6 +118,10 @@ namespace user
 		//}
 
 		void CancelAndDropAllUserRequests(User* user);
+
+#ifdef _CHECK_BB_SWAP
+		void UpdateTrackingSafetyMeasure();
+#endif
 
 	private:
 		io::TCPClient* pServerConn;

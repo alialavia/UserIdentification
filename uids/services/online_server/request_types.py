@@ -70,7 +70,7 @@ class ImageIdentificationPrealigned:
         user_id = server.classifier.predict(embeddings)
 
         if user_id is None:
-            r.Error(server, conn, "Label could not be predicted - Face cannot be detected.")
+            r.Error(server, conn, "Label could not be predicted - Samples are contradictory.")
             return
 
         # calculate confidence
@@ -123,14 +123,12 @@ class Update:
         log.info('cl', "Starting to process stream data...")
 
         # submit data
-        succ, conf = server.classifier.process_labeled_stream_data(user_id, embeddings)
+        succ, conf = server.classifier.process_labeled_stream_data(user_id, embeddings, check_update=False)
 
-        if succ:
-            r.UpdateFeedback(server, conn, int(conf*100))
+        if succ is None:
+            r.Error(server, conn, "Update samples are unambiguously.")
         else:
-            # update was not classified as the labeled class
-            # force reidentification
-            r.Reidentification(server, conn)
+            r.UpdateFeedback(server, conn, int(conf * 100))
 
 
 class UpdatePrealigned:
@@ -157,15 +155,13 @@ class UpdatePrealigned:
 
         log.info('cl', "Start to process stream data...")
 
-        # submit data (ignore if prediction of samples does not fit model)
-        succ, conf = server.classifier.process_labeled_stream_data(user_id, embeddings)
+        # submit data
+        succ, conf = server.classifier.process_labeled_stream_data(user_id, embeddings, check_update=False)
 
-
-        if succ == None:
-            r.Error(server, conn, "Update samples are not certain enough.")
+        if succ is None:
+            r.Error(server, conn, "Update samples are unambiguously.")
         else:
-            r.OK(server, conn)
-            # r.UpdateFeedback(server, conn, conf)
+            r.UpdateFeedback(server, conn, int(conf * 100))
 
 
 class UpdatePrealignedRobust:
@@ -196,8 +192,8 @@ class UpdatePrealignedRobust:
         succ, conf = server.classifier.process_labeled_stream_data(user_id, embeddings)
 
         if succ == None:
-            log.info('cls', "Update samples are not certain enough.")
-            r.Error(server, conn, "Update samples are not certain enough.")
+            log.info('cls', "Update samples are unambiguously.")
+            r.Error(server, conn, "Update samples are unambiguously.")
         elif succ == False:
             # update was not classified as the labeled class
             # force reidentification
