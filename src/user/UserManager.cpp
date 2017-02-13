@@ -621,6 +621,9 @@ void UserManager::UpdateTrackingSafetyMeasure() {
 	std::map<int, User*>::iterator it2;
 	for (it1 = mFrameIDToUser.begin(); it1 != mFrameIDToUser.end(); it1++)
 	{
+		// reset status
+		it1->second->SetTrackingIsSafe(true);
+
 		// choose pair
 		if (it1 != mFrameIDToUser.end()) {
 			for (it2 = ++it1; it2 != mFrameIDToUser.end(); it2++) {
@@ -732,9 +735,15 @@ void UserManager::DrawUsers(cv::Mat &img)
 
 		int baseline = 0;
 		cv::Size textSize = cv::getTextSize(text1, cv::FONT_HERSHEY_SIMPLEX, font_size, 1, &baseline);
-
 		cv::Rect bg_patch = cv::Rect(bb.x, bb.y, textSize.width + 20, textSize.height + 15);
-		img(bg_patch) = cv::Scalar(0, 0, 0);
+
+		cv::Scalar bg_color = cv::Scalar(0, 0, 0);
+		if (!target_user->TrackingIsSafe()) {
+			bg_color = cv::Scalar(0, 14, 88);
+		}
+
+		// draw flat background
+		img(bg_patch) = bg_color;
 
 		cv::putText(img, text1, cv::Point(bb.x+10, bb.y+20), cv::FONT_HERSHEY_SIMPLEX, font_size, color, 1, 8);
 		cv::putText(img, text2, cv::Point(bb.x+10, bb.y+40), cv::FONT_HERSHEY_SIMPLEX, font_size, color, 1, 8);
