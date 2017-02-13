@@ -19,7 +19,7 @@ namespace io
 		static void MakeIndexedName(std::string path, std::string &filename_orig, bool start_with_index = true);
 
 		// loading images
-		int LoadImageBatch(std::vector<cv::Mat> &img_batch, std::vector<std::string> &filenames, int batch_size = 10);
+		size_t LoadImageBatch(std::vector<cv::Mat> &img_batch, std::vector<std::string> &filenames, int batch_size = 10);
 		bool IsImage(const std::string &filename);
 		bool ChangeDirectory(const std::string &directory);
 		void GetFilesInDirectory(std::vector<std::string> &out, const std::string &directory);

@@ -73,14 +73,14 @@ void RadialFaceGrid::ResizeImages(int size)
 	}
 }
 
-void RadialFaceGrid::GetFaceGridPitchYaw(cv::Mat &dst, int canvas_height){
+void RadialFaceGrid::GetFaceGridPitchYaw(cv::Mat &dst, size_t canvas_height){
 
 
-	int patch_size = (int)((float)canvas_height / image_grid.Size(1));
-	int canvas_width = patch_size * image_grid.Size(2);
+	int patch_size = static_cast<int>(canvas_height / image_grid.Size(1));
+	int canvas_width = patch_size * static_cast<int>(image_grid.Size(2));
 
 	// allocate image
-	cv::Mat canvas = cv::Mat(canvas_height, canvas_width, CV_8UC3, cv::Scalar(0, 0, 0));
+	cv::Mat canvas = cv::Mat(static_cast<int>(canvas_height), canvas_width, CV_8UC3, cv::Scalar(0, 0, 0));
 
 	for (int p = 0; p < image_grid.Size(1); p++) {
 		for (int y = 0; y < image_grid.Size(2); y++) {
@@ -141,12 +141,12 @@ HRESULT FaceTracker::ExtractFacialData(FaceData face_data[NR_USERS])
 
 			// bounding boxes
 			face_container.boundingBox = cv::Rect2f(
-				cv::Point2f(fd.boundingBox.Left, fd.boundingBox.Bottom),
-				cv::Point2f(fd.boundingBox.Right, fd.boundingBox.Top)
+				cv::Point2i(fd.boundingBox.Left, fd.boundingBox.Bottom),
+				cv::Point2i(fd.boundingBox.Right, fd.boundingBox.Top)
 			);
 			face_container.boundingBoxIR = cv::Rect2f(
-				cv::Point2f(fd.boundingBoxIR.Top, fd.boundingBoxIR.Left),
-				cv::Point2f(fd.boundingBoxIR.Bottom, fd.boundingBoxIR.Right)
+				cv::Point2i(fd.boundingBoxIR.Top, fd.boundingBoxIR.Left),
+				cv::Point2i(fd.boundingBoxIR.Bottom, fd.boundingBoxIR.Right)
 			);
 
 			// rotation
@@ -169,12 +169,12 @@ HRESULT FaceTracker::ExtractFacialData(FaceData face_data[NR_USERS])
 
 }
 
-int FaceTracker::GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space) const
+size_t FaceTracker::GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space) const
 {
 
 	GetFaceBoundingBoxes(bounding_boxes, space);
 
-	float xmin, xmax, ymin, ymax, width, height;
+	float xmin, ymin, width, height;
 
 	int srcWidth, srcHeight;
 	if ((base::ImageSpace_Color & space) == base::ImageSpace_Color)
@@ -204,19 +204,18 @@ int FaceTracker::GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& bounding_bo
 
 }
 
-int FaceTracker::GetUserSceneIDs(std::vector<int> &ids) const
+size_t FaceTracker::GetUserSceneIDs(std::vector<int> &ids) const
 {
 	ids = mUserIDs;
 	return mUserIDs.size();
 }
 
-int FaceTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space) const
+size_t FaceTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space) const
 {
 	bounding_boxes.clear();
 	bool color_space = (base::ImageSpace_Color & space) == base::ImageSpace_Color;
 	for (size_t j = 0; j < mFaces.size(); j++)
 	{
-		RectI bb;
 		if (color_space) {
 			bounding_boxes.push_back(mFaces[j].boundingBox);
 		}

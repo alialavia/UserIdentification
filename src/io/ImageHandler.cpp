@@ -99,7 +99,7 @@ bool ImageHandler::FileExists(const std::string& name) {
 }
 
 
-int ImageHandler::LoadImageBatch(std::vector<cv::Mat> &img_batch, std::vector<std::string> &filenames, int batch_size) {
+size_t ImageHandler::LoadImageBatch(std::vector<cv::Mat> &img_batch, std::vector<std::string> &filenames, int batch_size) {
 
 	if (!mValidDirectory) {
 		return false;
@@ -228,7 +228,7 @@ void ImageHandler::DrawCenteredText(std::string text, float font_size, cv::Point
 
 void ImageHandler::DrawCenteredText(double text, float font_size, cv::Point pos, cv::Mat &img, cv::Scalar color) {
 	char str[200];
-	sprintf(str, "%.1f", text);
+	sprintf_s(str, "%.1f", text);
 	DrawCenteredText(str, font_size, pos, img, color);
 }
 

@@ -158,7 +158,7 @@ int TCPClient::ReceiveRGBImageQuadratic(cv::Mat &output)
 {
 	short img_dim = Receive16bit<short>();
 	output = cv::Mat::zeros(img_dim, img_dim, CV_8UC3);
-	int  buffer_length = output.total()*output.elemSize();
+	int buffer_length = static_cast<int>(output.total()*output.elemSize());
 
 	// allocate memory
 	char * sockData = new char[buffer_length];
@@ -181,7 +181,7 @@ int TCPClient::ReceiveRGBImage(cv::Mat &output)
 	short height = Receive16bit<short>();
 
 	output = cv::Mat::zeros(height, width, CV_8UC3);
-	int buffer_length = output.total()*output.elemSize();
+	int buffer_length = static_cast<int>(output.total()*output.elemSize());
 
 	// allocate memory
 	char * sockData = new char[buffer_length];
@@ -353,7 +353,7 @@ int TCPClient::SendRGBImageData(const cv::Mat &img) const
 	}
 
 	frame = (frame.reshape(0, 1)); // to make it continuous
-	const int imgSize = frame.total()*frame.elemSize();
+	const int imgSize = static_cast<const int>(frame.total()*frame.elemSize());
 
 	int bytecount;
 	if ((bytecount = send(mSocketID, (const char *)frame.data, imgSize, 0)) == SOCKET_ERROR) {
@@ -373,7 +373,7 @@ void TCPClient::SendRGBTestImage(int size) const
 	frame = (frame.reshape(0, 1)); // to make it continuous
 
 	// send size
-	const int imgSize = frame.total()*frame.elemSize();
+	const int imgSize = static_cast<const int>(frame.total()*frame.elemSize());
 
 	int bytecount;
 	if ((bytecount = send(mSocketID, (const char *)frame.data, imgSize, 0)) == SOCKET_ERROR) {
@@ -390,11 +390,11 @@ int TCPClient::SendString(std::string val) const
 {
 
 	// buffer size
-	SendUInt(val.size());
+	SendUInt(static_cast<int>(val.size()));
 
 	// send cstring
 	int bytecount;
-	if ((bytecount = send(mSocketID, val.c_str(), val.size(), 0)) == SOCKET_ERROR) {
+	if ((bytecount = send(mSocketID, val.c_str(), static_cast<int>(val.size()), 0)) == SOCKET_ERROR) {
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
 		return 0;
 	}
@@ -411,16 +411,16 @@ bool TCPClient::SendKeyboard() const
 	memset(buffer, '\0', buffer_len);
 
 	// receive characters
-	for (char* p = buffer; (c = getch()) != 13; p++) {
+	for (char* p = buffer; (c = _getch()) != 13; p++) {
 		printf("%c", c);
 		*p = c;
 	}
 
 	// buffer size
-	SendUInt(strlen(buffer));
+	SendUInt(static_cast<uint32_t>(strlen(buffer)));
 
 	// send char array
-	if ((bytecount = send(mSocketID, buffer, strlen(buffer), 0)) == SOCKET_ERROR) {
+	if ((bytecount = send(mSocketID, buffer, static_cast<int>(strlen(buffer)), 0)) == SOCKET_ERROR) {
 		fprintf(stderr, "Error sending data %d\n", WSAGetLastError());
 		return false;
 	}
@@ -446,7 +446,7 @@ void TCPClient::SendImageBatchQuadraticSameSize(const std::vector<cv::Mat> &imag
 	}
 
 	// send nr images
-	SendShort(images.size());
+	SendShort(static_cast<short>(images.size()));
 
 	// send image dimension
 	SendShort(images[0].size().width);
@@ -477,7 +477,7 @@ void TCPClient::SendImageBatchSameSize(const std::vector<cv::Mat> &images) const
 	}
 
 	// send nr images
-	SendShort(images.size());
+	SendShort(static_cast<short>(images.size()));
 
 	// send image dimension
 	SendShort(images[0].size().width);
@@ -507,7 +507,7 @@ void TCPClient::SendImageBatchQuadratic(const std::vector<cv::Mat> &images) cons
 	}
 
 	// send nr images
-	SendShort(images.size());
+	SendShort(static_cast<short>(images.size()));
 
 	// send images
 	for (size_t i = 0; i<images.size(); i++)
@@ -528,7 +528,7 @@ void TCPClient::SendImageBatch(const std::vector<cv::Mat> &images) const
 	}
 
 	// send nr images
-	SendShort(images.size());
+	SendShort(static_cast<short>(images.size()));
 
 	// send images
 	for (size_t i = 0; i<images.size(); i++)
@@ -561,7 +561,7 @@ int TCPClient::SendRGBImageQuadratic(const cv::Mat &img) const {
 #endif
 	int data_sent = 0;
 	// send image dimension
-	data_sent += SendShort(img.size().width);
+	data_sent += SendShort(static_cast<short>(img.size().width));
 	data_sent += SendRGBImageData(img);
 	return data_sent;
 }

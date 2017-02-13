@@ -165,8 +165,8 @@ HRESULT KinectSensorMultiSource::Open(int timeout)
 		hr = pSensor->get_CoordinateMapper(&m_pCoordinateMapper);
 	}
 
-	long start = time(0) * 1000;
-	long timeLeft = timeout;
+	time_t start = time(0) * 1000;
+	time_t timeLeft = timeout;
 
 	if (SUCCEEDED(hr))
 	{

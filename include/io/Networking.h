@@ -90,7 +90,7 @@ namespace io
 		{
 			char data_received;	// 8bit
 			recv(mSocketID, (char*)&data_received, 1, 0);
-			return (T)data_received;
+			return static_cast<T>(data_received);
 		}
 
 		template<typename T>

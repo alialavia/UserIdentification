@@ -47,7 +47,7 @@ namespace tracking
 
 		void DumpImageGrid(std::string filename = "capture", std::string log_name = "face_log.csv", std::string out_folder = "face_grid", bool append_log = false);
 		std::vector<cv::Mat*> ExtractGrid();
-		void GetFaceGridPitchYaw(cv::Mat &dst, int canvas_height=500);
+		void GetFaceGridPitchYaw(cv::Mat &dst, size_t canvas_height=500);
 
 		bool IsFree(int roll, int pitch, int yaw) {
 
@@ -89,19 +89,19 @@ namespace tracking
 			angles.clear();
 		}
 
-		int nr_images() {
+		size_t nr_images() {
 			return angles.size();
 		}
 
 		// ---------- index mapper
 		int iRoll(int roll) {
-			return floor(a_r*roll +b_r);
+			return static_cast<int>(floor(a_r*roll +b_r));
 		}
 		int iPitch(int pitch) {
-			return floor(a_p*pitch + b_p);
+			return static_cast<int>(floor(a_p*pitch + b_p));
 		}
 		int iYaw(int yaw) {
-			return floor(a_y*yaw + b_y);
+			return static_cast<int>(floor(a_y*yaw + b_y));
 		}
 
 		// images
@@ -180,25 +180,25 @@ namespace tracking
 		}
 
 		// overload with grid index tracking
-		void GetFaceGridPitchYaw(cv::Mat &dst, int canvas_height) {
+		void GetFaceGridPitchYaw(cv::Mat &dst, size_t canvas_height) {
 
-			int patch_size = (int)((float)canvas_height / image_grid.Size(1));
-			int canvas_width = patch_size * image_grid.Size(2);
+			size_t patch_size = canvas_height / image_grid.Size(1);
+			size_t canvas_width = patch_size * image_grid.Size(2);
 
 			mCanvasWidth = canvas_width;
 			mPatchSize = patch_size;
 
 			// allocate image
-			cv::Mat canvas = cv::Mat(canvas_height, canvas_width, CV_8UC3, cv::Scalar(0, 0, 0));
+			cv::Mat canvas = cv::Mat(static_cast<int>(canvas_height), static_cast<int>(canvas_width), CV_8UC3, cv::Scalar(0, 0, 0));
 
 			for (auto const& target : angles) {
 
 				cv::Vec3d a = target.second;
 
 				// calculate grid index
-				int ir = iRoll(a[0]);
-				int ip = iPitch(a[1]);
-				int iy = iYaw(a[2]);
+				int ir = iRoll(static_cast<int>(a[0]));
+				int ip = iPitch(static_cast<int>(a[1]));
+				int iy = iYaw(static_cast<int>(a[2]));
 
 				// get image
 				cv::Mat* im_ptr;
@@ -209,7 +209,7 @@ namespace tracking
 
 				// create copy for canvas
 				cv::Mat canvas_copy = (*im_ptr).clone();
-				cv::resize(canvas_copy, canvas_copy, cv::Size(patch_size, patch_size));
+				cv::resize(canvas_copy, canvas_copy, cv::Size(static_cast<int>(patch_size), static_cast<int>(patch_size)));
 
 				// render labels
 				if (mLabels[im_ptr] != None) {
@@ -246,11 +246,11 @@ namespace tracking
 					int fontFace = cv::FONT_HERSHEY_SCRIPT_SIMPLEX;
 					double fontScale = 2;
 					int thickness = 3;
-					io::ImageHandler::DrawCenteredText(text, 0.6, cv::Point(canvas_copy.cols / 2, canvas_copy.rows / 2), canvas_copy, color);
+					io::ImageHandler::DrawCenteredText(text, 0.6f, cv::Point(canvas_copy.cols / 2, canvas_copy.rows / 2), canvas_copy, color);
 				}
 
 				// copy to left top
-				canvas_copy.copyTo(canvas(cv::Rect(ip*patch_size, iy*patch_size, canvas_copy.cols, canvas_copy.rows)));
+				canvas_copy.copyTo(canvas(cv::Rect(ip*static_cast<int>(patch_size), iy*static_cast<int>(patch_size), canvas_copy.cols, canvas_copy.rows)));
 			}
 
 			dst = canvas;
@@ -322,8 +322,8 @@ namespace tracking
 		std::map<cv::Mat*, ImgLabel> mLabels;
 
 		// keep track of canvas properties
-		int mCanvasWidth = 0;
-		int mPatchSize = 0;
+		size_t mCanvasWidth = 0;
+		size_t mPatchSize = 0;
 	};
 
 
@@ -373,9 +373,9 @@ namespace tracking
 
 		HRESULT ExtractFacialData(FaceData face_data[NR_USERS]);
 
-		int GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space) const;
-		int GetUserSceneIDs(std::vector<int> &ids) const;
-		int GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space) const;
+		size_t GetFaceBoundingBoxesRobust(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space) const;
+		size_t GetUserSceneIDs(std::vector<int> &ids) const;
+		size_t GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_boxes, base::ImageSpace space) const;
 		void GetFaces(std::vector<Face> &faces);
 		void GetFaces(std::map<int, Face> &faces);
 		void GetFaces(std::vector<Face> &faces, std::vector<int> &user_ids);

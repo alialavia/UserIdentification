@@ -40,8 +40,7 @@ double FocusMeasure::LAPD(const cv::Mat& src)
 	cv::filter2D(src, dst3, ddepth, k3, anchor, delta, cv::BORDER_DEFAULT);
 	cv::Mat absSum = cv::abs(dst1) + cv::abs(dst2) + cv::abs(dst3) + cv::abs(dst1);
 	cv::Scalar tempVal = cv::mean(absSum);
-	float myMAtMean = tempVal.val[0];
-	return myMAtMean;
+	return tempVal.val[0];
 }
 
 double FocusMeasure::TENG(const cv::Mat& src, int ksize)

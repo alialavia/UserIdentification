@@ -46,8 +46,8 @@ namespace io {
 			mThread.join();
 		}
 
-		int GetRequestCount(){
-			int count = 0;
+		size_t GetRequestCount(){
+			size_t count = 0;
 			mRequestsLock.lock();
 			count = mRequests.size();
 			mRequestsLock.unlock();
@@ -55,8 +55,8 @@ namespace io {
 		}
 
 		template<class T>
-		int GetResponseCount() {
-			int count = 0;
+		size_t GetResponseCount() {
+			size_t count = 0;
 			mRespondsLock.lock();
 			count = (mResponds.count(typeid(T)) > 0 ? mResponds[typeid(T)].size() : 0);
 			mRespondsLock.unlock();
