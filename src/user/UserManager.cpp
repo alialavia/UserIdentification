@@ -215,6 +215,38 @@ void UserManager::ProcessResponses()
 
 
 	// ============================================= //
+	// Update response
+	// ============================================= //
+	io::UpdateResponse update_r;
+	while (pRequestHandler->PopResponse(&update_r, request_lookup, &req_type))
+	{
+		// display response
+		std::cout << "--- Update response" << std::endl;
+
+		// locate user for which request was sent
+		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request_lookup);
+
+		if (it != mRequestToUser.end()) {
+			// extract user
+			User* target_user = it->second;
+			io::NetworkRequest* target_request = it->first;
+
+			// remove request mapping
+			RemoveRequestUserLinking(target_request);
+
+			// update confidence
+			target_user->SetConfidence(update_r.mConfidence);
+			// reset action status
+			target_user->SetActionStatus(ActionStatus_Idle);
+		}
+		else {
+			// user corresponding to request not found - nothing to unlink - drop response
+			// e.g. User has left scene and all requests and linking where deleted
+			std::cout << "------ USER HAS LEFT SCENE. IGNORE THIS RESPONSE." << std::endl;
+		}
+	}
+
+	// ============================================= //
 	// Profile Picture Update
 	// ============================================= //
 	io::QuadraticImageResponse img_response;
@@ -464,8 +496,6 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 					if (target_user->pGrid->IsFree(roll, pitch, yaw)) {
 
 						cv::Rect2f facebb = target_user->GetFaceBoundingBox();
-						// TODO: debug why face bb is nan
-						std::cout << "............ Face bb: " << facebb.height << " | " << facebb.width << std::endl;
 
 						// collect another image
 						cv::Mat face_snap = scene_rgb(facebb);
@@ -486,7 +516,7 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 								{
 									// add face if not yet capture from this angle
 									target_user->pGrid->StoreSnapshot(roll, pitch, yaw, aligned);
-									std::cout << "--- take snapshot: " << target_user->pGrid->nr_images() << std::endl;
+									//std::cout << "--- take snapshot: " << target_user->pGrid->nr_images() << std::endl;
 								}
 								catch (...)
 								{

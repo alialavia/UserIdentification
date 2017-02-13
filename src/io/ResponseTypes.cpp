@@ -55,6 +55,13 @@ std::type_index ResponseFactory::AllocateAndLoad(NetworkResponseType type_id, io
 		ptr = resp;
 		return typeid(QuadraticImageResponse);
 	}
+	else if (type_id == NetworkResponse_UpdateResponse) {
+		UpdateResponse* resp = nullptr;
+		resp = new UpdateResponse(conn);
+		resp->GetPayload();
+		ptr = resp;
+		return typeid(UpdateResponse);
+	}
 	else if (type_id == NetworkResponse_Reidentification) {
 		ReidentificationResponse* resp = nullptr;
 		resp = new ReidentificationResponse(conn);

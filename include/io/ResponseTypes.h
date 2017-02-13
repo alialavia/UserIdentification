@@ -17,6 +17,7 @@ namespace io {
 		NetworkResponse_Embedding = 2,
 		NetworkResponse_Image = 3,
 		NetworkResponse_ImageQuadratic = 4,
+		NetworkResponse_UpdateResponse = 5,
 		NetworkResponse_Reidentification = 10,
 		NetworkResponse_Error = 999,
 		NetworkResponse_OK = 111,
@@ -156,6 +157,13 @@ namespace io {
 		void GetPayload() {};
 	};
 
+	class UpdateResponse : public NetworkResponse
+	{
+	public:
+		UpdateResponse(io::TCPClient* conn = nullptr) :NetworkResponse(conn, NetworkResponse_UpdateResponse), mConfidence(0){}
+		void GetPayload() {mConfidence = (int)pConn->Receive8bit<uint8_t>();};
+		int mConfidence;
+	};
 }
 
 #endif
