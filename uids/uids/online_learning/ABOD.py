@@ -176,7 +176,9 @@ class ABOD:
                         else:
                             tmp = angle_BAC / float(math.pow(AB * AC, 2))
                     except ZeroDivisionError:
-                        sys.exit('ERROR\tABOF\tfloat division by zero! Trying to predict training point?')
+                        log.severe("ERROR\tABOF\tfloat division by zero! Trying to predict training point?'")
+                        tmp = 500
+                        # sys.exit('ERROR\tABOF\tfloat division by zero! Trying to predict training point?')
                     varList.append(tmp)
             factors.append(np.var(varList))
         return factors

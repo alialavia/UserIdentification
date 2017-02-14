@@ -36,6 +36,12 @@ NetworkRequestHandler::~NetworkRequestHandler()
 		delete(req);
 		mRequests.pop();
 	}
+	while (!mPriorityRequests.empty())
+	{
+		NetworkRequest* req = mPriorityRequests.front();
+		delete(req);
+		mPriorityRequests.pop();
+	}
 
 	// delete all unread responses
 	for (auto it = mResponds.begin(); it != mResponds.end(); ++it)
@@ -44,29 +50,45 @@ NetworkRequestHandler::~NetworkRequestHandler()
 		{
 			NetworkResponse* resp = it->second.front();
 			delete(resp);
-			mRequests.pop();
+		}
+	}
+	for (auto it = mPriorityResponds.begin(); it != mPriorityResponds.end(); ++it)
+	{
+		while (!it->second.empty())
+		{
+			NetworkResponse* resp = it->second.front();
+			delete(resp);
 		}
 	}
 }
 
-void NetworkRequestHandler::addRequest(io::NetworkRequest* request)
+void NetworkRequestHandler::addRequest(io::NetworkRequest* request, bool priority)
 {
-	// block request adding till request queue is empty again
-	if (GetRequestCount() == mMaxRequests) {
+	if(priority)
+	{
+		mRequestsLock.lock();
+		mPriorityRequests.push(request);
+		mRequestsLock.unlock();
+	}else
+	{
+		// block request adding till request queue is empty again
+		if (GetRequestCount() == mMaxRequests) {
 #ifdef _DEBUG_REQUESTHANDLER
-		std::cout << "Reached max. request count. Waiting to synchronize with request handler..." << std::endl;
+			std::cout << "Reached max. request count. Waiting to synchronize with request handler..." << std::endl;
 #endif
 
-		while (GetRequestCount() > mContinuationThresh) {
-			// wait
-			std::cout << "-- refresh" << std::endl;
-			Sleep(mRefreshRate);
+			while (GetRequestCount() > mContinuationThresh) {
+				// wait
+				std::cout << "-- refresh" << std::endl;
+				Sleep(mRefreshRate);
+			}
 		}
+
+		mRequestsLock.lock();
+		mRequests.push(request);	// push back
+		mRequestsLock.unlock();
 	}
 
-	mRequestsLock.lock();
-	mRequests.push(request);	// push back
-	mRequestsLock.unlock();
 }
 
 void NetworkRequestHandler::cancelPendingRequest(io::NetworkRequest* request) {
@@ -80,6 +102,13 @@ void NetworkRequestHandler::cancelPendingRequest(io::NetworkRequest* request) {
 		// delete request itself
 		delete(request);
 	}
+	if (mPriorityRequests.contains(request))
+	{
+		// remove from task queue
+		mPriorityRequests.erase(request);
+		// delete request itself
+		delete(request);
+	}
 	mRequestsLock.unlock();
 }
 
@@ -89,20 +118,30 @@ void NetworkRequestHandler::processRequests()
 #ifdef _DEBUG_REQUESTHANDLER
 	std::cout << "--- Starting NetworkRequestHandler::processRequests()" << std::endl;
 #endif
+	math::SequentialContainer<NetworkRequest*>* queue_ptr = nullptr;
 
 	while (mStatus == RequestHandlerStatus_Running)
 	{
-		if (!mRequests.empty())
+		// process priority requests first
+		if(!mPriorityRequests.empty())
+		{
+			queue_ptr = &mPriorityRequests;
+		}else
+		{
+			queue_ptr = &mRequests;
+		}
+
+		if (!queue_ptr->empty())
 		{
 			// submit the request to the server
 			mRequestsLock.lock();
 #ifdef _DEBUG_REQUESTHANDLER
 			std::cout << "---------------PROCESSING REQUEST----------------" << std::endl;
-			std::cout << "Type ID(" << mRequests.front()->cRequestType << ") | total of this type: " << mRequests.size() << std::endl;
+			std::cout << "Type ID(" << queue_ptr->front()->cRequestType << ") | total of this type: " << queue_ptr->size() << std::endl;
 			std::cout << "-------------------------------------------------" << std::endl;
 #endif
-			NetworkRequest* request_ptr = mRequests.front();
-			mRequests.pop();	// pop front
+			NetworkRequest* request_ptr = queue_ptr->front();
+			queue_ptr->pop();	// pop front
 			mRequestsLock.unlock();
 
 			// extract server connection
@@ -135,7 +174,13 @@ void NetworkRequestHandler::processRequests()
 			mMappingLock.unlock();
 
 			mRespondsLock.lock();
-			mResponds[response_type_id].push(response_ptr);
+			if(queue_ptr == &mPriorityRequests)
+			{
+				mPriorityResponds[response_type_id].push(response_ptr);
+			}else
+			{
+				mResponds[response_type_id].push(response_ptr);
+			}
 			mRespondsLock.unlock();
 
 			// disconnect from server

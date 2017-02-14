@@ -63,6 +63,7 @@ namespace user
 			mIDStatus = IDStatus_Unknown;
 			mActionStatus = ActionStatus_Idle;
 			mTrackingIsSafe = true;
+			mUpdatingProfilePicture = false;
 			// release profile image
 			if(!mProfilePicture.empty())
 			{

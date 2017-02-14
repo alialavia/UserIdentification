@@ -63,7 +63,7 @@ namespace io {
 			return count;
 		}
 
-		void addRequest(io::NetworkRequest* request);
+		void addRequest(io::NetworkRequest* request, bool priority=false);
 
 		void cancelPendingRequest(io::NetworkRequest* request);
 
@@ -72,22 +72,34 @@ namespace io {
 		bool PopResponse(T *response_container, NetworkRequest* &req_lookup, NetworkRequestType* request_type = nullptr)
 		{
 			bool status = false;
+			std::map<std::type_index, std::queue<NetworkResponse*>> *queue_ptr = nullptr;
 			mRespondsLock.lock();
 
 			if (
-				mResponds.count(typeid(T)) > 0 &&
-				mResponds[typeid(T)].size() > 0
+				mPriorityResponds.count(typeid(T)) > 0 &&
+				mPriorityResponds[typeid(T)].size() > 0
+				) {
+				queue_ptr = &mPriorityResponds;
+			}else
+			{
+				queue_ptr = &mResponds;
+			}
+
+
+			if (
+				queue_ptr->count(typeid(T)) > 0 &&
+				(*queue_ptr)[typeid(T)].size() > 0
 				) {
 
 #ifdef _DEBUG_REQUESTHANDLER
-				std::cout << "--- PopResponse: " << typeid(T).name() << " | response count: " << mResponds[typeid(T)].size() << std::endl;
+				std::cout << "--- PopResponse: " << typeid(T).name() << " | response count: " << (*queue_ptr)[typeid(T)].size() << std::endl;
 #endif
 
 				// load response from specific request type
-				NetworkResponse* response = mResponds[typeid(T)].front();
+				NetworkResponse* response = (*queue_ptr)[typeid(T)].front();
 
 				// remove from queue - pop front
-				mResponds[typeid(T)].pop();
+				(*queue_ptr)[typeid(T)].pop();
 
 				// variant 1 ---------------- type specific
 				//copyImageContainer(std::integral_constant<bool, is_same<QIR, T>::value>(), response, response_container);
@@ -161,8 +173,12 @@ namespace io {
 
 		// unprocessed requests in submit order
 		math::SequentialContainer<NetworkRequest*> mRequests;
+		// priority queue
+		math::SequentialContainer<NetworkRequest*> mPriorityRequests;
 		// processed requests ordered by request type in processing order (stacked)
 		std::map<std::type_index, std::queue<NetworkResponse*>> mResponds;
+		// priority responses
+		std::map<std::type_index, std::queue<NetworkResponse*>> mPriorityResponds;
 
 		// linking
 		// TODO: use smart pointers

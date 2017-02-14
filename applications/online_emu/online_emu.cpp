@@ -80,7 +80,7 @@ int main(int argc, char** argv)
 
 		// generate request
 		server_conn.Connect();
-		io::EmbeddingCollectionByIDAligned update_request(&server_conn, face_patches, user_id);
+		io::EmbeddingCollectionByID update_request(&server_conn, face_patches, user_id, io::NetworkRequest_EmbeddingCollectionByIDAlignedRobust);
 		update_request.SubmitRequest();
 
 		// wait for reponse

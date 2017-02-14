@@ -1,14 +1,10 @@
 #include <user\UserManager.h>
 #include <user\User.h>
 #include <opencv2/imgproc.hpp>
-
-
 #include <io/RequestHandler.h>
 #include <io/RequestTypes.h>
 #include <io/ResponseTypes.h>
-
 #include <opencv2/highgui/highgui.hpp>
-
 #include <tracking\FaceTracker.h>
 
 using namespace  user;
@@ -35,6 +31,14 @@ bool UserManager::Init(io::TCPClient* connection, io::NetworkRequestHandler* han
 
 void UserManager::UpdateFaceData(std::vector<tracking::Face> faces, std::vector<int> user_ids) {
 	for (size_t i = 0; i < faces.size(); i++) {
+
+#ifdef _DEBUG_USERMANAGER
+		if(mFrameIDToUser.count(user_ids[i]) == 0)
+		{
+			throw std::invalid_argument("Updating invalid User!");
+		}
+#endif
+
 		User* u = mFrameIDToUser[user_ids[i]];
 		u->SetFaceData(faces[i]);
 	}
@@ -103,7 +107,6 @@ void UserManager::RefreshUserTracking(
 // incorporate processed requests: update user ids
 void UserManager::ProcessResponses()
 {
-
 	io::NetworkRequest* request_lookup = nullptr;	// careful! the request corresponding to this pointer is already deleted!
 	io::NetworkRequestType req_type;
 
@@ -342,19 +345,28 @@ void UserManager::ProcessResponses()
 			io::NetworkRequest* target_request = it->first;
 
 			// error during identification (e.g. no faces detected) - try again
-			if (req_type == io::NetworkRequest_ImageIdentification) {
+			if (
+				req_type == io::NetworkRequest_ImageIdentification ||
+				req_type == io::NetworkRequest_ImageIdentificationAligned
+				) {
 				target_user->SetIDStatus(user::IDStatus_Unknown);
 				target_user->SetActionStatus(ActionStatus_Idle);
 			}
 			// error during update - not enough "good"/destinctive feature vectors (most vectors are around threshold)
 			// trash update and start again
-			else if (req_type == io::NetworkRequest_EmbeddingCollectionByIDAligned
-				|| io::NetworkRequest_EmbeddingCollectionByID
-				|| io::NetworkRequest_EmbeddingCollectionByName) 
+			else if (
+				req_type == io::NetworkRequest_EmbeddingCollectionByID ||
+				req_type == io::NetworkRequest_EmbeddingCollectionByIDAligned ||
+				req_type == io::NetworkRequest_EmbeddingCollectionByIDAlignedRobust ||
+				req_type == io::NetworkRequest_EmbeddingCollectionByName
+					) 
 			{
 				target_user->SetActionStatus(ActionStatus_Idle);
 			}
-
+			// error during profile picture update - user does not match
+			else if (req_type == io::NetworkRequest_ProfilePictureUpdate) {
+				target_user->SetPendingProfilePicture(false);
+			}
 			// remove request mapping
 			RemoveRequestUserLinking(target_request);
 
@@ -439,7 +451,7 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 #else
 						IDReq* new_request = new IDReq(pServerConn, face_patches);
 #endif
-						pRequestHandler->addRequest(new_request);
+						pRequestHandler->addRequest(new_request, true);
 
 						// update linking
 						mRequestToUser[new_request] = target_user;
@@ -476,7 +488,7 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 				cv::resize(profile_picture, profile_picture, cv::Size(120, 120));
 				// make request
 				io::ProfilePictureUpdate* new_request = new io::ProfilePictureUpdate(pServerConn, target_user->GetUserID(), profile_picture);
-				pRequestHandler->addRequest(new_request);
+				pRequestHandler->addRequest(new_request, true);
 				// update linking
 				mRequestToUser[new_request] = target_user;
 				mUserToRequests[target_user].insert(new_request);
@@ -617,25 +629,29 @@ void UserManager::CancelAndDropAllUserRequests(User* user) {
 
 #ifdef _CHECK_BB_SWAP
 void UserManager::UpdateTrackingSafetyMeasure() {
-	std::map<int, User*>::iterator it1;
-	std::map<int, User*>::iterator it2;
-	for (it1 = mFrameIDToUser.begin(); it1 != mFrameIDToUser.end(); it1++)
+
+	for (auto uit1 = mFrameIDToUser.begin(); uit1 != mFrameIDToUser.end(); ++uit1)
 	{
 		// reset status
-		it1->second->SetTrackingIsSafe(true);
+		uit1->second->SetTrackingIsSafe(true);
+	}
 
-		// choose pair
-		if (it1 != mFrameIDToUser.end()) {
-			for (it2 = ++it1; it2 != mFrameIDToUser.end(); it2++) {
-				cv::Rect r1 = it1->second->GetFaceBoundingBox();
+	for (auto uit1 = mFrameIDToUser.begin(); uit1 != mFrameIDToUser.end(); ++uit1)
+	{
+		// choose pair (if not last element)
+		if (uit1 != std::prev(mFrameIDToUser.end())) {
+			for (auto it2 = std::next(uit1); it2 != mFrameIDToUser.end(); ++it2) {
+				cv::Rect r1 = uit1->second->GetFaceBoundingBox();
 				cv::Rect r2 = it2->second->GetFaceBoundingBox();
+
 				// bbs intersect if area > 0
 				bool intersect = ((r1 & r2).area() > 0);
 				if (intersect) {
 					// set safety status
-					it1->second->SetTrackingIsSafe(false);
+					uit1->second->SetTrackingIsSafe(false);
 					it2->second->SetTrackingIsSafe(false);
 				}
+
 			}
 		}
 	}

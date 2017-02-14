@@ -255,14 +255,14 @@ class ProfilePictureUpdate:
         # predict user id
         user_id_predicted = server.classifier.predict(embedding)
 
-        # check if correct user
-        if user_id_predicted is None:
-            r.Error(server, conn, "Label could not be predicted - Face cannot be detected.")
-            return
-        elif user_id_predicted != user_id:
-            # unknown user
-            r.Error(server, conn, "The profile image does not come from the same person!")
-            return
+        # disabled ATM: check if correct user
+        # if user_id_predicted is None:
+        #     r.Error(server, conn, "Label could not be predicted - Face is unambiguous.")
+        #     return
+        # elif user_id_predicted != user_id:
+        #     # unknown user
+        #     r.Error(server, conn, "The profile image does not come from the same person!")
+        #     return
 
         server.user_db.set_profile_picture(user_id, image)
 
