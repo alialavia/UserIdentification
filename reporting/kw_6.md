@@ -6,16 +6,22 @@
 ## Notes/Remarks
 
 **ToDos:**
-- Fix tracking safety measure
-- Request Handler: Implement priority queue (for ID-requests and profile picture updates)
-- Bugfix: Profile picture of 2nd person not displayed (in case he leaves right after initialization)
-- Influence of background
-- Test network recording
-- Schedule demo scene
-- Refactor One-VS-Rest embeddings model (use general model dir)
-- Extend UserManager API
-
+[] Fix tracking safety measure
+[x] Request Handler: Implement priority queue (for ID-requests and profile picture updates)
+[x] Bugfix: Profile picture of 2nd person not displayed (in case he leaves right after initialization)
+[] Influence of background
+[] Test network recording
+[] Schedule demo scene
+[] Refactor One-VS-Rest embeddings model (use general model dir)
+[] Extend UserManager API
+[] Cascaded identification for critical cases (e.g. metric learning or pick the one with higher ABOD weighting)
+	- Opt. 1: Metric Learning
+	- Opt. 2: Pick "Inlier"-Class with highest relative weighting
+[] Feature: Identification on classifier subset - (dont evaluate on identified users in the scene)
+	- Classify on subset (send ids to exclude in identification request)
+	
 **Improvements**
+
 - Use Kinect API for facial feature detection (dlib slows system down, cant use it in debug mode)
 - Logger for client side
 - Server side logger: Dump logs to hd (for evaluation purposes)
