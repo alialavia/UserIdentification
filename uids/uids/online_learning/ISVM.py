@@ -6,24 +6,21 @@ from uids.utils.HullCluster import HullCluster
 class ISVM:
 
     __verbose = False
-    __online_mode = True
 
     clf = None
     uncertainty_thresh = 0.7
 
     random_data = None
     data_cluster = HullCluster()
-    __data_full = []
 
     # prediction
     prediction = None
     probability = None
 
-    def __init__(self, random_data, online_mode=False):
+    def __init__(self, random_data):
         # load random data
         self.random_data = random_data
         self.clf = SVC(kernel='linear', probability=True, C=1)
-        self.__online_mode = online_mode
 
     def decision_function(self, samples):
         pass
@@ -35,6 +32,9 @@ class ISVM:
         prob += np.sum(1-self.probability[:,1][self.prediction == -1])
         prob /= len(self.probability[:,1][self.prediction != 0])
         return prob
+
+    def mean_dist(self, samples, metric='cosine'):
+        return np.mean(pairwise_distances(samples, self.data_cluster.get_data(), metric=metric))
 
     def predict(self, samples):
         proba = self.clf.predict_proba(samples)
@@ -53,17 +53,8 @@ class ISVM:
         self.clf.fit(training_embeddings, training_labels)
 
     def partial_fit(self, samples):
-        if self.__online_mode is True:
-            self.data_cluster.update(samples)
-            reduced_data = self.data_cluster.get_data()
-            # refit SVM one vs random
-            self.__fit_vs_random(reduced_data)
-        else:
-            # collect all data
-            if len(self.__data_full) == 0:
-                self.__data_full = samples
-            else:
-                self.__data_full = np.concatenate((self.__data_full, samples))
-            self.__fit_vs_random(self.__data_full)
-
+        self.data_cluster.update(samples)
+        reduced_data = self.data_cluster.get_data()
+        # refit SVM one vs random
+        self.__fit_vs_random(reduced_data)
 

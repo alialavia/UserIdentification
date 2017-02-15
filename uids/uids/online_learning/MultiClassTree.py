@@ -273,15 +273,22 @@ class MultiClassTree(MultiClassTreeBase):
             return -1
 
         identification_mask = cls_scores >= self.__class_thresh * nr_samples
-        ids = cls_scores[identification_mask]
+        ids = class_ids[identification_mask]
         if len(ids) > 0:
 
             # multiple possible detection - invalid samples
             if len(ids) > 1:
-                return None
+                log.severe("Samples are inambiguous. Classes: {}".format(ids))
+                # use average to-class-distance to select best choice
+                mean_dist = []
+                for class_id in ids:
+                    mean_dist.append(self.classifiers[class_id].mean_dist(samples))
+                best_id_index = mean_dist.index(min(mean_dist))
+                return int(ids[best_id_index])
+                # return None
 
             # single person identified - return id
-            return int(class_ids[identification_mask][0])
+            return int(ids[0])
         else:
             # samples unclear
             return None
@@ -458,7 +465,7 @@ class OnlineMultiClassTree(MultiClassTree):
     def define_classifiers(self):
         self.VALID_CLASSIFIERS = {'ABOD', 'IABOD', 'ISVM'}
 
-    def __init__(self, user_db_, classifier='ISVM'):
+    def __init__(self, user_db_, classifier='IABOD'):
         MultiClassTree.__init__(self, user_db_, classifier)
         if classifier == 'ISVM':
             # load lfw embeddings

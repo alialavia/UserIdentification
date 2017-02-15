@@ -60,6 +60,7 @@ class ABOD:
             self.data = data
 
         # calculate intra-cluster distances
+        # todo: cleanup
         self.cluster_distances = pairwise_distances(self.data, self.data, metric='euclidean')
 
         log.info('cl', "New ABOD Classifier initialized in {}s".format("%.4f"%(time.time()-start)))
@@ -74,6 +75,9 @@ class ABOD:
         # probability that it is the class (uncertain samples not counted)
         cls_scores = (self.prediction > 0).sum()
         return cls_scores / float(len(self.prediction[self.prediction != 0]))
+
+    def mean_dist(self, samples):
+        return np.mean(pairwise_distances(samples, self.data, metric='cosine'))
 
     def predict(self, samples):
         """

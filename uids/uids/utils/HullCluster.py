@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-from sklearn.metrics.pairwise import pairwise_distances
 from uids.utils.DataAnalysis import *
 from scipy.spatial import Delaunay
 from uids.utils.Logger import Logger as log
@@ -15,12 +14,13 @@ class HullCluster:
     """
     # ========= parameters
     # dimension reduction
-    max_size = 100
+    max_size = 70      # if the cluster size exceeds threshold, switch to 'dim_removal' dimensions
     dim_reduction = 6   # 0: automatic reduction
     dim_removal = 5     # dimension reduction when we exceed the maximum cluster size
 
     # ========= options
     __remove_near_pts = False
+    knn_removal_thresh = 50
     __verbose = False
 
     # ========= internal representation
@@ -35,8 +35,11 @@ class HullCluster:
     log_dist_delete = []
     log_expl_var = []
 
-    def __init__(self):
-        pass
+    def __init__(self, max_size=70, dim_reduction=6, dim_removal=5, knn_removal_thresh=50):
+        self.max_size = max_size
+        self.dim_reduction = dim_reduction
+        self.dim_removal = dim_removal
+        self.knn_removal_thresh = knn_removal_thresh
 
     def get_data(self):
         return self.__data
