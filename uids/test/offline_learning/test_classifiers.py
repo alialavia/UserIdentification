@@ -68,6 +68,41 @@ def load_embeddings(filename):
 # ================================= #
 #              Main
 
+def test2():
+    emb1 = load_embeddings("embeddings_matthias.pkl")
+    emb2 = load_embeddings("embeddings_matthias_big.pkl")
+    emb3 = load_embeddings("embeddings_laia.pkl")
+    emb4 = load_embeddings("embeddings_christian.pkl")
+    emb_lfw = load_embeddings("embeddings_lfw.pkl")
+
+    random.shuffle(emb1)
+
+    clf = SVC(kernel='linear', probability=True, C=1)
+
+    train = emb1[0:30]
+    test = emb2[0:10]
+    ul = emb4
+
+    # train user and unknown class
+    label_class = np.repeat(1, np.shape(train)[0])
+    label_unknown = np.repeat(-1, np.shape(emb_lfw)[0])
+    training_embeddings = np.concatenate((train, emb_lfw))
+    training_labels = np.concatenate((label_class, label_unknown))
+    clf.fit(training_embeddings, training_labels)
+    proba = clf.predict_proba(test)
+    thresh = 0.7
+    mask_1 = np.sum(proba < thresh, axis=1) == 2
+    pred = np.array([-1 if r[0] > 0.5 else 1 for r in proba])
+
+    pred[mask_1] = 0
+
+    print "Probability values", proba
+    print "Sample is uncertain: ", mask_1
+    print "Prediction through probability: ", pred
+    print "Direct prediction:", clf.predict(test)
+    print "Probability, that it is target class: {:.2f}".format(np.prod(proba[:, 1][pred == 1]))
+
+
 def test1():
     emb1 = load_embeddings("embeddings_matthias.pkl")
     emb2 = load_embeddings("embeddings_matthias_big.pkl")
@@ -140,4 +175,4 @@ def test1():
 
 
 if __name__ == '__main__':
-    test1()
+    test2()
