@@ -3,21 +3,21 @@
 ## Work Done
 
 **ToDos:**
-- [] Fix tracking safety measure
+- [x] Fix tracking safety measure
 - [x] Request Handler: Implement priority queue (for ID-requests and profile picture updates)
 - [x] Bugfix: Profile picture of 2nd person not displayed (in case he leaves right after initialization)
-- [ ] Influence of background
 - [ ] Test network recording
 - [ ] Schedule demo scene
-- [ ] Refactor One-VS-Rest embeddings model (use general model dir)
+
 - [ ] Extend UserManager API
 - [ ] Cascaded identification for critical cases (e.g. metric learning or pick the one with higher ABOD weighting)
-	- Opt. 1: Metric Learning
-	- Opt. 2: Pick "Inlier"-Class with highest relative weighting
+	- [ ] Opt. 1: Metric Learning (Large Margin Nearest Neighbor): 30vs30 samples approx. 3.6 sec - huge positive impact on cosineDist and ABOD thresholding
+	- [x] Opt. 2: Pick "Inlier"-Class with lowest mean cosine distance - working OK in most cases but not for degraded ClusterHull model
 - [ ] Feature: Identification on classifier subset - (dont evaluate on identified users in the scene)
 	- Classify on subset (send ids to exclude in identification request)
 	- Same for robust updates: Exclude identified users in scene which have "secure" tracking and faces are beeing recognized (SDK, possible object detections)
-	
+- [ ] Refactor One-VS-Rest embeddings model (use general model dir)
+- [ ] Influence of background
 
 ## Notes/Remarks
 	
@@ -31,6 +31,18 @@
 - If two classifiers are too similar (cosine dist. of mean): Specific metric learning for comparison
 - Don't take pictures, when user has mouth open (big influence on embedding)
 
+
 ## Challenges/Problems
 
+**Problems**
+- Hull Model (Include new points outside, clean inside, KNN thinning) degrades model (better classification if only first 40 samples are kept as model)
+	- Both with KNN removal enabled/disable
+	- Hull inversion does not help (even worse)
+	
+**Solutions/Ideas**
+- Model class data as multiple convex hall layers instead of a single one to increase stability
+- Incremental(?) GMM with random sampling for ABOD calculation
+- K-Nearest points around moving average (agglomerate till max size is reached and cluster is more stable)
+	
 ## Literature/Personal Notes
+- [ClusterHull](https://www.cs.ucsb.edu/~suri/psdir/icde06.pdf)
