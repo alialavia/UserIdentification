@@ -10,6 +10,9 @@ import math
 from uids.utils.DataAnalysis import *
 from sklearn import metrics
 from sklearn.metrics.cluster import *
+from metric_learn import Covariance
+import time
+from uids.online_learning.ABOD import ABOD
 
 # path managing
 fileDir = os.path.dirname(os.path.realpath(__file__))
@@ -88,7 +91,7 @@ def test_lmnn_sample_data():
     plt.show()
 
 
-def test_lmnn(d0, d1, learner, k=5):
+def test_lmnn(d0, d1, learner):
     # generate input
     labels = np.concatenate((np.repeat(0, len(d0)), np.repeat(1, len(d1))))
     data = np.concatenate((d0, d1))
@@ -104,6 +107,81 @@ def test_lmnn(d0, d1, learner, k=5):
     plt.show()
 
 
+def test_lmnn0():
+
+    d0 = load_data('embeddings_matthias.pkl')
+    d1 = load_data('embeddings_christian.pkl')
+
+    d0_train = d0[0:30,:]
+    d1_train = d1[0:30,:]
+    d0_test = d0[30:40,:]
+    d1_test = d1[30:40,:]
+
+    # ---------- train
+    labels_train = np.concatenate((np.repeat(0, len(d0_train)), np.repeat(1, len(d1_train))))
+    data_train = np.concatenate((d0_train, d1_train))
+
+    lmnn = LMNN(k=3, learn_rate=1e-6)
+    start = time.time()
+    lmnn.fit(data_train, labels_train)
+    print "Fitting took {} seconds".format(time.time()-start)
+
+    # ---------- test
+
+    print "---- Evaluation in original space: Metric against Class 0"
+    print "     Smaller valuer = better choice"
+    cos_dist_orig00 = np.mean(pairwise_distances(d0_test, d0_train, metric='cosine'))
+    cos_dist_orig01 = np.mean(pairwise_distances(d0_test, d1_train, metric='cosine'))
+    cos_dist_orig10 = np.mean(pairwise_distances(d1_test, d0_train, metric='cosine'))
+    cos_dist_orig11 = np.mean(pairwise_distances(d1_test, d1_train, metric='cosine'))
+    print "Class 0 samples: Cosine distance: 0 - {:2f}, 1 - {:2f}".format(cos_dist_orig00, cos_dist_orig01)
+    print "Class 1 samples: Cosine distance: 0 - {:2f}, 1 - {:2f}".format(cos_dist_orig10, cos_dist_orig11)
+
+    print "---- Evaluation in learned space:"
+    print "     Smaller valuer = better choice"
+    cos_dist_orig00 = np.mean(pairwise_distances(lmnn.transform(d0_test), lmnn.transform(d0_train), metric='cosine'))
+    cos_dist_orig01 = np.mean(pairwise_distances(lmnn.transform(d0_test), lmnn.transform(d1_train), metric='cosine'))
+    cos_dist_orig10 = np.mean(pairwise_distances(lmnn.transform(d1_test), lmnn.transform(d0_train), metric='cosine'))
+    cos_dist_orig11 = np.mean(pairwise_distances(lmnn.transform(d1_test), lmnn.transform(d1_train), metric='cosine'))
+    print "Class 0 samples: Cosine distance: 0 - {:2f}, 1 - {:2f}".format(cos_dist_orig00, cos_dist_orig01)
+    print "Class 1 samples: Cosine distance: 0 - {:2f}, 1 - {:2f}".format(cos_dist_orig10, cos_dist_orig11)
+
+
+    print "===========================ABOD===================================="
+
+    clf0_orig = ABOD()
+    clf1_orig = ABOD()
+    clf0_opt = ABOD()
+    clf1_opt = ABOD()
+
+    # fit classifiers
+    clf0_orig.fit(d0_train)
+    clf1_orig.fit(d1_train)
+    clf0_opt.fit(lmnn.transform(d0_train))
+    clf1_opt.fit(lmnn.transform(d1_train))
+
+    # predict
+    print "\n-----------ABOD values in original space:------------------\n\n"
+    clf0_orig.predict(d0_test)
+    clf0_orig.predict(d1_test)
+    clf1_orig.predict(d0_test)
+    clf1_orig.predict(d1_test)
+
+    # predict
+    print "\n-----------ABOD values in custom space:------------------\n\n"
+    clf0_opt.predict(lmnn.transform(d0_test))
+    clf0_opt.predict(lmnn.transform(d1_test))
+    clf1_opt.predict(lmnn.transform(d0_test))
+    clf1_opt.predict(lmnn.transform(d1_test))
+
+
+def test_covariance():
+    iris = load_iris()['data']
+
+    cov = Covariance().fit(iris)
+    x = cov.transform(iris)
+    print x
+
 
 def run_evaluation():
     parser = argparse.ArgumentParser()
@@ -116,6 +194,7 @@ def run_evaluation():
     emb_0 = load_data('embeddings_matthias.pkl')
     emb_1 = load_data('embeddings_elias.pkl')
     emb_2 = load_data('embeddings_laia.pkl')
+    emb_3 = load_data('embeddings_christian.pkl')
     emb_lfw = load_data('embeddings_lfw.pkl')
 
     if emb_0 is None or emb_1 is None:
@@ -125,7 +204,7 @@ def run_evaluation():
     # ------------------- EVALUATION
 
     d0 = emb_0
-    d1 = emb_1
+    d1 = emb_3
 
     # learner = LMNN(k=2, learn_rate=1e-6)
     # learner = NCA(max_iter=100, learning_rate=0.01)
@@ -138,7 +217,9 @@ def run_evaluation():
 
 
 
-    # test_lmnn(emb_fit, emb_1, 2)
+    test_lmnn(emb_0, emb_3, learner)
+
+    return
 
     labels = np.concatenate((np.repeat(0, len(d0)), np.repeat(1, len(d1))))
     data = np.concatenate((d0, d1))
@@ -148,9 +229,9 @@ def run_evaluation():
     d0_new = np.dot(d0, np.transpose(metric_transformer))
     d1_new = np.dot(d1, np.transpose(metric_transformer))
 
-    evaluate_metric(d0, d1, 'euclidean')
+    evaluate_metric(d0, d1, 'cosine')
     plt.show()
-    evaluate_metric(d0_new, d1_new, 'euclidean')
+    evaluate_metric(d0_new, d1_new, 'cosine')
     plt.show()
 
     # test transformation on whole dataset: does everybody split?
@@ -178,4 +259,4 @@ def run_evaluation():
 
 
 if __name__ == '__main__':
-    run_evaluation()
+    test_lmnn0()
