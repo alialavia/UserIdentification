@@ -3,7 +3,7 @@
 ## Work Done
 
 **ToDos:**
-- [ ] Fix tracking safety measure
+- [] Fix tracking safety measure
 - [x] Request Handler: Implement priority queue (for ID-requests and profile picture updates)
 - [x] Bugfix: Profile picture of 2nd person not displayed (in case he leaves right after initialization)
 - [ ] Influence of background
@@ -16,6 +16,7 @@
 	- Opt. 2: Pick "Inlier"-Class with highest relative weighting
 - [ ] Feature: Identification on classifier subset - (dont evaluate on identified users in the scene)
 	- Classify on subset (send ids to exclude in identification request)
+	- Same for robust updates: Exclude identified users in scene which have "secure" tracking and faces are beeing recognized (SDK, possible object detections)
 	
 
 ## Notes/Remarks
