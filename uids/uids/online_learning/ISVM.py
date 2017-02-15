@@ -11,7 +11,7 @@ class ISVM:
     uncertainty_thresh = 0.7
 
     random_data = None
-    data_cluster = HullCluster()
+    data_cluster = None
 
     # prediction
     prediction = None
@@ -21,6 +21,7 @@ class ISVM:
         # load random data
         self.random_data = random_data
         self.clf = SVC(kernel='linear', probability=True, C=1)
+        self.data_cluster = HullCluster()
 
     def decision_function(self, samples):
         pass
@@ -35,6 +36,10 @@ class ISVM:
 
     def mean_dist(self, samples, metric='cosine'):
         return np.mean(pairwise_distances(samples, self.data_cluster.get_data(), metric=metric))
+
+    def class_mean_dist(self, samples, metric='cosine'):
+        class_mean = np.mean(self.data_cluster.get_data(), axis=0)
+        return pairwise_distances(class_mean.reshape(1, -1), samples, metric=metric)
 
     def predict(self, samples):
         proba = self.clf.predict_proba(samples)

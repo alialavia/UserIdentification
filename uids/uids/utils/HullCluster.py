@@ -19,9 +19,11 @@ class HullCluster:
     dim_removal = 5     # dimension reduction when we exceed the maximum cluster size
 
     # ========= options
-    __remove_near_pts = False
-    knn_removal_thresh = 50
     __verbose = False
+    __inverted = False
+
+    # ========= KNN thinning
+    knn_removal_thresh = 50  # 0: disabled
 
     # ========= internal representation
     __data = []
@@ -35,11 +37,12 @@ class HullCluster:
     log_dist_delete = []
     log_expl_var = []
 
-    def __init__(self, max_size=70, dim_reduction=6, dim_removal=5, knn_removal_thresh=50):
+    def __init__(self, max_size=70, dim_reduction=6, dim_removal=5, knn_removal_thresh=50, inverted=False):
         self.max_size = max_size
         self.dim_reduction = dim_reduction
         self.dim_removal = dim_removal
         self.knn_removal_thresh = knn_removal_thresh
+        self.__inverted = inverted
 
     def get_data(self):
         return self.__data
@@ -49,6 +52,7 @@ class HullCluster:
         # init - add all samples if no data yet
         if len(self.__data) == 0:
             self.__data = samples
+            return
 
         # =======================================
         # 1.  Reduce data/sample data
@@ -78,14 +82,17 @@ class HullCluster:
         # =======================================
         # 3.  Select new samples from outside convex hull
 
-        outside_mask = np.array([False if hull.find_simplex(sample) >= 0 else True for sample in samples_reduced])
-        if self.__verbose:
-            # Todo: use outside mask counting
-            nr_elems_outside_hull = np.sum([0 if hull.find_simplex(sample) >= 0 else 1 for sample in samples_reduced])
-            print "Elements OUTSIDE hull (to include): {}/{}".format(nr_elems_outside_hull, len(samples))
+        if not self.__inverted:
+            inclusion_mask = np.array([False if hull.find_simplex(sample) >= 0 else True for sample in samples_reduced])
+            if self.__verbose:
+                # Todo: use outside mask counting
+                nr_elems_outside_hull = np.sum([0 if hull.find_simplex(sample) >= 0 else 1 for sample in samples_reduced])
+                print "Elements OUTSIDE hull (to include): {}/{}".format(nr_elems_outside_hull, len(samples))
+        else:
+            inclusion_mask = np.array([True if hull.find_simplex(sample) >= 0 else False for sample in samples_reduced])
 
         # add samples (samples need to be np.array)
-        self.__data = np.concatenate((self.__data, samples[outside_mask]))
+        self.__data = np.concatenate((self.__data, samples[inclusion_mask]))
 
         # =======================================
         # 4.  Recalculate hull with newly added points
@@ -108,9 +115,18 @@ class HullCluster:
         # =======================================
         # 5.  Discharge samples inside hull
 
-        # select samples inside hull
-        cl_to_delete = np.array(list(set(range(0, len(cluster_reduced))) - set(np.unique(hull.convex_hull))))
-        # set(range(len(data_hull))).difference(hull.convex_hull)
+        if not self.__inverted:
+            # select samples inside hull
+            cl_to_delete = np.array(list(set(range(0, len(cluster_reduced))) - set(np.unique(hull.convex_hull))))
+            # set(range(len(data_hull))).difference(hull.convex_hull)
+        else:
+            cl_to_delete = np.array([])
+            # select samples on hull
+            if len(cluster_reduced) > self.max_size:
+                hull_indices = list(np.unique(hull.convex_hull))
+                if len(hull_indices) > 0:
+                    nr_to_del = 5 if len(hull_indices) > 5 else 0
+                    cl_to_delete = np.array(hull_indices[0:nr_to_del])
 
         # print "Points building convex hull: {}".format(set(np.unique(hull.convex_hull)))
         # print "To delete: {}".format(cl_to_delete)
@@ -129,17 +145,18 @@ class HullCluster:
         self.__data = np.delete(self.__data, cl_to_delete, axis=0)
 
         # =======================================
-        # 6.  delete very similar points
+        # 6.  KNN point removal: remove similar points
 
-        max_removal = 10 if len(self.__data) > 40 else 0
-        if max_removal > 0:
-            filter = KNFilter(self.__data, k=3, threshold=0.25)
-            tmp = filter.filter_x_samples(max_removal)
-            print "--- Removing {} knn points".format(len(self.__data)-len(tmp))
-            self.__data = tmp
+        if self.knn_removal_thresh > 0:
+            max_removal = 10 if len(self.__data) > self.knn_removal_thresh else 0
+            if max_removal > 0:
+                filter = KNFilter(self.__data, k=3, threshold=0.25)
+                tmp = filter.filter_x_samples(max_removal)
+                print "--- Removing {} knn points".format(len(self.__data)-len(tmp))
+                self.__data = tmp
 
-        if self.__log:
-            self.log_cl_size_reduced.append(len(self.__data))
+            if self.__log:
+                self.log_cl_size_reduced.append(len(self.__data))
 
         print "Cluster size: {}".format(len(self.__data))
 

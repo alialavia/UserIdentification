@@ -79,6 +79,10 @@ class ABOD:
     def mean_dist(self, samples):
         return np.mean(pairwise_distances(samples, self.data, metric='cosine'))
 
+    def class_mean_dist(self, samples, metric='cosine'):
+        class_mean = np.mean(self.data, axis=0)
+        return pairwise_distances(class_mean.reshape(1,-1), samples, metric=metric)
+
     def predict(self, samples):
         """
         One Class prediction
@@ -167,9 +171,11 @@ class ABOD:
                     AC = dist_lookup[i_sample][j]
 
                     if np.array_equal(B, C):
-                        log.error("Points are equal: B == C!")
+                        log.error("Points are equal: B == C! Assuming classification of training point (ABOD 1000)")
+                        varList.append(1000)
                         print "Bi/Cj: {}/{}".format(i, j)
-                        sys.exit('ERROR\tangleBAC\tmath domain ERROR, |cos<AB, AC>| <= 1')
+                        # sys.exit('ERROR\tangleBAC\tmath domain ERROR, |cos<AB, AC>| <= 1')
+                        continue
 
                     angle_BAC = self.__angleBAC(A, B, C, AB, AC)
                     # compute each element of variance list

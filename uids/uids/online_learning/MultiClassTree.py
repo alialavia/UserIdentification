@@ -278,13 +278,31 @@ class MultiClassTree(MultiClassTreeBase):
 
             # multiple possible detection - invalid samples
             if len(ids) > 1:
-                log.severe("Samples are inambiguous. Classes: {}".format(ids))
+
                 # use average to-class-distance to select best choice
-                mean_dist = []
+                mean_dist_cosine = []
+                mean_dist_euclidean = []
                 for class_id in ids:
-                    mean_dist.append(self.classifiers[class_id].mean_dist(samples))
-                best_id_index = mean_dist.index(min(mean_dist))
-                return int(ids[best_id_index])
+                    mean_dist_cosine.append(self.classifiers[class_id].mean_dist(samples))
+                    mean_dist_euclidean.append(self.classifiers[class_id].mean_dist(samples, 'euclidean'))
+
+
+                id_index_cosine = mean_dist_cosine.index(min(mean_dist_cosine))
+                id_index_euclidean = mean_dist_euclidean.index(min(mean_dist_euclidean))
+
+                log.severe("Samples are inambiguous. Classes: {}".format(ids))
+                log.severe("IDCOS: {} | meandist cosine: {}".format(int(ids[id_index_cosine]), mean_dist_cosine))
+                log.severe("IDEUC: {} | meandist euclidean: {}".format(int(ids[id_index_euclidean]), mean_dist_euclidean))
+
+                for class_id in ids:
+                    print self.classifiers[class_id].class_mean_dist(samples, 'cosine')
+
+                mean_dist_cosine = np.array(mean_dist_cosine)
+                if np.sum((mean_dist_cosine - min(mean_dist_cosine)) < 0.05) > 1:
+                    print "------------- samples discarged - inambiguous"
+                    return None
+
+                return int(ids[id_index_cosine])
                 # return None
 
             # single person identified - return id
