@@ -58,7 +58,7 @@ namespace io
 		KinectSensorMultiSource();
 		~KinectSensorMultiSource();
 
-		HRESULT Open(int timeout = 3000);
+		HRESULT Open(int timeout = 5000);
 		void Close();
 
 		HRESULT AcquireFrame();
