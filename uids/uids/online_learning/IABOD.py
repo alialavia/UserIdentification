@@ -1,6 +1,6 @@
 from uids.online_learning.ABOD import ABOD
 from uids.utils.Logger import Logger as log
-from uids.utils.HullCluster import HullCluster
+from uids.data_models.HullCluster import HullCluster
 import numpy as np
 from sklearn.metrics.pairwise import pairwise_distances
 
@@ -14,7 +14,7 @@ class IABOD(ABOD):
     __test_offline = False
     data_cluster = HullCluster(knn_removal_thresh=0, inverted=False)
 
-    def __init__(self, test_offline=False):
+    def __init__(self, test_offline=True):
         ABOD.__init__(self)
         self.__test_offline = test_offline
 

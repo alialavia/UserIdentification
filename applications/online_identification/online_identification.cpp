@@ -101,7 +101,7 @@ int main(int argc, char** argv)
 			//ft.GetUserSceneIDs(user_scene_ids);
 
 			// if users in scene
-			if (user_scene_ids.size() > 0)
+			//if (user_scene_ids.size() > 0)
 			{
 				// refresh users (add/remove users, reset features)
 				um.RefreshUserTracking(user_scene_ids, bounding_boxes);

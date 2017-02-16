@@ -1,6 +1,6 @@
 from uids.utils.DataAnalysis import *
 from sklearn.svm import SVC
-from uids.utils.HullCluster import HullCluster
+from uids.data_models.HullCluster import HullCluster
 
 
 class ISVM:
