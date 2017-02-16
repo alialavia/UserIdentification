@@ -99,7 +99,7 @@ void UserManager::RefreshUserTracking(
 
 #ifdef _CHECK_BB_SWAP
 	// update the tracking safety status
-	UpdateTrackingSafetyMeasure();
+	UpdateTrackingStatus();
 #endif
 
 }
@@ -166,7 +166,7 @@ void UserManager::ProcessResponses()
 				// profile picture
 				if(!response.mImage.empty())
 				{
-					target_user->AssignProfilePicture(response.mImage);
+					target_user->SetProfilePicture(response.mImage);
 				}else
 				{
 					//std::cout << "------ no profile picture was taken before\n";
@@ -177,7 +177,7 @@ void UserManager::ProcessResponses()
 
 			// reset action status
 			target_user->SetPendingProfilePicture(false);
-			target_user->SetActionStatus(ActionStatus_Idle);
+			target_user->SetStatus(ActionStatus_Idle);
 		}
 		else {
 			// user corresponding to request not found - nothing to unlink - drop response
@@ -246,7 +246,7 @@ void UserManager::ProcessResponses()
 			// update confidence
 			target_user->SetConfidence(update_r.mConfidence);
 			// reset action status
-			target_user->SetActionStatus(ActionStatus_Idle);
+			target_user->SetStatus(ActionStatus_Idle);
 		}
 		else {
 			// user corresponding to request not found - nothing to unlink - drop response
@@ -279,7 +279,7 @@ void UserManager::ProcessResponses()
 			if(req_type == io::NetworkRequest_ProfilePictureUpdate)
 			{
 				// update profile picture
-				target_user->AssignProfilePicture(img_response.mImage);
+				target_user->SetProfilePicture(img_response.mImage);
 				target_user->SetPendingProfilePicture(false);
 			}
 		}
@@ -312,7 +312,7 @@ void UserManager::ProcessResponses()
 			RemoveRequestUserLinking(target_request);
 
 			// reset action status
-			target_user->SetActionStatus(ActionStatus_Idle);
+			target_user->SetStatus(ActionStatus_Idle);
 
 			// handle custom events
 			//if (req_type == io::NetworkRequest_EmbeddingCollectionByID) {
@@ -349,8 +349,8 @@ void UserManager::ProcessResponses()
 				req_type == io::NetworkRequest_ImageIdentification ||
 				req_type == io::NetworkRequest_ImageIdentificationAligned
 				) {
-				target_user->SetIDStatus(user::IDStatus_Unknown);
-				target_user->SetActionStatus(ActionStatus_Idle);
+				target_user->SetStatus(user::IDStatus_Unknown);
+				target_user->SetStatus(ActionStatus_Idle);
 			}
 			// error during update - not enough "good"/destinctive feature vectors (most vectors are around threshold)
 			// trash update and start again
@@ -361,7 +361,7 @@ void UserManager::ProcessResponses()
 				req_type == io::NetworkRequest_EmbeddingCollectionByName
 					) 
 			{
-				target_user->SetActionStatus(ActionStatus_Idle);
+				target_user->SetStatus(ActionStatus_Idle);
 			}
 			// error during profile picture update - user does not match
 			else if (req_type == io::NetworkRequest_ProfilePictureUpdate) {
@@ -399,7 +399,7 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 
 			// new user in scene
 			if (action == ActionStatus_Idle) {
-				target_user->SetActionStatus(ActionStatus_Initialization);
+				target_user->SetStatus(ActionStatus_Initialization);
 				action = ActionStatus_Initialization;
 			}
 
@@ -459,7 +459,7 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 
 						// set user action status
 						target_user->SetPendingProfilePicture(true);
-						target_user->SetActionStatus(ActionStatus_IDPending);
+						target_user->SetStatus(ActionStatus_IDPending);
 						target_user->pGrid->Clear();
 					}
 				}
@@ -496,7 +496,7 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 
 
 			if (action == ActionStatus_Idle) {
-				target_user->SetActionStatus(ActionStatus_DataCollection);
+				target_user->SetStatus(ActionStatus_DataCollection);
 				action = ActionStatus_DataCollection;
 			}
 
@@ -587,7 +587,7 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 						mUserToRequests[target_user].insert(new_request);
 
 						// set user action status
-						target_user->SetActionStatus(ActionStatus_UpdatePending);
+						target_user->SetStatus(ActionStatus_UpdatePending);
 						target_user->pGrid->Clear();
 					}
 				}	//	/end face data available
@@ -628,7 +628,7 @@ void UserManager::CancelAndDropAllUserRequests(User* user) {
 }
 
 #ifdef _CHECK_BB_SWAP
-void UserManager::UpdateTrackingSafetyMeasure() {
+void UserManager::UpdateTrackingStatus() {
 
 	for (auto uit1 = mFrameIDToUser.begin(); uit1 != mFrameIDToUser.end(); ++uit1)
 	{

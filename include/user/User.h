@@ -21,6 +21,18 @@ namespace user
 		ActionStatus_UpdatePending = 3,
 		ActionStatus_DataCollection = 4
 	};
+	// whether or not tracking instance is consistant/safe
+	enum TrackingStatus
+	{
+		TrackingStatus_Uncertain = 0,
+		TrackingStatus_Certain = 1
+	};
+	// whether or not we are tracking a person
+	enum HumanTrackingStatus
+	{
+		HumanTrackingStatus_Uncertain = 0,
+		HumanTrackingStatus_Certain = 1
+	};
 
 	class User {
 
@@ -34,6 +46,7 @@ namespace user
 		}
 		~User()
 		{
+			// data freed in destructor of grid
 #ifdef FACEGRID_RECORDING
 			delete(pGrid);
 #endif
@@ -41,140 +54,56 @@ namespace user
 			ResetSceneFeatures();
 		}
 
-		// ------ setters
-		// status/id setters
-		void SetUserID(int id, std::string nice_name);
-		void SetIDStatus(IdentificationStatus status);
-		void SetActionStatus(ActionStatus status);
-		void SetFaceBoundingBox(cv::Rect2f bb);
-		// feature setters
-		void SetFaceData(tracking::Face f);
+		// ========= general
+		// reset user completely/delete all user information
+		void ResetUser();
 
-		void ResetSceneFeatures() {
-			// reset all stored features
-			if (mFaceData != nullptr) {
-				delete(mFaceData);
-				mFaceData = nullptr;
-			}
-		}
-
-		void ResetUser() {
-			mUserID = -1;
-			mIDStatus = IDStatus_Unknown;
-			mActionStatus = ActionStatus_Idle;
-			mTrackingIsSafe = true;
-			mUpdatingProfilePicture = false;
-			// release profile image
-			if(!mProfilePicture.empty())
-			{
-				mProfilePicture.release();
-			}
-		}
-
-		// ------ getters
-		// status/id getters
+		// ========= user status
+		// setters
+		void SetStatus(ActionStatus status);
+		void SetStatus(IdentificationStatus status);
+		void SetStatus(TrackingStatus status);
+		void SetStatus(HumanTrackingStatus status);
+		// getters
 		void GetStatus(IdentificationStatus &s1, ActionStatus &s2);
-		void GetUserID(int& id, std::string& nice_name) const
-		{
-			id = mUserID;
-			nice_name = mUserNiceName;
-		}
-		int GetUserID()
-		{
-			return mUserID;
-		}
+		void GetStatus(ActionStatus &s);
+		void GetStatus(IdentificationStatus &s);
+		void GetStatus(TrackingStatus &s);
+		void GetStatus(HumanTrackingStatus &s);
 
+		// ========= identification
+		// id
+		void SetUserID(int id, std::string nice_name);
+		void GetUserID(int& id, std::string& nice_name) const;
+		int GetUserID() const;
+		// bounding box/position
+		void SetFaceBoundingBox(cv::Rect2f bb);
 		cv::Rect2f GetFaceBoundingBox();
-		// feature getters
+
+		// ========= features
+		// reset all stored features (e.g. mFaceData)
+		void ResetSceneFeatures();
+		void SetFaceData(tracking::Face f);
 		bool GetFaceData(tracking::Face &f);
 
-		// ------ helpers
+		// ========= helpers
+		void PrintStatus();
 
-		void PrintStatus()
-		{
-			std::cout << "--- id_status: " << mIDStatus << " | action: " << mActionStatus << std::endl;
-		}
+		// ========= profile picture utilities
+		bool IsViewedFromFront();
+		bool NeedsProfilePicture(){return (mUpdatingProfilePicture ? false : mProfilePicture.empty());}
+		void SetProfilePicture(cv::Mat picture){mProfilePicture = picture;}
+		void SetPendingProfilePicture(bool status){mUpdatingProfilePicture = status;}
+		bool GetProfilePicture(cv::Mat &pic);
 
-		/*
-		 *
-		// Client Side Picture Taking
-		- During update (when person has been identified)
-		- If person has no profile picture yet (nothing received from server)
-		- Evaluate the face (bb) in each frame if the orientation is frontal
-		- if it is approx. frontal: optionally rotate
-		- save picture to user instance
-		- send profilePictureUpdate Request to server
+		// identification confidence
+		int GetConfidence() { return mConfidence; }
+		void SetConfidence(const int &conf) { mConfidence = conf; }
 
-		// difficulties
-		- profile picture taken, when tracking switches
+		// tracking status
+		void SetTrackingIsSafe(bool is_save) {mTrackingIsSafe = is_save;}
+		bool TrackingIsSafe() {return mTrackingIsSafe;}
 
-		// solutions
-		- also classify profile picture and reject if it does not comply with corresponding ID
-		 */
-
-		bool IsViewedFromFront()
-		{
-			// get face orientation
-			if (mFaceData != nullptr) {
-				// calc euler angles
-				int roll, pitch, yaw;
-				mFaceData->GetEulerAngles(roll, pitch, yaw);
-				// optional: rotate image
-
-				if(pitch >= 30 || pitch <= -30)
-				{
-					return false;
-				}
-				if (roll >= 30 || roll <= -30)
-				{
-					return false;
-				}
-				if (yaw >= 30 || yaw <= -30)
-				{
-					return false;
-				}
-
-				return true;
-			}
-			return false;
-		}
-
-		bool NeedsProfilePicture()
-		{
-			return (mUpdatingProfilePicture ? false : mProfilePicture.empty());
-		}
-		void AssignProfilePicture(cv::Mat picture)
-		{
-			mProfilePicture = picture;
-		}
-		void SetPendingProfilePicture(bool status)
-		{
-			mUpdatingProfilePicture = status;
-		}
-		bool GetProfilePicture(cv::Mat &pic)
-		{
-			if(mProfilePicture.empty())
-			{
-				return false;
-			}
-			pic = mProfilePicture;
-			return true;
-		}
-
-		int GetConfidence()
-		{
-			return mConfidence;
-		}
-		void SetConfidence(const int &conf)
-		{
-			mConfidence = conf;
-		}
-		void SetTrackingIsSafe(bool is_save) {
-			mTrackingIsSafe = is_save;
-		}
-		bool TrackingIsSafe() {
-			return mTrackingIsSafe;
-		}
 
 	private:
 		// user id
@@ -182,19 +111,26 @@ namespace user
 		std::string mUserNiceName;
 		// localization/tracking: must be set at all times
 		cv::Rect2f mFaceBoundingBox;
+
 		// status
 		IdentificationStatus mIDStatus;
 		ActionStatus mActionStatus;
+		TrackingStatus mTrackingStatus;
+		HumanTrackingStatus mHumanTrackingStatus;
 
 		// features: might be present or not
 		tracking::Face* mFaceData;
 
+		// profile picture
 		cv::Mat mProfilePicture;
+
+		// todo:delete
 		bool mUpdatingProfilePicture;
 
 		// current confidence of the identification in %
 		int mConfidence;
 		// if the tracking is confident (no bounding boxes overlap)
+		// Todo: refacotr = Tracking Status
 		bool mTrackingIsSafe;
 
 	public:

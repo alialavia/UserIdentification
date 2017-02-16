@@ -120,7 +120,7 @@ namespace user
 		void CancelAndDropAllUserRequests(User* user);
 
 #ifdef _CHECK_BB_SWAP
-		void UpdateTrackingSafetyMeasure();
+		void UpdateTrackingStatus();
 #endif
 
 	private:
