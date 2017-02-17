@@ -7,6 +7,7 @@
 - [x] Request Handler: Implement priority queue (for ID-requests and profile picture updates)
 - [x] Bugfix: Profile picture of 2nd person not displayed (in case he leaves right after initialization)
 - [ ] Test network recording
+	- [x] Network storage ordered
 - [ ] Schedule demo scene
 
 - [ ] Extend UserManager API
