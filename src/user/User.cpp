@@ -1,4 +1,6 @@
 #include <user/User.h>
+#include "features/Face.h"
+
 
 using namespace user;
 
@@ -7,17 +9,23 @@ void User::ResetUser() {
 	mUserID = -1;
 	mIDStatus = IDStatus_Unknown;
 	mActionStatus = ActionStatus_Idle;
-	mTrackingIsSafe = true;
+#ifdef _CHECK_TRACKING_CONF
+	mTrackingStatus = TrackingStatus_Certain;
+#endif
+	mHumanTrackingStatus = HumanTrackingStatus_Certain;
 	mUpdatingProfilePicture = false;
+
 	// release profile image
 	if (!mProfilePicture.empty())
 	{
 		mProfilePicture.release();
 	}
+
 #ifdef FACEGRID_RECORDING
 	// reset face grid
 	pGrid->Clear();
 #endif
+
 }
 
 // ------ user status
@@ -29,10 +37,12 @@ void User::SetStatus(IdentificationStatus status)
 {
 	mIDStatus = status;
 }
+#ifdef _CHECK_TRACKING_CONF
 void User::SetStatus(TrackingStatus status)
 {
 	mTrackingStatus = status;
 }
+#endif
 void User::SetStatus(HumanTrackingStatus status)
 {
 	mHumanTrackingStatus = status;
@@ -51,10 +61,12 @@ void User::GetStatus(IdentificationStatus &s)
 {
 	s = mIDStatus;
 }
+#ifdef _CHECK_TRACKING_CONF
 void User::GetStatus(TrackingStatus &s)
 {
 	s = mTrackingStatus;
 }
+#endif
 void User::GetStatus(HumanTrackingStatus &s)
 {
 	s = mHumanTrackingStatus;
@@ -165,4 +177,42 @@ bool User::GetProfilePicture(cv::Mat &pic)
 	}
 	pic = mProfilePicture;
 	return true;
+}
+
+// ========= sampling
+
+bool User::TryToRecordFaceSample(const cv::Mat &scene_rgb)
+{
+	tracking::Face face;
+	bool succ = false;
+	if (GetFaceData(face)) {
+		int roll, pitch, yaw;
+		face.GetEulerAngles(roll, pitch, yaw);
+		if (pGrid->IsFree(roll, pitch, yaw))
+		{
+			cv::Rect2f facebb = GetFaceBoundingBox();
+			cv::Mat face_snap = scene_rgb(facebb);
+			cv::Mat aligned;
+			// TODO: use Microsoft API with Face data
+#ifdef _DLIB_PREALIGN
+			if (pFaceAligner->AlignImage(96, face_snap, aligned))
+#else
+			aligned = face_snap;
+			// resize (requests needs all squared with same size)
+			cv::resize(aligned, aligned, cv::Size(120, 120));
+#endif
+			{
+				try
+				{
+					pGrid->StoreSnapshot(roll, pitch, yaw, aligned);
+					succ = true;
+				}
+				catch (...)
+				{
+				}
+			}
+		}
+
+	}
+	return succ;
 }

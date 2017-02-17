@@ -4,29 +4,36 @@
 #include <tracking\FaceTracker.h>
 #include <opencv2/core.hpp>
 
+namespace features
+{
+	class DlibFaceAligner;
+}
+
 namespace user
 {
 
 	enum IdentificationStatus
 	{
-		IDStatus_Unknown = 0,
-		IDStatus_Identified = 1
+		IDStatus_Unknown = 0,	 // has no ID yet
+		IDStatus_Identified = 1, // has ID and is safe
+		IDStatus_Uncertain = 2	 // has ID but is not safe
 	};
 
 	enum ActionStatus
 	{
-		ActionStatus_Idle = 0,
-		ActionStatus_IDPending = 1,
-		ActionStatus_Initialization = 2,
-		ActionStatus_UpdatePending = 3,
-		ActionStatus_DataCollection = 4
+		ActionStatus_Idle = 0,			// ready for new requests
+		ActionStatus_Waiting = 1,		// do nothing, wait
+		ActionStatus_WaitForCertainTracking = 2,
+		ActionStatus_DataCollection = 3 //  for update/identification
 	};
+#ifdef _CHECK_TRACKING_CONF
 	// whether or not tracking instance is consistant/safe
 	enum TrackingStatus
 	{
-		TrackingStatus_Uncertain = 0,
+		TrackingStatus_Uncertain = 0,	// tracking state alone unsafe
 		TrackingStatus_Certain = 1
 	};
+#endif
 	// whether or not we are tracking a person
 	enum HumanTrackingStatus
 	{
@@ -37,8 +44,14 @@ namespace user
 	class User {
 
 	public:
-		User() : mUserID(-1), mUserNiceName(""), mIDStatus(IDStatus_Unknown), mActionStatus(ActionStatus_Idle),
-			mFaceData(nullptr), mUpdatingProfilePicture(false), mConfidence(0), mTrackingIsSafe(true)
+		User() : mUserID(-1), mUserNiceName(""), 
+		// init user status
+		mIDStatus(IDStatus_Unknown), mActionStatus(ActionStatus_Idle), 
+#ifdef _CHECK_TRACKING_CONF
+		mTrackingStatus(TrackingStatus_Certain), 
+#endif
+		mHumanTrackingStatus(HumanTrackingStatus_Certain),
+			mFaceData(nullptr), mUpdatingProfilePicture(false), mConfidence(0)
 		{
 #ifdef FACEGRID_RECORDING
 			pGrid = new tracking::RadialFaceGrid(2, 15, 15);
@@ -62,13 +75,17 @@ namespace user
 		// setters
 		void SetStatus(ActionStatus status);
 		void SetStatus(IdentificationStatus status);
+#ifdef _CHECK_TRACKING_CONF
 		void SetStatus(TrackingStatus status);
+#endif
 		void SetStatus(HumanTrackingStatus status);
 		// getters
 		void GetStatus(IdentificationStatus &s1, ActionStatus &s2);
 		void GetStatus(ActionStatus &s);
 		void GetStatus(IdentificationStatus &s);
+#ifdef _CHECK_TRACKING_CONF
 		void GetStatus(TrackingStatus &s);
+#endif
 		void GetStatus(HumanTrackingStatus &s);
 
 		// ========= identification
@@ -79,6 +96,9 @@ namespace user
 		// bounding box/position
 		void SetFaceBoundingBox(cv::Rect2f bb);
 		cv::Rect2f GetFaceBoundingBox();
+
+		// take snapshot of face
+		bool TryToRecordFaceSample(const cv::Mat &scene_rgb);
 
 		// ========= features
 		// reset all stored features (e.g. mFaceData)
@@ -100,11 +120,6 @@ namespace user
 		int GetConfidence() { return mConfidence; }
 		void SetConfidence(const int &conf) { mConfidence = conf; }
 
-		// tracking status
-		void SetTrackingIsSafe(bool is_save) {mTrackingIsSafe = is_save;}
-		bool TrackingIsSafe() {return mTrackingIsSafe;}
-
-
 	private:
 		// user id
 		int mUserID;
@@ -123,15 +138,15 @@ namespace user
 
 		// profile picture
 		cv::Mat mProfilePicture;
-
-		// todo:delete
 		bool mUpdatingProfilePicture;
 
 		// current confidence of the identification in %
 		int mConfidence;
-		// if the tracking is confident (no bounding boxes overlap)
-		// Todo: refacotr = Tracking Status
-		bool mTrackingIsSafe;
+
+		// dlib face aligner
+#ifdef _DLIB_PREALIGN
+		features::DlibFaceAligner* pFaceAligner;
+#endif
 
 	public:
 		// temporal model data (images, accumulated status)

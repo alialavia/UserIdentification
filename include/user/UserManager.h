@@ -41,13 +41,13 @@ namespace user
 		pServerConn(nullptr), 
 		pRequestHandler(nullptr)
 #ifdef _DLIB_PREALIGN
-		,mDlibAligner(nullptr)
+		,mpDlibAligner(nullptr)
 #endif
 		{
 		}
 		~UserManager() {
 #ifdef _DLIB_PREALIGN
-			delete(mDlibAligner);
+			delete(mpDlibAligner);
 #endif
 
 			// TODO: do proper cleanup
@@ -119,7 +119,7 @@ namespace user
 
 		void CancelAndDropAllUserRequests(User* user);
 
-#ifdef _CHECK_BB_SWAP
+#ifdef _CHECK_TRACKING_CONF
 		void UpdateTrackingStatus();
 #endif
 
@@ -138,7 +138,7 @@ namespace user
 
 #ifdef _DLIB_PREALIGN
 		// face aligner
-		features::DlibFaceAligner* mDlibAligner;
+		features::DlibFaceAligner* mpDlibAligner;
 #endif
 
 	};
