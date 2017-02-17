@@ -7,8 +7,9 @@ ROUTING = {
            "ImageIdentification": 1,  # identify user from image
            "ImageIdentificationPrealigned": 2,
            "Update": 10,  # collect embeddings from images for user with ID XY
-           "UpdatePrealigned": 11,
-           "UpdatePrealignedRobust": 12,
+           "UpdateRobust": 11,
+           "UpdatePrealigned": 12,
+           "UpdatePrealignedRobust": 13,
            "ImageAlignment": 22,
            "ProfilePictureUpdate": 23
        },
@@ -16,8 +17,9 @@ ROUTING = {
            1: "ImageIdentification",
            2: "ImageIdentificationPrealigned",
            10: "Update",
-           11: "UpdatePrealigned",
-           12: "UpdatePrealignedRobust",
+           11: "UpdateRobust",
+           12: "UpdatePrealigned",
+           13: "UpdatePrealignedRobust",
            22: "ImageAlignment",
            23: "ProfilePictureUpdate"
         }

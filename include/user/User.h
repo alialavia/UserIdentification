@@ -44,7 +44,11 @@ namespace user
 	class User {
 
 	public:
-		User() : mUserID(-1), mUserNiceName(""), 
+		User(
+#ifdef _DLIB_PREALIGN
+			features::DlibFaceAligner* aligner
+#endif
+		) : mUserID(-1), mUserNiceName(""), 
 		// init user status
 		mIDStatus(IDStatus_Unknown), mActionStatus(ActionStatus_Idle), 
 #ifdef _CHECK_TRACKING_CONF
@@ -52,6 +56,9 @@ namespace user
 #endif
 		mHumanTrackingStatus(HumanTrackingStatus_Certain),
 			mFaceData(nullptr), mUpdatingProfilePicture(false), mConfidence(0)
+#ifdef _DLIB_PREALIGN
+			,pFaceAligner(aligner)
+#endif
 		{
 #ifdef FACEGRID_RECORDING
 			pGrid = new tracking::RadialFaceGrid(2, 15, 15);

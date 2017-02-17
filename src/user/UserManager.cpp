@@ -58,7 +58,11 @@ void UserManager::RefreshUserTracking(
 		if (mFrameIDToUser.count(scene_id) == 0)
 		{
 			// create new user
-			mFrameIDToUser[scene_id] = new User();
+			mFrameIDToUser[scene_id] = new User(
+#ifdef _DLIB_PREALIGN
+				mpDlibAligner
+#endif
+			);
 		}
 	}
 
@@ -109,6 +113,7 @@ void UserManager::ProcessResponses()
 {
 	io::NetworkRequest* request_lookup = nullptr;	// careful! the request corresponding to this pointer is already deleted!
 	io::NetworkRequestType req_type;
+	user::IdentificationStatus id_status;
 
 	// ============================================= //
 	// 1. handle identification responses
@@ -224,7 +229,7 @@ void UserManager::ProcessResponses()
 
 
 	// ============================================= //
-	// Update response
+	// Update response (successful)
 	// ============================================= //
 	io::UpdateResponse update_r;
 	while (pRequestHandler->PopResponse(&update_r, request_lookup, &req_type))
@@ -247,6 +252,20 @@ void UserManager::ProcessResponses()
 			target_user->SetConfidence(update_r.mConfidence);
 			// reset action status
 			target_user->SetStatus(ActionStatus_Idle);
+
+			target_user->GetStatus(id_status);
+			
+			// if the update was robust and successful:
+			if (
+				(target_request->cRequestType == io::NetworkRequest_EmbeddingCollectionByIDRobust ||
+				 target_request->cRequestType == io::NetworkRequest_EmbeddingCollectionByIDAlignedRobust
+				)
+				&&
+				id_status == IDStatus_Uncertain
+				) {
+				// user has reidentified itself
+				target_user->SetStatus(IDStatus_Identified);
+			}
 		}
 		else {
 			// user corresponding to request not found - nothing to unlink - drop response
@@ -389,17 +408,16 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 	{
 		IdentificationStatus id_status;
 		ActionStatus action;
-		TrackingStatus tracking_status;
 		user::User* target_user = it->second;
 		target_user->GetStatus(id_status, action);
-		target_user->GetStatus(tracking_status);
 
 		//std::cout << "--- id_Status: "<< id_status << " | action: "<< action << std::endl;
 		// request user identification
 
 
 		// do nothing
-		if (action == ActionStatus_Waiting) {
+		if (action == ActionStatus_Waiting
+			|| action == ActionStatus_WaitForCertainTracking) {
 			continue;
 		}
 
@@ -412,6 +430,8 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 			if (action == ActionStatus_Idle) {
 				target_user->SetStatus(ActionStatus_DataCollection);
 				action = ActionStatus_DataCollection;
+				// reset unsafe samples
+				target_user->pGrid->Clear();
 			}
 
 			// collect images for identification
@@ -454,6 +474,8 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 			if (action == ActionStatus_Idle) {
 				target_user->SetStatus(ActionStatus_DataCollection);
 				action = ActionStatus_DataCollection;
+				// reset unsafe samples
+				target_user->pGrid->Clear();
 			}
 
 			// collect images for identification
@@ -474,7 +496,10 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 							io::NetworkRequest_EmbeddingCollectionByIDAlignedRobust	// specified request type
 						);
 #else
-						throw std::invalid_argument("Robust non-pre aligned update not implemented yet.");
+						io::EmbeddingCollectionByID* new_request = new io::EmbeddingCollectionByID(
+							pServerConn, face_patches, target_user->GetUserID(),
+							io::NetworkRequest_EmbeddingCollectionByIDRobust	// specified request type
+						);
 #endif
 						pRequestHandler->addRequest(new_request, true);
 
@@ -868,25 +893,62 @@ void UserManager::UpdateTrackingStatus() {
 	for (auto it = mFrameIDToUser.begin(); it != mFrameIDToUser.end(); ++it)
 	{
 		IdentificationStatus s;
+		ActionStatus as;
 		it->second->GetStatus(s);
-		it->second->SetStatus();
+		it->second->GetStatus(as);
 
+		// currently unsafe tracking
 		if(scene_ids_uncertain.count(it->first) > 0)
 		{
+			// update temp tracking status
+			it->second->SetStatus(TrackingStatus_Uncertain);
+
+
 			// tracking is uncertain atm
 			if(s==IDStatus_Identified)
 			{
 				// update id status
 				it->second->SetStatus(IDStatus_Uncertain);
-			}
+				// cancel all pending requests
+				// atm: no robust request besides reidentification
+				// todo: else cancel all other requests here (prevent delayed reidentification at an unsafe state)
 
+				// wait till tracking is save again, then do reidentification
+				it->second->SetStatus(ActionStatus_WaitForCertainTracking);
+			}
+			else if(s == IDStatus_Uncertain) {
+
+
+				// cancel possible pending reidentification requests
+				if (as == ActionStatus_Waiting) {
+					CancelAndDropAllUserRequests(it->second);
+				}
+
+				// wait till tracking is save again, then do reidentification
+				it->second->SetStatus(ActionStatus_WaitForCertainTracking);
+
+			}
+			else if (s == IDStatus_Unknown) {
+				// cancel data collection - unambiguous
+				if (as == ActionStatus_Waiting) {
+					CancelAndDropAllUserRequests(it->second);
+				}
+
+				it->second->SetStatus(ActionStatus_WaitForCertainTracking);
+			}
+		// safe tracking
 		}else
 		{
+			// update temp tracking status
+			it->second->SetStatus(TrackingStatus_Certain);
 
-			if(s==IDStatus_Uncertain)
+			// tracking safe again - reset samples and start data collection
+			if(s==IDStatus_Uncertain && as==ActionStatus_WaitForCertainTracking)
 			{
-				// tricker data collection (for reidentification)
-				it->second->SetStatus(ActionStatus_DataCollection);
+				it->second->SetStatus(ActionStatus_Idle);
+			}
+			else if (s == IDStatus_Unknown && as == ActionStatus_WaitForCertainTracking) {
+				it->second->SetStatus(ActionStatus_Idle);
 			}
 		}
 
@@ -992,7 +1054,7 @@ void UserManager::DrawUsers(cv::Mat &img)
 		ActionStatus action;
 		target_user->GetStatus(id_status, action);
 
-		if (id_status == IDStatus_Identified)
+		if (id_status == IDStatus_Identified || id_status == IDStatus_Uncertain)
 		{
 			int user_id = 0;
 			std::string nice_name = "";
@@ -1002,19 +1064,37 @@ void UserManager::DrawUsers(cv::Mat &img)
 			color = cv::Scalar(0, 255, 0);
 
 			// confidence
-			text1 += " Confidence: " + std::to_string(target_user->GetConfidence());
+			//text1 += " Confidence: " + std::to_string(target_user->GetConfidence());
+
+			if (id_status == IDStatus_Uncertain) {
+				if (action == ActionStatus_WaitForCertainTracking) {
+					text1 += " | waiting for safe tracking";
+				}
+				else if (action == ActionStatus_Waiting) {
+					text1 += " | pending reidentification";
+				}
+				else if (action == ActionStatus_DataCollection) {
+					text1 += " | sampling (" + std::to_string(target_user->pGrid->nr_images()) + ")";
+				}
+			}
+
+			
+			
 		}
 		else
 		{
 			text1 = "Status: unknown";
 			if (action == ActionStatus_DataCollection) {
-				text2 = "Initialization";
+				text2 = "Sampling ("+std::to_string(target_user->pGrid->nr_images())+")";
 			}
 			else if (action == ActionStatus_Waiting) {
 				text2 = "ID pending";
 			}
 			else if (action == ActionStatus_Idle) {
 				text2 = "Idle";
+			}
+			else if (action == ActionStatus_WaitForCertainTracking) {
+				text2 = "Wait for safe tracking";
 			}
 			color = cv::Scalar(0, 0, 255);
 			
@@ -1039,6 +1119,8 @@ void UserManager::DrawUsers(cv::Mat &img)
 		cv::putText(img, text2, cv::Point(bb.x+10, bb.y+40), cv::FONT_HERSHEY_SIMPLEX, font_size, color, 1, 8);
 
 		// draw face bounding box
-		//cv::rectangle(img, bb, color, 2, cv::LINE_4);
+		if (id_status == IDStatus_Uncertain) {
+			cv::rectangle(img, bb, cv::Scalar(0, 14, 88), 2, cv::LINE_4);
+		}
 	}
 }
