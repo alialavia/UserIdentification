@@ -5,9 +5,10 @@ from uids.utils.DataAnalysis import *
 from scipy.spatial import Delaunay
 from uids.utils.Logger import Logger as log
 from uids.utils.KNFilter import KNFilter
+from uids.data_models.ClusterBase import ClusterBase
 
 
-class HullCluster:
+class HullCluster(ClusterBase):
     """
     Notes:
         - Convex Hull is a subgraph of the Delauny Triangulation
@@ -38,14 +39,12 @@ class HullCluster:
     log_expl_var = []
 
     def __init__(self, max_size=70, dim_reduction=6, dim_removal=5, knn_removal_thresh=50, inverted=False):
+        ClusterBase.__init__(self)
         self.max_size = max_size
         self.dim_reduction = dim_reduction
         self.dim_removal = dim_removal
         self.knn_removal_thresh = knn_removal_thresh
         self.__inverted = inverted
-
-    def get_data(self):
-        return self.__data
 
     def update(self, samples):
 

@@ -1,6 +1,8 @@
 from uids.online_learning.ABOD import ABOD
 from uids.utils.Logger import Logger as log
 from uids.data_models.HullCluster import HullCluster
+from uids.data_models.StandardCluster import StandardCluster
+from uids.data_models.ClusterBase import ClusterBase
 import numpy as np
 from sklearn.metrics.pairwise import pairwise_distances
 
@@ -12,11 +14,17 @@ class IABOD(ABOD):
     data = []
     __verbose = False
     __test_offline = False
-    data_cluster = HullCluster(knn_removal_thresh=0, inverted=False)
+    data_cluster = None
 
-    def __init__(self, test_offline=True):
+    # todo: remove test online
+    def __init__(self, test_offline=False, cluster=None):
         ABOD.__init__(self)
         self.__test_offline = test_offline
+        if cluster is None:
+            self.data_cluster = StandardCluster()
+        else:
+            assert issubclass(cluster, ClusterBase)
+            self.data_cluster = cluster
 
     def fit(self, data, dim_reduction=False):
         raise NotImplementedError("Use 'partial_fit' instead of 'fit'")
@@ -33,9 +41,8 @@ class IABOD(ABOD):
             self.data = self.data_cluster.get_data()
 
     def mean_dist(self, samples, metric='cosine'):
-        return np.mean(pairwise_distances(samples, self.data, metric=metric))
+        return self.data_cluster.mean_dist(samples, metric)
 
     def class_mean_dist(self, samples, metric='cosine'):
-        class_mean = np.mean(self.data, axis=0)
-        return pairwise_distances(class_mean.reshape(1,-1), samples, metric=metric)
+        return self.data_cluster.class_mean_dist(samples, metric)
 

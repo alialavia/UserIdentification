@@ -1,6 +1,8 @@
 from uids.utils.DataAnalysis import *
 from sklearn.svm import SVC
 from uids.data_models.HullCluster import HullCluster
+from uids.data_models.StandardCluster import StandardCluster
+from uids.data_models.ClusterBase import ClusterBase
 
 
 class ISVM:
@@ -17,11 +19,15 @@ class ISVM:
     prediction = None
     probability = None
 
-    def __init__(self, random_data):
+    def __init__(self, random_data, cluster=None):
         # load random data
         self.random_data = random_data
         self.clf = SVC(kernel='linear', probability=True, C=1)
-        self.data_cluster = HullCluster()
+        if cluster is None:
+            self.data_cluster = StandardCluster()
+        else:
+            assert issubclass(cluster, ClusterBase)
+            self.data_cluster = cluster
 
     def decision_function(self, samples):
         pass
@@ -35,11 +41,10 @@ class ISVM:
         return prob
 
     def mean_dist(self, samples, metric='cosine'):
-        return np.mean(pairwise_distances(samples, self.data_cluster.get_data(), metric=metric))
+        return self.data_cluster.mean_dist(samples, metric)
 
     def class_mean_dist(self, samples, metric='cosine'):
-        class_mean = np.mean(self.data_cluster.get_data(), axis=0)
-        return pairwise_distances(class_mean.reshape(1, -1), samples, metric=metric)
+        return self.data_cluster.class_mean_dist(samples, metric)
 
     def predict(self, samples):
         proba = self.clf.predict_proba(samples)

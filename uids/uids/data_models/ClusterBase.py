@@ -1,7 +1,7 @@
 import numpy as np
-from uids.utils.DataAnalysis import *
 from uids.utils.Logger import Logger as log
 from abc import abstractmethod
+from sklearn.metrics.pairwise import *
 
 
 class ClusterBase:

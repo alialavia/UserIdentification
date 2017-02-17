@@ -104,7 +104,7 @@ class Update:
         # receive user id
         user_id = server.receive_uint(conn)
 
-        log.info('server', 'User Update (Robust) for ID {}'.format(user_id))
+        log.info('server', 'User Update for ID {}'.format(user_id))
 
         # receive images
         images = server.receive_image_batch_squared_same_size(conn)
@@ -129,6 +129,44 @@ class Update:
             r.Error(server, conn, "Update samples are unambiguously.")
         else:
             r.UpdateFeedback(server, conn, int(conf * 100))
+
+
+class UpdateRobust:
+
+    def __init__(self, server, conn):
+        # receive user id
+        user_id = server.receive_uint(conn)
+
+        log.info('server', 'User Update (Robust) for ID {}'.format(user_id))
+
+        # receive images
+        images = server.receive_image_batch_squared_same_size(conn)
+
+        # generate embedding
+        embeddings = server.embedding_gen.get_embeddings(images)
+
+        if embeddings.shape[0] < 5:
+            r.Error(server, conn, "Not enough images for update quality check.")
+            return
+
+        if not embeddings.any():
+            r.Error(server, conn, "Could not generate face embeddings.")
+            return
+
+        log.info('cl', "Starting to process stream data...")
+
+        # submit data
+        succ, conf = server.classifier.process_labeled_stream_data(user_id, embeddings)
+
+        if succ == None:
+            log.info('cls', "Update samples are unambiguously.")
+            r.Error(server, conn, "Update samples are unambiguously.")
+        elif succ == False:
+            # update was not classified as the labeled class
+            # force reidentification
+            r.Reidentification(server, conn)
+        else:
+            r.UpdateFeedback(server, conn, int(conf*100))
 
 
 class UpdatePrealigned:
