@@ -98,9 +98,8 @@ namespace user
 
 		void CancelAndDropAllUserRequests(User* user);
 
-#ifdef _CHECK_TRACKING_CONF
 		void UpdateTrackingStatus();
-#endif
+
 
 		// ========= API
 		std::vector<std::pair<int, int>> GetUserandTrackingID();

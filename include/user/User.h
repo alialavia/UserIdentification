@@ -26,14 +26,14 @@ namespace user
 		ActionStatus_WaitForCertainTracking = 2,
 		ActionStatus_DataCollection = 3 //  for update/identification
 	};
-#ifdef _CHECK_TRACKING_CONF
+
 	// whether or not tracking instance is consistant/safe
 	enum TrackingStatus
 	{
 		TrackingStatus_Uncertain = 0,	// tracking state alone unsafe
 		TrackingStatus_Certain = 1
 	};
-#endif
+
 	// whether or not we are tracking a person
 	enum HumanTrackingStatus
 	{
@@ -51,9 +51,7 @@ namespace user
 		) : mUserID(-1), mUserNiceName(""), 
 		// init user status
 		mIDStatus(IDStatus_Unknown), mActionStatus(ActionStatus_Idle), 
-#ifdef _CHECK_TRACKING_CONF
 		mTrackingStatus(TrackingStatus_Certain), 
-#endif
 		mHumanTrackingStatus(HumanTrackingStatus_Certain),
 			mFaceData(nullptr), mUpdatingProfilePicture(false), mConfidence(0)
 #ifdef _DLIB_PREALIGN
@@ -82,17 +80,13 @@ namespace user
 		// setters
 		void SetStatus(ActionStatus status);
 		void SetStatus(IdentificationStatus status);
-#ifdef _CHECK_TRACKING_CONF
 		void SetStatus(TrackingStatus status);
-#endif
 		void SetStatus(HumanTrackingStatus status);
 		// getters
 		void GetStatus(IdentificationStatus &s1, ActionStatus &s2);
 		void GetStatus(ActionStatus &s);
 		void GetStatus(IdentificationStatus &s);
-#ifdef _CHECK_TRACKING_CONF
 		void GetStatus(TrackingStatus &s);
-#endif
 		void GetStatus(HumanTrackingStatus &s);
 
 		// ========= identification

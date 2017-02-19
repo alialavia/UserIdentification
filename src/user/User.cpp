@@ -9,9 +9,7 @@ void User::ResetUser() {
 	mUserID = -1;
 	mIDStatus = IDStatus_Unknown;
 	mActionStatus = ActionStatus_Idle;
-#ifdef _CHECK_TRACKING_CONF
 	mTrackingStatus = TrackingStatus_Certain;
-#endif
 	mHumanTrackingStatus = HumanTrackingStatus_Certain;
 	mUpdatingProfilePicture = false;
 
@@ -37,12 +35,10 @@ void User::SetStatus(IdentificationStatus status)
 {
 	mIDStatus = status;
 }
-#ifdef _CHECK_TRACKING_CONF
 void User::SetStatus(TrackingStatus status)
 {
 	mTrackingStatus = status;
 }
-#endif
 void User::SetStatus(HumanTrackingStatus status)
 {
 	mHumanTrackingStatus = status;
@@ -61,12 +57,10 @@ void User::GetStatus(IdentificationStatus &s)
 {
 	s = mIDStatus;
 }
-#ifdef _CHECK_TRACKING_CONF
 void User::GetStatus(TrackingStatus &s)
 {
 	s = mTrackingStatus;
 }
-#endif
 void User::GetStatus(HumanTrackingStatus &s)
 {
 	s = mHumanTrackingStatus;

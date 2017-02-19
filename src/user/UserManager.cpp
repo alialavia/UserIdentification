@@ -101,10 +101,8 @@ void UserManager::RefreshUserTracking(
 		}
 	}
 
-#ifdef _CHECK_TRACKING_CONF
-	// update the tracking safety status
+	// update the tracking status (safety/human tracking)
 	UpdateTrackingStatus();
-#endif
 
 }
 
@@ -466,7 +464,7 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 			}
 		}
 		// ============================================= //
-		// 2. Uncertain
+		// 2. Uncertain (if _CHECK_TRACKING_CONF is enabled)
 		// ============================================= //
 		else if (id_status == IDStatus_Uncertain)
 		{
@@ -865,9 +863,13 @@ void UserManager::CancelAndDropAllUserRequests(User* user) {
 	}
 }
 
-#ifdef _CHECK_TRACKING_CONF
+
 void UserManager::UpdateTrackingStatus() {
 
+	// check human user tracking status
+
+	// check tracking confidence
+#ifdef _CHECK_TRACKING_CONF
 	std::map<int, bool> scene_ids_uncertain;
 
 	// get current tracking status
@@ -953,43 +955,10 @@ void UserManager::UpdateTrackingStatus() {
 		}
 
 	}
-
-
-}
 #endif
 
-//#ifdef _CHECK_TRACKING_CONF
-//void UserManager::UpdateTrackingStatus() {
-//
-//
-//	for (auto uit1 = mFrameIDToUser.begin(); uit1 != mFrameIDToUser.end(); ++uit1)
-//	{
-//		// reset status
-//		uit1->second->SetStatus(user::TrackingStatus_Certain);
-//	}
-//	// temporary status: uncertain
-//	for (auto uit1 = mFrameIDToUser.begin(); uit1 != mFrameIDToUser.end(); ++uit1)
-//	{
-//		// choose pair (if not last element)
-//		if (uit1 != std::prev(mFrameIDToUser.end())) {
-//			for (auto it2 = std::next(uit1); it2 != mFrameIDToUser.end(); ++it2) {
-//				cv::Rect r1 = uit1->second->GetFaceBoundingBox();
-//				cv::Rect r2 = it2->second->GetFaceBoundingBox();
-//
-//				// bbs intersect if area > 0
-//				bool intersect = ((r1 & r2).area() > 0);
-//				if (intersect) {
-//					// set safety status
-//					uit1->second->SetStatus(user::TrackingStatus_Uncertain);
-//					it2->second->SetStatus(user::TrackingStatus_Uncertain);
-//				}
-//
-//			}
-//		}
-//	}
-//
-//}
-//#endif
+}
+
 
 // ----------------- API functions
 
