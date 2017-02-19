@@ -96,32 +96,17 @@ namespace user
 #endif
 		}
 
-		//void RemoveRequestUserLinking(User* user) {
-		//	// delete all request linking for a user (request needs to be deleted manually if not poped from req/resp queue)
-
-		//	
-		//	std::map<User*, std::set<io::NetworkRequest*>>::iterator it1 = mUserToRequests.find(user);
-		//	if (it1 != mUserToRequests.end()) {
-
-		//		mUserToRequests.erase(it1);
-		//	}
-
-
-		//	std::map<User*, io::NetworkRequest*>::iterator it1 = mUserToRequest.find(user);
-		//	if (it1 != mUserToRequest.end()) {
-		//		std::map<io::NetworkRequest*, User*>::iterator it2 = mRequestToUser.find(it1->second);
-		//		if (it2 != mRequestToUser.end()) {
-		//			mRequestToUser.erase(it2);
-		//		}
-		//		mUserToRequest.erase(it1);
-		//	}
-		//}
-
 		void CancelAndDropAllUserRequests(User* user);
 
 #ifdef _CHECK_TRACKING_CONF
 		void UpdateTrackingStatus();
 #endif
+
+		// ========= API
+		std::vector<std::pair<int, int>> GetUserandTrackingID();
+		std::vector<std::pair<int, cv::Mat>> GetSceneProfilePictures();
+		std::vector<std::pair<int, cv::Mat>> GetAllProfilePictures();
+		bool GetUserID(const cv::Mat &face_capture, int &user_id);
 
 	private:
 		io::TCPClient* pServerConn;

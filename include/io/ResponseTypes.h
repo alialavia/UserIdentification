@@ -19,6 +19,7 @@ namespace io {
 		NetworkResponse_ImageQuadratic = 4,
 		NetworkResponse_UpdateResponse = 5,
 		NetworkResponse_Reidentification = 10,
+		NetworkResponse_ProfilePictures = 20,
 		NetworkResponse_Error = 999,
 		NetworkResponse_OK = 111,
 	};
@@ -163,6 +164,27 @@ namespace io {
 		UpdateResponse(io::TCPClient* conn = nullptr) :NetworkResponse(conn, NetworkResponse_UpdateResponse), mConfidence(0){}
 		void GetPayload() {mConfidence = (int)pConn->Receive8bit<uint8_t>();};
 		int mConfidence;
+	};
+
+	class ProfilePictures : public NetworkResponse
+	{
+	public:
+		ProfilePictures(io::TCPClient* conn = nullptr) :NetworkResponse(conn, NetworkResponse_ProfilePictures) {}
+		void GetPayload() { 
+			// number of users
+			int nr_users = pConn->Receive32bit<int>();
+
+			if (nr_users > 0) {
+				// receive user ids
+				for (int i = 0; i < nr_users;i++) {
+					mUserIDs.push_back(pConn->Receive32bit<int>());
+				}
+				// receive profile pictures
+				pConn->ReceiveRGBImagesQuadraticSameSize(mImages);
+			}
+		};
+		std::vector<int> mUserIDs;
+		std::vector<cv::Mat> mImages;
 	};
 }
 

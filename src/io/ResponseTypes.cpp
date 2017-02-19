@@ -68,6 +68,13 @@ std::type_index ResponseFactory::AllocateAndLoad(NetworkResponseType type_id, io
 		resp->GetPayload();
 		ptr = resp;
 		return typeid(ReidentificationResponse);
+	}
+	else if (type_id == NetworkResponse_ProfilePictures) {
+		ProfilePictures* resp = nullptr;
+		resp = new ProfilePictures(conn);
+		resp->GetPayload();
+		ptr = resp;
+		return typeid(ProfilePictures);
 	}else
 	{
 		ErrorResponse* resp = nullptr;

@@ -83,6 +83,7 @@ namespace io
 		int ReceiveMessage(SOCKET socket_id, char *buf, int *len);
 
 		int ReceiveRGBImageQuadratic(cv::Mat &output);
+		int ReceiveRGBImagesQuadraticSameSize(std::vector<cv::Mat> &output);
 		int ReceiveRGBImage(cv::Mat &output);
 
 		template<typename T>

@@ -293,16 +293,30 @@ class ProfilePictureUpdate:
         # predict user id
         user_id_predicted = server.classifier.predict(embedding)
 
-        # disabled ATM: check if correct user
-        # if user_id_predicted is None:
-        #     r.Error(server, conn, "Label could not be predicted - Face is unambiguous.")
-        #     return
-        # elif user_id_predicted != user_id:
-        #     # unknown user
-        #     r.Error(server, conn, "The profile image does not come from the same person!")
-        #     return
+        # check if correct user
+        if user_id_predicted is None:
+            r.Error(server, conn, "Label could not be predicted - Face is unambiguous.")
+            return
+        elif user_id_predicted != user_id:
+            # unknown user
+            r.Error(server, conn, "The profile image does not come from the same person!")
+            return
 
         server.user_db.set_profile_picture(user_id, image)
 
         # send back image
         r.QuadraticImage(server, conn, image)
+
+
+class GetProfilePictures:
+
+    def __init__(self, server, conn):
+
+        log.info('server', 'Getting all profile pictures')
+
+        uids, pictures = server.user_db.get_all_profile_pictures()
+
+        # send back image
+        r.ProfilePictures(server, conn, uids, pictures)
+
+

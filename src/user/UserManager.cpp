@@ -991,6 +991,77 @@ void UserManager::UpdateTrackingStatus() {
 //}
 //#endif
 
+// ----------------- API functions
+
+std::vector<std::pair<int, int>> UserManager::GetUserandTrackingID() {
+	std::vector<std::pair<int, int>> out;
+	for (auto it = mFrameIDToUser.begin(); it != mFrameIDToUser.end(); ++it)
+	{
+		out.push_back(std::make_pair(it->second->GetUserID(), it->first));
+	}
+	return out;
+}
+
+std::vector<std::pair<int, cv::Mat>> UserManager::GetSceneProfilePictures() {
+	std::vector<std::pair<int, cv::Mat>> out;
+	cv::Mat profile_pic;
+	for (auto it = mFrameIDToUser.begin(); it != mFrameIDToUser.end(); ++it)
+	{
+		if (it->second->GetProfilePicture(profile_pic)) {
+			out.push_back(std::make_pair(it->second->GetUserID(), profile_pic));
+		}
+	}
+	return out;
+}
+
+std::vector<std::pair<int, cv::Mat>> UserManager::GetAllProfilePictures() {
+	std::vector<std::pair<int, cv::Mat>> out;
+	// request images from server
+	io::GetProfilePictures req(pServerConn);
+	pServerConn->Connect();
+	req.SubmitRequest();
+	// wait for reponse
+	io::ProfilePictures resp(pServerConn);
+	int response_code = 0;
+	if (!resp.Load(&response_code)) {
+		// error
+	}
+	else {
+#ifdef _DEBUG_USERMANAGER
+		if (resp.mUserIDs.size() != resp.mUserIDs.size()) {
+			std::cout << "--- Error: size(user_ids) != size(user_profile_pictures)!\n";
+		}
+#endif
+		// load images
+		for (size_t i = 0; i < resp.mUserIDs.size(); i++) {
+			out.push_back(std::make_pair(resp.mUserIDs[i], resp.mImages[i]));
+		}
+	}
+	pServerConn->Close();
+	return out;
+}
+
+bool UserManager::GetUserID(const cv::Mat &face_capture, int &user_id) {
+	std::vector<cv::Mat> face_patches = { face_capture };
+	IDReq id_request(pServerConn, face_patches);
+	pServerConn->Connect();
+	id_request.SubmitRequest();
+	user_id = -1;
+	bool succ = false;
+	// wait for reponse
+	io::IdentificationResponse id_response(pServerConn);
+	int response_code = 0;
+	if (!id_response.Load(&response_code)) {
+		//std::cout << "--- An error occurred during update: ResponseType " << response_code << " | expected: " << id_response.cTypeID << std::endl;
+	}
+	else {
+		succ = true;
+		user_id = id_response.mUserID;
+	}
+	pServerConn->Close();
+	return succ;
+}
+
 // ----------------- helper functions
 
 void UserManager::DrawUsers(cv::Mat &img)

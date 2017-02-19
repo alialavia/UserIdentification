@@ -11,7 +11,8 @@ ROUTING = {
            "UpdatePrealigned": 12,
            "UpdatePrealignedRobust": 13,
            "ImageAlignment": 22,
-           "ProfilePictureUpdate": 23
+           "ProfilePictureUpdate": 23,
+           "GetProfilePictures": 24
        },
        "NAME": {
            1: "ImageIdentification",
@@ -21,7 +22,8 @@ ROUTING = {
            12: "UpdatePrealigned",
            13: "UpdatePrealignedRobust",
            22: "ImageAlignment",
-           23: "ProfilePictureUpdate"
+           23: "ProfilePictureUpdate",
+           24: "GetProfilePictures"
         }
    },
    "RESPONSE": {  # response id range: integer
@@ -32,6 +34,7 @@ ROUTING = {
            "QuadraticImage": 4,
            "UpdateFeedback": 5,
            "Reidentification": 10,
+           "ProfilePictures": 20,
            "OK": 111,
            "Error": 999
        },
@@ -42,6 +45,7 @@ ROUTING = {
            4: "QuadraticImage",
            5: "UpdateFeedback",
            10: "Reidentification",
+           20: "ProfilePictures",
            111: "OK",
            999: "Error"
        }

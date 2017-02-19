@@ -45,6 +45,9 @@ class UserDB:
         else:
             return None
 
+    def get_all_profile_pictures(self):
+        return self.__profile_pictures.keys(), self.__profile_pictures.values()
+
     #  ----------- DESCRIPTOR TOOLS
     def add_samples(self, user_id, new_samples):
         """embeddings: array of embeddings"""

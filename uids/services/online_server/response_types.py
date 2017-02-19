@@ -98,3 +98,22 @@ class QuadraticImage:
 
         # send image
         server.send_rgb_image_squared(conn, img)
+
+
+class ProfilePictures:
+
+    def __init__(self, server, conn, user_ids, pictures):
+
+        # send back response identifier
+        resp_id = ROUTING['RESPONSE']['ID'][self.__class__.__name__]
+        server.send_int(conn, int(resp_id))
+
+        # send number of users
+        server.send_int(conn, len(user_ids))
+
+        if len(user_ids):
+            # send user ids
+            for id in user_ids:
+                server.send_int(conn, int(resp_id))
+            # send images
+            server.send_image_batch_squared_same_size(conn, pictures)

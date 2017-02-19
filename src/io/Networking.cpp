@@ -154,6 +154,27 @@ int TCPClient::ReceiveMessage(SOCKET socket, char *buf, int *len)
 	return (n <= 0) ? -1 : 0;
 }
 
+
+int TCPClient::ReceiveRGBImagesQuadraticSameSize(std::vector<cv::Mat> &output) {
+	// number of images
+	short nr_images = Receive16bit<short>();
+	short img_dim = Receive16bit<short>();
+	int buffer_length = static_cast<int>(img_dim*img_dim*3*1); // CV_8UC3
+	// allocate memory
+	char * sockData = new char[buffer_length];
+	int bytes_recv = 0;
+	// receive images
+	for (int i = 0; i < nr_images;i++) {
+		bytes_recv += ReceiveMessage(mSocketID, sockData, &buffer_length);
+		// apply to opencv header
+		cv::Mat tmp(cv::Size(img_dim, img_dim), CV_8UC3, sockData);
+		output.push_back(tmp.clone());
+	}
+	delete[] sockData;
+	return bytes_recv;
+}
+
+
 int TCPClient::ReceiveRGBImageQuadratic(cv::Mat &output)
 {
 	short img_dim = Receive16bit<short>();

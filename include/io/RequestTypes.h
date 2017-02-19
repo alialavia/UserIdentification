@@ -28,7 +28,8 @@ namespace io {
 		NetworkRequest_EmbeddingCalculation = 20,
 		NetworkRequest_ClassifierTraining = 21,
 		NetworkRequest_ImageAlignment = 22,
-		NetworkRequest_ProfilePictureUpdate = 23
+		NetworkRequest_ProfilePictureUpdate = 23,
+		NetworkRequest_GetProfilePictures = 24
 	};
 
 	// request type
@@ -241,8 +242,6 @@ namespace io {
 	};
 
 
-
-
 	class ImageAlignment : public NetworkRequest
 	{
 	public:
@@ -287,6 +286,12 @@ namespace io {
 		int mUserID;
 		// payload: quadratic(!) image
 		cv::Mat mImage;
+	};
+
+	class GetProfilePictures : public NetworkRequest
+	{
+	public: GetProfilePictures(io::TCPClient* server_conn) :NetworkRequest(server_conn, NetworkRequest_GetProfilePictures){}
+	protected: void SubmitPayload() {}
 	};
 
 }
