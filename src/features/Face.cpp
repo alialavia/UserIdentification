@@ -77,10 +77,30 @@ void KinectFaceAligner::LoadLandmarkReference()
 		0.477561227414, 0.778476346951
 	};
 
+	double min_y = FACE_POINTS[1];
+	double max_y = FACE_POINTS[1];
+	double min_x = FACE_POINTS[0];
+	double max_x = FACE_POINTS[0];
 	for (int i = 0; i < FACE_POINTS.size(); i += 2) {
+		if (min_y > FACE_POINTS[i + 1]) min_y = FACE_POINTS[i + 1];
+		if (max_y < FACE_POINTS[i + 1]) max_y = FACE_POINTS[i + 1];
+		if (min_x > FACE_POINTS[i]) min_x = FACE_POINTS[i];
+		if (max_x < FACE_POINTS[i]) max_x = FACE_POINTS[i];
 		cv::Point2d tempPoint(FACE_POINTS[i], FACE_POINTS[i + 1]);
 		mFaceLandmarksReference.push_back(tempPoint);
 	}
+
+	mReferenceMinBB = cv::Rect2d(cv::Point2d(min_x, min_y), cv::Point2d(max_x, max_y));
+
+	//MINMAX_TEMPLATE = (TEMPLATE - TPL_MIN) / (TPL_MAX - TPL_MIN)
+	for (int i = 0; i < mFaceLandmarksReference.size(); i++) {
+		cv::Point2d tempPoint(
+			(mFaceLandmarksReference[i].x - min_x) / (max_x - min_x),
+			(mFaceLandmarksReference[i].y - min_y) / (max_y - min_y)
+		);
+		mMinMaxTemplate.push_back(tempPoint);
+	}
+
 }
 
 CVPoints KinectFaceAligner::GetRefFaceLandmarkPos(const cv::Rect2d& faceBB) const {

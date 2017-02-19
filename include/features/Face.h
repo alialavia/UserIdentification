@@ -26,7 +26,10 @@ namespace features{
 
 	class KinectFaceAligner : public tracking::FaceTracker {
 
+	private:
 		CVPoints mFaceLandmarksReference;
+		CVPoints mMinMaxTemplate;
+		cv::Rect2d mReferenceMinBB;
 
 	public:
 		KinectFaceAligner(IKinectSensor* sensor) : tracking::FaceTracker(sensor) 
@@ -50,16 +53,7 @@ namespace features{
 		}
 		
 		// aling image using facial landmarks
-		bool AlignImage(cv::Mat &dst, int imgDim, cv::Mat &input, const cv::Rect2d& bb) {
-
-			// reference landmarks
-			CVPoints reference_pts = GetRefFaceLandmarkPos(bb);
-
-			// calculate affine transform from three point mappings
-			int ref_index[3] = { 39, 42, 33 };
-			int tracker_index[3] = { FacePointType_EyeLeft, FacePointType_EyeRight, FacePointType_Nose };
-			cv::Point2f alignPointsSS[3];
-			cv::Point2f meanAlignPointsSS[3];
+		bool AlignImage(int imgDim, cv::Mat src_bb, cv::Mat &dst) {
 
 			// select face
 			if (mFaces.size()==0) {
@@ -67,29 +61,35 @@ namespace features{
 				return false;
 			}
 
-			// select face data
-			tracking::Face target_face = mFaces[0];
+			// select face
+			tracking::Face user_face = mFaces[0];
 
+			// get rel pos of face landmarks
+
+			std::vector<int> kinect_l_indices = { FacePointType_EyeLeft, FacePointType_EyeRight, FacePointType_Nose};
+			std::vector<cv::Point2f> landmarks_in_bb = user_face.GetLandMarkPointsinBB(kinect_l_indices);
+
+
+			// get template dest points for current bounding box
+			int dlib_l_indices[3] = { 36, 45, 33 };	// matching dlib template indices
+			std::vector<cv::Point2f> dst_points;
+
+			// Todo: calc reference point pos in bb
 			for (std::size_t i = 0; i < 3; i++)
 			{
-				// tracked feature location
-				alignPointsSS[i].x = target_face.Points[tracker_index[i]].X;
-				alignPointsSS[i].y = target_face.Points[tracker_index[i]].Y;
-
-				// reference points
-				meanAlignPointsSS[i].x = reference_pts[ref_index[i]].x;
-				meanAlignPointsSS[i].y = reference_pts[ref_index[i]].y;
+				int index = dlib_l_indices[i];
+				dst_points.push_back(cv::Point2f(src_bb.cols*mMinMaxTemplate[index].x/3, src_bb.rows*mMinMaxTemplate[index].y/3));
 			}
 
-			cv::Mat H = cv::getAffineTransform(alignPointsSS, meanAlignPointsSS);
-			cv::Mat warpedImg = cv::Mat::zeros(input.rows, input.cols, input.type());
-			// warp image
-			cv::warpAffine(input, warpedImg, H, warpedImg.size());
+			cv::Mat warpedImg;
+			cv::Mat H = cv::getAffineTransform(&landmarks_in_bb[0], &dst_points[0]);
+			warpedImg = cv::Mat::zeros(src_bb.rows, src_bb.cols, src_bb.type());
 
-			// ----------- select roi
-			warpedImg = warpedImg(bb);
+			// warp image - performs hard crop from top, left
+			cv::warpAffine(src_bb, warpedImg, H, warpedImg.size());
 
-
+			// resize to output size
+			//cv::resize(warpedImg, warpedImg, cv::Size(imgDim, imgDim));
 			dst = warpedImg;
 			return true;
 		}

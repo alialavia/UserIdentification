@@ -338,9 +338,30 @@ namespace tracking
 		cv::Rect2f boundingBox;
 		cv::Rect2f boundingBoxIR;
 		cv::Vec4f Rotation;	// rotation quaternion x,y,z,w
-		PointF Points[FacePointType::FacePointType_Count];
+		PointF Points[FacePointType::FacePointType_Count];	// facial landmarks in whole image
 		PointF PointsIR[FacePointType::FacePointType_Count];
 		DetectionResult Properties[FaceProperty::FaceProperty_Count];
+
+		std::vector<cv::Point2f> GetLandMarkPoints(std::vector<int> landmark_indices) const{
+			std::vector<cv::Point2f> points;
+			for (size_t i = 0; i < landmark_indices.size();i++) {
+				if (i<FacePointType::FacePointType_Count) {
+					points.push_back(cv::Point2f(Points[i].X, Points[i].Y));
+				}
+			}
+			return points;
+		}
+
+		std::vector<cv::Point2f> GetLandMarkPointsinBB(std::vector<int> landmark_indices) const{
+			std::vector<cv::Point2f> points_in_frame = GetLandMarkPoints(landmark_indices);
+			for (size_t i = 0; i < landmark_indices.size(); i++) {
+				// calc relative position in bb
+				points_in_frame[i].x -= boundingBox.x;
+				points_in_frame[i].y -= boundingBox.y;
+			}
+
+			return points_in_frame;
+		}
 
 		void GetEulerAngles(int& roll, int& pitch, int& yaw) {
 			double x = Rotation[0];
