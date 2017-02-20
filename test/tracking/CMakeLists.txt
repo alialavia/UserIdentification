@@ -46,4 +46,20 @@ SET(TARGET_EXTERNAL_LIBRARIES
 )
 
 SETUP_APPLICATION(alignment_comparison Tests)
+# -------------------
+
+SET(TARGET_SRC
+    opticalFlow.cpp 
+)
+
+SET(TARGET_H
+    # header.h
+)
+
+SET(TARGET_EXTERNAL_LIBRARIES
+	Tracking
+	Features
+)
+
+SETUP_APPLICATION(optical_flow Tests)
 
