@@ -5,12 +5,11 @@
 using namespace user;
 
 // ========= general
-void User::ResetUser() {
+void User::ResetUserIdentity() {
 	mUserID = -1;
 	mIDStatus = IDStatus_Unknown;
 	mActionStatus = ActionStatus_Idle;
-	mTrackingStatus = TrackingStatus_Certain;
-	mHumanTrackingStatus = HumanTrackingStatus_Certain;
+	mTrackingStatus = TrackingConsistency_OK;
 	mUpdatingProfilePicture = false;
 
 	// release profile image
@@ -35,13 +34,9 @@ void User::SetStatus(IdentificationStatus status)
 {
 	mIDStatus = status;
 }
-void User::SetStatus(TrackingStatus status)
+void User::SetStatus(TrackingConsistency status)
 {
 	mTrackingStatus = status;
-}
-void User::SetStatus(HumanTrackingStatus status)
-{
-	mHumanTrackingStatus = status;
 }
 // getters
 void User::GetStatus(IdentificationStatus &s1, ActionStatus &s2)
@@ -57,13 +52,9 @@ void User::GetStatus(IdentificationStatus &s)
 {
 	s = mIDStatus;
 }
-void User::GetStatus(TrackingStatus &s)
+void User::GetStatus(TrackingConsistency &s)
 {
 	s = mTrackingStatus;
-}
-void User::GetStatus(HumanTrackingStatus &s)
-{
-	s = mHumanTrackingStatus;
 }
 
 // ========= identification
@@ -73,9 +64,22 @@ void User::SetUserID(int id, std::string nice_name)
 	mUserNiceName = nice_name;
 	mIDStatus = IDStatus_Identified;
 }
-void User::SetFaceBoundingBox(cv::Rect2f bb)
+void User::UpdateFaceBoundingBox(cv::Rect2f bb)
 {
-	mFaceBoundingBox = bb;
+	// bb centroid
+	cv::Point2d centroid = cv::Point2d((bb.x + bb.width) / 2, (bb.y + bb.height) / 2);
+	
+	if (mFaceBoundingBox.width > 0) {
+		// add bb movement
+		mBBMovement.AddElement(cv::norm(mFaceCenter - centroid));
+		mFaceCenter = centroid;
+		mFaceBoundingBox = bb;
+	}
+	else {
+		// first round
+		mFaceCenter = centroid;
+		mFaceBoundingBox = bb;
+	}
 }
 void User::SetFaceData(tracking::Face f)
 {

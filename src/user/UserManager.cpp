@@ -77,7 +77,7 @@ void UserManager::RefreshUserTracking(
 		if (user_index < user_scene_ids.size())
 		{
 			// user is in scene - update scene data (bounding box, position etc.)
-			target_user->SetFaceBoundingBox(bounding_boxes[user_index]);
+			target_user->UpdateFaceBoundingBox(bounding_boxes[user_index]);
 			// reset feature tracking
 			target_user->ResetSceneFeatures();
 			++it;
@@ -100,9 +100,6 @@ void UserManager::RefreshUserTracking(
 			mFrameIDToUser.erase(it++);	// increment after deletion
 		}
 	}
-
-	// update the tracking status (safety/human tracking)
-	UpdateTrackingStatus();
 
 }
 
@@ -147,8 +144,8 @@ void UserManager::ProcessResponses()
 				{
 					// person with same id is already in scene
 					// reset both tracking instances and force reidentification
-					its->second->ResetUser();
-					target_user->ResetUser();
+					its->second->ResetUserIdentity();
+					target_user->ResetUserIdentity();
 					// cancel all requests for the two users
 					CancelAndDropAllUserRequests(its->second);
 					CancelAndDropAllUserRequests(target_user);
@@ -215,7 +212,7 @@ void UserManager::ProcessResponses()
 			CancelAndDropAllUserRequests(target_user);
 
 			// reset target user
-			target_user->ResetUser();
+			target_user->ResetUserIdentity();
 		}
 		else {
 			// user corresponding to request not found - nothing to unlink - drop response
@@ -224,7 +221,6 @@ void UserManager::ProcessResponses()
 			std::cout << "------ USER HAS LEFT SCENE. IGNORE THIS RESPONSE." << std::endl;
 		}
 	}
-
 
 	// ============================================= //
 	// Update response (successful)
@@ -566,13 +562,27 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 
 						io::EmbeddingCollectionByID* new_request;
 #ifdef _DLIB_PREALIGN
+	#ifdef _ALWAYS_DO_SAFE_UPDATE
+						new_request = new io::EmbeddingCollectionByID(
+							pServerConn, face_patches, user_id,
+							io::NetworkRequest_EmbeddingCollectionByIDAlignedRobust	// specified request type
+						);
+	#else
 						new_request = new io::EmbeddingCollectionByID(
 							pServerConn, face_patches, user_id,
 							io::NetworkRequest_EmbeddingCollectionByIDAligned	// specified request type
 						);
+	#endif
+
 #else
-						// standard update
+	#ifdef _ALWAYS_DO_SAFE_UPDATE
+						new_request = new io::EmbeddingCollectionByID(
+							pServerConn, face_patches, user_id,
+							io::NetworkRequest_EmbeddingCollectionByIDRobust	// specified request type
+						);
+	#else
 						new_request = new io::EmbeddingCollectionByID(pServerConn, face_patches, user_id);
+	#endif
 #endif
 						pRequestHandler->addRequest(new_request);
 
@@ -584,7 +594,7 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 						target_user->SetStatus(ActionStatus_Waiting);
 						target_user->pGrid->Clear();
 					}
-#endif
+#endif	// /FACEGRID_RECORDING 
 				}
 			}
 
@@ -604,7 +614,7 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 //	{
 //		IdentificationStatus id_status;
 //		ActionStatus action;
-//		TrackingStatus tracking_status;
+//		TrackingConsistency tracking_status;
 //		user::User* target_user = it->second;
 //		target_user->GetStatus(id_status, action);
 //		target_user->GetStatus(tracking_status);
@@ -695,7 +705,7 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 //		}
 //		else if (id_status == IDStatus_Identified) {
 //			
-//			if(tracking_status == user::TrackingStatus_Certain)
+//			if(tracking_status == user::TrackingConsistency_OK)
 //			{
 //				if (action == ActionStatus_WaitForCertainTracking)
 //				{
@@ -799,10 +809,10 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 //#ifdef _DLIB_PREALIGN
 //#ifdef _CHECK_TRACKING_CONF
 //
-//						user::TrackingStatus tracking_status;
+//						user::TrackingConsistency tracking_status;
 //						target_user->GetStatus(tracking_status);
 //						// robust update: check update for model consistency
-//						if (tracking_status == user::TrackingStatus_Uncertain) {
+//						if (tracking_status == user::TrackingConsistency_Uncertain) {
 //						new_request = new io::EmbeddingCollectionByID(
 //							pServerConn, face_patches, user_id,
 //							io::NetworkRequest_EmbeddingCollectionByIDAlignedRobust	// specified request type
@@ -866,7 +876,36 @@ void UserManager::CancelAndDropAllUserRequests(User* user) {
 
 void UserManager::UpdateTrackingStatus() {
 
+	IdentificationStatus ids;
+
 	// check human user tracking status
+	for (auto it = mFrameIDToUser.begin(); it != mFrameIDToUser.end(); ++it)
+	{
+		it->second->GetStatus(ids);
+
+		// update face detection counter
+		it->second->IncrementFaceDetectionStatus();
+
+		// increment bounding box movement status
+		it->second->IncrementBBMovementStatus();
+
+		// update overall status
+		if (ids == IDStatus_IsObject) {
+			if (!it->second->IsTrackingObject()) {
+				it->second->SetStatus(IDStatus_Unknown);
+			}
+		}
+		else {
+			if (it->second->IsTrackingObject()) {
+				// reset UserID
+				it->second->ResetUserIdentity();
+				// set to object
+				it->second->SetStatus(IDStatus_IsObject);
+			}
+		}
+
+
+	}
 
 	// check tracking confidence
 #ifdef _CHECK_TRACKING_CONF
@@ -903,8 +942,7 @@ void UserManager::UpdateTrackingStatus() {
 		if(scene_ids_uncertain.count(it->first) > 0)
 		{
 			// update temp tracking status
-			it->second->SetStatus(TrackingStatus_Uncertain);
-
+			it->second->SetStatus(TrackingConsistency_Uncertain);
 
 			// tracking is uncertain atm
 			if(s==IDStatus_Identified)
@@ -942,7 +980,7 @@ void UserManager::UpdateTrackingStatus() {
 		}else
 		{
 			// update temp tracking status
-			it->second->SetStatus(TrackingStatus_Certain);
+			it->second->SetStatus(TrackingConsistency_OK);
 
 			// tracking safe again - reset samples and start data collection
 			if(s==IDStatus_Uncertain && as==ActionStatus_WaitForCertainTracking)
@@ -1088,6 +1126,7 @@ void UserManager::DrawUsers(cv::Mat &img)
 		// draw identification status
 		float font_size = 0.5;
 		cv::Scalar color = cv::Scalar(0, 0, 0);
+		cv::Scalar bg_color = cv::Scalar(0, 0, 0);
 		std::string text1, text2;
 
 		IdentificationStatus id_status;
@@ -1118,8 +1157,11 @@ void UserManager::DrawUsers(cv::Mat &img)
 				}
 			}
 
-			
-			
+		}
+		else if (id_status == IDStatus_IsObject) {
+			text1 = "OBJECT TRACKING";
+			color = cv::Scalar(0, 0, 0);
+			bg_color = cv::Scalar(0, 0, 255);
 		}
 		else
 		{
@@ -1136,19 +1178,19 @@ void UserManager::DrawUsers(cv::Mat &img)
 			else if (action == ActionStatus_WaitForCertainTracking) {
 				text2 = "Wait for safe tracking";
 			}
+
+			text2 += " " + target_user->GetHumanStatusString();
+
 			color = cv::Scalar(0, 0, 255);
-			
 		}
 
 		int baseline = 0;
 		cv::Size textSize = cv::getTextSize(text1, cv::FONT_HERSHEY_SIMPLEX, font_size, 1, &baseline);
 		cv::Rect bg_patch = cv::Rect(bb.x, bb.y, textSize.width + 20, textSize.height + 15);
 
-		cv::Scalar bg_color = cv::Scalar(0, 0, 0);
-
-		user::TrackingStatus tracking_status;
+		user::TrackingConsistency tracking_status;
 		target_user->GetStatus(tracking_status);
-		if (tracking_status == user::TrackingStatus_Uncertain) {
+		if (tracking_status == user::TrackingConsistency_Uncertain) {
 			bg_color = cv::Scalar(0, 14, 88);
 		}
 

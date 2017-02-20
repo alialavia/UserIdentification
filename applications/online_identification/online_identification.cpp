@@ -109,10 +109,18 @@ int main(int argc, char** argv)
 				// ------------- update features
 				// face data
 				um.UpdateFaceData(faces, face_ids);
+
+
+
+
 				// skeleton data
 
 				// color model
 				// ...
+
+				// ------------- 
+				// update the tracking status (safety/human tracking) based on features
+				um.UpdateTrackingStatus();
 
 				// ------------- 
 

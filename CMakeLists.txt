@@ -184,10 +184,13 @@ SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 # use facegrid recording (pose dependent image capturing)
 add_definitions(-DFACEGRID_RECORDING)
-# only check tracking confidence (reidentification in critical situations)
+# check tracking confidence (reidentification in critical situations)
+# allows custom "uncertain tracking" state, which blocks new updates upon "clean" robust update
 add_definitions(-D_CHECK_TRACKING_CONF)
 # use dlib to prealign the face images before they are beeing sent to the server
 add_definitions(-D_DLIB_PREALIGN)
+# always do robust updates (chances are that reinitialization is triggered too often)
+add_definitions(-D_ALWAYS_DO_SAFE_UPDATE)
 
 
 #-------------------------------------------------
@@ -210,8 +213,8 @@ MAKE_DIRECTORY("${OUTPUT_BINDIR}/${PROJECT_OUTPUT_PATH}")
 
 # copy models
 file(COPY ${PROJECT_MODELS_PATH} DESTINATION ${OUTPUT_BINDIR})
-
 Message(${OUTPUT_BINDIR})
+
 #-------------------------------------------------
 # Add Sources
 #-------------------------------------------------
