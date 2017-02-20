@@ -68,6 +68,7 @@ namespace io
 		void GetImageCopyRGB(cv::Mat& dst) const;
 		void GetImageCopyRGBSubtracted(cv::Mat& dst) const;
 		void GetImageCopyDepth(cv::Mat& dst) const;
+		void GetImageCopyDepth8UThresholded(cv::Mat& dst) const;
 		void GetImageCopyBodyIndex(cv::Mat& dst) const;
 		void GetImageCopyBodyIndexColored(cv::Mat& dst) const;
 		void GetImageCopyRGBSkeleton(cv::Mat& dst) const;

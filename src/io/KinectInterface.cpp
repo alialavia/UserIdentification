@@ -612,8 +612,6 @@ HRESULT KinectSensorMultiSource::ProcessDepthFrame(IDepthFrame* depth_frame, int
 	USHORT nDepthMaxDistance = 0;
 
 	// current image buffer length
-	UINT nBufferLen;
-
 	UINT nBufferSize = 0;
 
 	hr = depth_frame->get_FrameDescription(&frameDesc);
@@ -629,23 +627,26 @@ HRESULT KinectSensorMultiSource::ProcessDepthFrame(IDepthFrame* depth_frame, int
 			SUCCEEDED(depth_frame->get_DepthMaxReliableDistance(&nDepthMaxDistance))
 		)
 		{
-			// allocate buffer
-			nBufferLen = height * width * sizeof(UINT16);
+
+			// BYTE intensity = static_cast<BYTE>((depth >= nMinDepth) && (depth <= nMaxDepth) ? (depth % 256) : 0);
+			//  reinterpret_cast<BYTE*>(pColorImageBuffer)
+
+			UINT16 *pTempBuffer = NULL;
+			hr = depth_frame->AccessUnderlyingBuffer(&nBufferSize, &pTempBuffer);
 
 			// allocate more memory if necessary
-			if (nBufferLen > buffer_len)
+			if (nBufferSize > buffer_len)
 			{
 				if (buffer != nullptr)
 				{
 					delete[] buffer;
 				}
-				buffer = new UINT16[nBufferLen];
-				buffer_len = nBufferLen;
+				buffer = new UINT16[nBufferSize];
+				buffer_len = nBufferSize;
 			}
 
-			// BYTE intensity = static_cast<BYTE>((depth >= nMinDepth) && (depth <= nMaxDepth) ? (depth % 256) : 0);
-			//  reinterpret_cast<BYTE*>(pColorImageBuffer)
-			hr = depth_frame->CopyFrameDataToArray(buffer_len, buffer);
+			// copy to external buffer passed by reference
+			memcpy(buffer, pTempBuffer, sizeof(UINT16)*nBufferSize);
 		}
 	}
 
@@ -830,14 +831,30 @@ void KinectSensorMultiSource::GetImageCopyRGBSkeleton(cv::Mat& dst) const
 void KinectSensorMultiSource::GetImageCopyDepth(cv::Mat& dst) const
 {
 	mSensorMutex.lock();
-	// tmp
-	cv::Mat cv_img(DepthStreamHeight, DepthStreamWidth, CV_16U, pDepthBuffer);
+
+	cv::Mat cv_img(DepthStreamHeight, DepthStreamWidth, CV_16UC1, reinterpret_cast<void*>(pDepthBuffer));
 	cv::Mat resized;
 
 	cv::resize(cv_img, resized, cv::Size(mDepthImageWidth, mDepthImageHeight));
 	//double scale = 255.0 / (nDepthMaxReliableDistance - nDepthMinReliableDistance);
 	//double scale = 255.0 / 5;
 	//resized.convertTo(resized, CV_8UC1, scale);
+
+	dst = resized;
+	mSensorMutex.unlock();
+}
+
+void KinectSensorMultiSource::GetImageCopyDepth8UThresholded(cv::Mat& dst) const
+{
+	mSensorMutex.lock();
+
+	cv::Mat cv_img(DepthStreamHeight, DepthStreamWidth, CV_16UC1, reinterpret_cast<void*>(pDepthBuffer));
+	cv::Mat resized;
+
+	cv::resize(cv_img, resized, cv::Size(mDepthImageWidth, mDepthImageHeight));
+
+	double scale = 255.0 / (4500 - 200);
+	resized.convertTo(resized, CV_8UC1, scale);
 
 	dst = resized;
 	mSensorMutex.unlock();
