@@ -243,6 +243,49 @@ namespace math {
 
 	};
 
+
+	template <class value_type>
+	class CircularBuffer
+	{
+	public:
+		CircularBuffer(size_t max_size=5): mMaxSize(max_size)
+		{
+		}
+		void AddElement(value_type el) {
+			mValues.push_back(el);
+			if (mValues.size()>mMaxSize) {
+				// delete first item
+				mValues.erase(mValues.begin());
+			}
+		}
+		bool FullMedian(float &median) {
+			if (mValues.size() != mMaxSize) {
+				return false;
+			}
+			median = Median();
+			return true;
+		}
+		float Median() {
+			std::vector<value_type> tmp = mValues;
+			std::nth_element(tmp.begin(), tmp.begin() + tmp.size() / 2, tmp.end());
+			return tmp[tmp.size() / 2];
+		}
+		void clear() {
+			mValues.clear();
+		}
+		size_t size() {
+			return mValues.size();
+		}
+		bool empty() {
+			return mValues.empty();
+		}
+	private:
+		std::vector<value_type> mValues;
+		size_t mMaxSize;
+	};
+
+
+
 } // namespace
 
 #endif
