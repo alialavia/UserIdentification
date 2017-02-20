@@ -187,8 +187,15 @@ add_definitions(-DFACEGRID_RECORDING)
 # check tracking confidence (reidentification in critical situations)
 # allows custom "uncertain tracking" state, which blocks new updates upon "clean" robust update
 add_definitions(-D_CHECK_TRACKING_CONF)
-# use dlib to prealign the face images before they are beeing sent to the server
-add_definitions(-D_DLIB_PREALIGN)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+
+else()
+	# dlib face detection only runs fast in relase mode
+	# use dlib to prealign the face images before they are beeing sent to the server
+	add_definitions(-D_DLIB_PREALIGN)
+endif()
+
 # always do robust updates (chances are that reinitialization is triggered too often)
 add_definitions(-D_ALWAYS_DO_SAFE_UPDATE)
 
