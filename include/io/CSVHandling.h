@@ -21,6 +21,13 @@ public:
 		*filehandle_ << val;
 		col_nr++;
 	};
+	template<class T>
+	void addList(std::vector<T> values) {
+		for (size_t i = 0; i < values.size();i++) {
+			addEntry(values[i]);
+			EndRow();
+		}
+	}
 	void changeFile(std::string filename);
 private:
 	std::string filename_;
