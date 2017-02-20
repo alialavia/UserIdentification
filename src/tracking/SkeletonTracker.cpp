@@ -187,6 +187,7 @@ size_t SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_b
 
 	bounding_boxes.clear();
 	ColorSpacePoint p1c, p2c, p3c, p4c;
+	DepthSpacePoint p1dc, p2dc, p3dc, p4dc;
 	CameraSpacePoint head_center, p1, p2, p3, p4;
 	std::vector <cv::Point2f> color_coordinates_cv;
 	cv::Rect2f bounding_box;
@@ -218,25 +219,49 @@ size_t SkeletonTracker::GetFaceBoundingBoxes(std::vector<cv::Rect2f>& bounding_b
 		p4.Y += box_size / 2;
 
 		//m_pCoordinateMapper->MapCameraPointToColorSpace(cameraspace_pt, &colorspace_pt);
-		m_pCoordinateMapper->MapCameraPointToColorSpace(p1, &p1c);
-		m_pCoordinateMapper->MapCameraPointToColorSpace(p2, &p2c);
-		m_pCoordinateMapper->MapCameraPointToColorSpace(p3, &p3c);
-		m_pCoordinateMapper->MapCameraPointToColorSpace(p4, &p4c);
-
-		// check if coordinate mapping succeeded
-		if (
-			p1c.X != -std::numeric_limits<float>::infinity() && p1c.Y != -std::numeric_limits<float>::infinity() &&
-			p2c.X != -std::numeric_limits<float>::infinity() && p2c.Y != -std::numeric_limits<float>::infinity() &&
-			p3c.X != -std::numeric_limits<float>::infinity() && p3c.Y != -std::numeric_limits<float>::infinity() &&
-			p4c.X != -std::numeric_limits<float>::infinity() && p4c.Y != -std::numeric_limits<float>::infinity()
-			)
+		if ((base::ImageSpace_Color & space) == base::ImageSpace_Color)
 		{
-			float head_size_colorspace = abs(p4c.X - p1c.X);
-			bounding_box = cv::Rect2f(p4c.X, p4c.Y, head_size_colorspace, head_size_colorspace);
-			// save
-			user_ids.push_back(static_cast<int>(iUser));
-			bounding_boxes.push_back(bounding_box);
+			m_pCoordinateMapper->MapCameraPointToColorSpace(p1, &p1c);
+			m_pCoordinateMapper->MapCameraPointToColorSpace(p2, &p2c);
+			m_pCoordinateMapper->MapCameraPointToColorSpace(p3, &p3c);
+			m_pCoordinateMapper->MapCameraPointToColorSpace(p4, &p4c);
+			// check if coordinate mapping succeeded
+			if (
+				p1c.X != -std::numeric_limits<float>::infinity() && p1c.Y != -std::numeric_limits<float>::infinity() &&
+				p2c.X != -std::numeric_limits<float>::infinity() && p2c.Y != -std::numeric_limits<float>::infinity() &&
+				p3c.X != -std::numeric_limits<float>::infinity() && p3c.Y != -std::numeric_limits<float>::infinity() &&
+				p4c.X != -std::numeric_limits<float>::infinity() && p4c.Y != -std::numeric_limits<float>::infinity()
+				)
+			{
+				float head_size_target_space = abs(p4c.X - p1c.X);
+				bounding_box = cv::Rect2f(p4c.X, p4c.Y, head_size_target_space, head_size_target_space);
+				// save
+				user_ids.push_back(static_cast<int>(iUser));
+				bounding_boxes.push_back(bounding_box);
+			}
 		}
+		else {
+			m_pCoordinateMapper->MapCameraPointToDepthSpace(p1, &p1dc);
+			m_pCoordinateMapper->MapCameraPointToDepthSpace(p2, &p2dc);
+			m_pCoordinateMapper->MapCameraPointToDepthSpace(p3, &p3dc);
+			m_pCoordinateMapper->MapCameraPointToDepthSpace(p4, &p4dc);
+			// check if coordinate mapping succeeded
+			if (
+				p1dc.X != -std::numeric_limits<float>::infinity() && p1dc.Y != -std::numeric_limits<float>::infinity() &&
+				p2dc.X != -std::numeric_limits<float>::infinity() && p2dc.Y != -std::numeric_limits<float>::infinity() &&
+				p3dc.X != -std::numeric_limits<float>::infinity() && p3dc.Y != -std::numeric_limits<float>::infinity() &&
+				p4dc.X != -std::numeric_limits<float>::infinity() && p4dc.Y != -std::numeric_limits<float>::infinity()
+				)
+			{
+				float head_size_target_space = abs(p4dc.X - p1dc.X);
+				bounding_box = cv::Rect2f(p4dc.X, p4dc.Y, head_size_target_space, head_size_target_space);
+				// save
+				user_ids.push_back(static_cast<int>(iUser));
+				bounding_boxes.push_back(bounding_box);
+			}
+		}
+
+
 	}
 
 	return bounding_boxes.size();
