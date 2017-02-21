@@ -11,6 +11,8 @@
 #include <user\User.h>
 #include <io/Networking.h>
 #include <io/RequestHandler.h>
+#include <imgproc/ImgProcessing.h>
+
 
 DEFINE_int32(port, 8080, "Server port");
 
@@ -139,7 +141,32 @@ int main(int argc, char** argv)
 
 			// display image
 			cv::imshow("Scene", color_image);
-			cv::waitKey(3);
+			char c = cv::waitKey(3);
+
+			// get all profile pictures from server
+			if (c == '1')
+			{
+				std::vector<std::pair<int, cv::Mat>> profile_pictures = um.GetAllProfilePictures();
+				std::vector<int> user_ids;
+				std::vector<cv::Mat> profile_pics;
+				um.GetAllProfilePictures(profile_pics, user_ids);
+				// write id on profile pictures
+				for(size_t i=0;i<profile_pics.size();i++)
+				{
+					cv::putText(profile_pics[i], "ID"+std::to_string(user_ids[i]), cv::Point(10, 10), cv::FONT_HERSHEY_SIMPLEX, 0.3, cv::Scalar(0,0,255), 1, 8);
+				}
+
+				if(profile_pics.size() > 0)
+				{
+					cv::Mat combined = imgproc::ImageProc::createOne(profile_pics, 5, 10);
+					cv::imshow("Profile Pictures", combined);
+					cv::waitKey(3);
+				}else
+				{
+					std::cout << "No profile pictures taken yet...\n";
+				}
+
+			}
 
 		}
 		else {

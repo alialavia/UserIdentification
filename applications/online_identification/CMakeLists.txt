@@ -9,6 +9,7 @@ SET(TARGET_H
 SET(TARGET_EXTERNAL_LIBRARIES
 	Tracking
 	User
+	ImgProc
 )
 
 SETUP_APPLICATION(online_id Applications)
