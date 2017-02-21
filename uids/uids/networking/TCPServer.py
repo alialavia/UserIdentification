@@ -171,17 +171,21 @@ class TCPServer:
         # send image number
         self.send_short(client_socket, len(images))
 
-        # send image size
-        cols, rows = images[0].shape()
-        if cols != rows:
+        # check image size
+        cols_orig, rows_orig, channels = images[0].shape
+        if cols_orig != rows_orig:
             raise ValueError('Trying to send image that is not quadratic!')
 
         # send image size
-        self.send_short(client_socket, cols)
+        self.send_short(client_socket, cols_orig)
 
         # send data
         string_data = ""
         for img in images:
+            # check image size
+            cols, rows, channels = images[0].shape
+            if cols != cols_orig or rows != rows_orig:
+                raise ValueError('Image dimensions are not equal!')
             data = numpy.array(img)
             string_data += data.tostring()
         client_socket.send(string_data)
