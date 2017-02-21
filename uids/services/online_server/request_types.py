@@ -156,7 +156,7 @@ class UpdateRobust:
         log.info('cl', "Starting to process stream data...")
 
         # submit data
-        succ, conf = server.classifier.process_labeled_stream_data(user_id, embeddings)
+        succ, conf = server.classifier.process_labeled_stream_data(user_id, embeddings, check_update=True)
 
         if succ == None:
             log.info('cls', "Update samples are unambiguously.")
@@ -227,7 +227,7 @@ class UpdatePrealignedRobust:
         log.info('cl', "Starting to process stream data...")
 
         # submit data
-        succ, conf = server.classifier.process_labeled_stream_data(user_id, embeddings)
+        succ, conf = server.classifier.process_labeled_stream_data(user_id, embeddings, check_update=True)
 
         if succ == None:
             log.info('cls', "Update samples are unambiguously.")

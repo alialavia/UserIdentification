@@ -241,7 +241,6 @@ void UserManager::ProcessResponses()
 
 			// remove request mapping
 			RemoveRequestUserLinking(target_request);
-
 			// update confidence
 			target_user->SetConfidence(update_r.mConfidence);
 			// reset action status
@@ -254,8 +253,7 @@ void UserManager::ProcessResponses()
 				(target_request->cRequestType == io::NetworkRequest_EmbeddingCollectionByIDRobust ||
 				 target_request->cRequestType == io::NetworkRequest_EmbeddingCollectionByIDAlignedRobust
 				)
-				&&
-				id_status == IDStatus_Uncertain
+				//&& id_status == IDStatus_Uncertain
 				) {
 				// user has reidentified itself
 				target_user->SetStatus(IDStatus_Identified);
@@ -369,6 +367,7 @@ void UserManager::ProcessResponses()
 			// trash update and start again
 			else if (
 				req_type == io::NetworkRequest_EmbeddingCollectionByID ||
+				req_type == io::NetworkRequest_EmbeddingCollectionByIDRobust ||
 				req_type == io::NetworkRequest_EmbeddingCollectionByIDAligned ||
 				req_type == io::NetworkRequest_EmbeddingCollectionByIDAlignedRobust ||
 				req_type == io::NetworkRequest_EmbeddingCollectionByName
@@ -521,7 +520,9 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 
 			// Update/assign profile picture
 			if (target_user->NeedsProfilePicture() &&
-				target_user->IsViewedFromFront())
+				target_user->IsViewedFromFront()
+				//&& target_user->LooksPhotogenic()
+				)
 			{
 				target_user->SetPendingProfilePicture(true);
 				cv::Mat profile_picture = scene_rgb(target_user->GetFaceBoundingBox());
@@ -556,7 +557,7 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 						}
 						int user_id; std::string user_name;
 
-						// TODO: DEBUG HERE
+						// TODO: DEBUG HERE - fixed atm
 						// ID -1
 						target_user->GetUserID(user_id, user_name);
 
@@ -605,251 +606,6 @@ void UserManager::GenerateRequests(cv::Mat scene_rgb)
 	}
 }
 
-
-
-//// send identification requests for all unknown users
-//void UserManager::GenerateRequests_DEPRECATED(cv::Mat scene_rgb)
-//{
-//	for (auto it = mFrameIDToUser.begin(); it != mFrameIDToUser.end(); ++it)
-//	{
-//		IdentificationStatus id_status;
-//		ActionStatus action;
-//		TrackingConsistency tracking_status;
-//		user::User* target_user = it->second;
-//		target_user->GetStatus(id_status, action);
-//		target_user->GetStatus(tracking_status);
-//
-//		//std::cout << "--- id_Status: "<< id_status << " | action: "<< action << std::endl;
-//		// request user identification
-//
-//		if (id_status == IDStatus_Uncertain)
-//		{
-//			
-//		}
-//		else if (id_status == IDStatus_Unknown)
-//		{
-//
-//			// do nothing
-//			// 1. ID pending
-//			if (action == ActionStatus_Waiting) {
-//				continue;
-//			}
-//
-//			// new user in scene
-//			if (action == ActionStatus_Idle) {
-//				target_user->SetStatus(ActionStatus_DataCollection);
-//				action = ActionStatus_DataCollection;
-//			}
-//
-//			// collect images for identification
-//			if (action == ActionStatus_DataCollection) {
-//
-//#ifdef FACEGRID_RECORDING
-//				// check if face should be recorded
-//				tracking::Face face;
-//				if (target_user->GetFaceData(face)) {
-//
-//					int roll, pitch, yaw;
-//					face.GetEulerAngles(roll, pitch, yaw);
-//					// face from this pose not yet recorded
-//					if (target_user->pGrid->IsFree(roll, pitch, yaw)) {
-//						cv::Rect2f facebb = target_user->GetFaceBoundingBox();
-//						cv::Mat face_snap = scene_rgb(facebb);
-//						cv::Mat aligned;
-//#ifdef _DLIB_PREALIGN
-//						if (mpDlibAligner->AlignImage(96, face_snap, aligned))
-//#else
-//						aligned = face_snap;
-//						// resize (requests needs all squared with same size)
-//						cv::resize(aligned, aligned, cv::Size(120, 120));
-//#endif
-//						{
-//							try
-//							{
-//								target_user->pGrid->StoreSnapshot(roll, pitch, yaw, aligned);
-//							}
-//							catch (...)
-//							{
-//							}
-//						}
-//					}	// /free pose position
-//
-//					// if enough images, request identification
-//					if (target_user->pGrid->nr_images() > 9) {
-//
-//						// extract images
-//						std::vector<cv::Mat*> face_patches = target_user->pGrid->ExtractGrid();
-//
-//						// make new identification request
-//#ifdef _DLIB_PREALIGN
-//						io::ImageIdentificationAligned* new_request = new io::ImageIdentificationAligned(pServerConn, face_patches);
-//#else
-//						IDReq* new_request = new IDReq(pServerConn, face_patches);
-//#endif
-//						pRequestHandler->addRequest(new_request, true);
-//
-//						// update linking
-//						mRequestToUser[new_request] = target_user;
-//						mUserToRequests[target_user].insert(new_request);
-//
-//						// set user action status
-//						target_user->SetPendingProfilePicture(true);	// might get it from server
-//						target_user->SetStatus(ActionStatus_Waiting);
-//						target_user->pGrid->Clear();
-//					}
-//				}
-//#endif
-//
-//			}
-//
-//		}
-//		else if (id_status == IDStatus_Identified) {
-//			
-//			if(tracking_status == user::TrackingConsistency_OK)
-//			{
-//				if (action == ActionStatus_WaitForCertainTracking)
-//				{
-//					// do identification request (e.g. robust update)
-//
-//					// block further requests
-//					target_user->SetStatus(user::ActionStatus_Waiting);
-//				}
-//			}else
-//			{
-//				// wait till internal tracking status has changed
-//				target_user->SetStatus(ActionStatus_WaitForCertainTracking);
-//				continue;
-//			}
-//
-//			// waiting (e.g. update pending)
-//			if (action == ActionStatus_Waiting) {
-//				continue;
-//			}
-//			// if nothing to do: collect updates
-//			if (action == ActionStatus_Idle) {
-//				target_user->SetStatus(ActionStatus_DataCollection);
-//				action = ActionStatus_DataCollection;
-//			}
-//
-//			// Update/assign profile picture
-//			if (target_user->NeedsProfilePicture() &&
-//				target_user->IsViewedFromFront())
-//			{
-//				target_user->SetPendingProfilePicture(true);
-//				cv::Mat profile_picture = scene_rgb(target_user->GetFaceBoundingBox());
-//				// scale
-//				cv::resize(profile_picture, profile_picture, cv::Size(120, 120));
-//				// make request
-//				io::ProfilePictureUpdate* new_request = new io::ProfilePictureUpdate(pServerConn, target_user->GetUserID(), profile_picture);
-//				pRequestHandler->addRequest(new_request, true);
-//				// update linking
-//				mRequestToUser[new_request] = target_user;
-//				mUserToRequests[target_user].insert(new_request);
-//			}
-//
-//			// send model updates - reinforced learning
-//			if (action == ActionStatus_DataCollection) {
-//#ifdef FACEGRID_RECORDING
-//				// check if face should be recorded
-//				tracking::Face face;
-//				if (target_user->GetFaceData(face)) {
-//
-//					int roll, pitch, yaw;
-//					face.GetEulerAngles(roll, pitch, yaw);
-//
-//					// face from this pose not yet recorded
-//					if (target_user->pGrid->IsFree(roll, pitch, yaw)) {
-//
-//						cv::Rect2f facebb = target_user->GetFaceBoundingBox();
-//
-//						// collect another image
-//						cv::Mat face_snap = scene_rgb(facebb);
-//
-//						// detect and warp face
-//						cv::Mat aligned;
-//						
-//#ifdef _DLIB_PREALIGN
-//							if (mpDlibAligner->AlignImage(96, face_snap, aligned)) 
-//#else
-//						aligned = face_snap;
-//						// resize (requests needs all squared with same size)
-//						cv::resize(aligned, aligned, cv::Size(120, 120));
-//#endif
-//							{
-//								// save
-//								try
-//								{
-//									// add face if not yet capture from this angle
-//									target_user->pGrid->StoreSnapshot(roll, pitch, yaw, aligned);
-//									//std::cout << "--- take snapshot: " << target_user->pGrid->nr_images() << std::endl;
-//								}
-//								catch (...)
-//								{
-//								}
-//							}
-//					}	// /free pose position
-//
-//						// if enough images, request identification
-//					if (target_user->pGrid->nr_images() > 9) {
-//
-//						// extract images
-//						std::vector<cv::Mat*> face_patches = target_user->pGrid->ExtractGrid();
-//
-//						if (face_patches[0]->cols == 0)
-//						{
-//							std::cout << "----------- WHY? -----------" << std::endl;
-//						}
-//						int user_id; std::string user_name;
-//
-//						// TODO: DEBUG HERE
-//						// ID -1
-//						target_user->GetUserID(user_id, user_name);
-//
-//						io::EmbeddingCollectionByID* new_request;
-//#ifdef _DLIB_PREALIGN
-//#ifdef _CHECK_TRACKING_CONF
-//
-//						user::TrackingConsistency tracking_status;
-//						target_user->GetStatus(tracking_status);
-//						// robust update: check update for model consistency
-//						if (tracking_status == user::TrackingConsistency_Uncertain) {
-//						new_request = new io::EmbeddingCollectionByID(
-//							pServerConn, face_patches, user_id,
-//							io::NetworkRequest_EmbeddingCollectionByIDAlignedRobust	// specified request type
-//						);
-//					}else
-//#endif
-//					
-//						{new_request = new io::EmbeddingCollectionByID(
-//							pServerConn, face_patches, user_id, 
-//							io::NetworkRequest_EmbeddingCollectionByIDAligned	// specified request type
-//						);}
-//
-//#else
-//						// standard update
-//						new_request = new io::EmbeddingCollectionByID(pServerConn, face_patches, user_id);
-//#endif
-//						pRequestHandler->addRequest(new_request);
-//
-//						// update linking
-//						mRequestToUser[new_request] = target_user;
-//						mUserToRequests[target_user].insert(new_request);
-//
-//						// set user action status
-//						target_user->SetStatus(ActionStatus_Waiting);
-//						target_user->pGrid->Clear();
-//					}
-//				}	//	/end face data available
-//#endif
-//
-//			}
-//
-//
-//
-//		}
-//		
-//	}
-//}
 
 void UserManager::CancelAndDropAllUserRequests(User* user) {
 	// delete pending requests and delete all linking
@@ -1046,6 +802,32 @@ std::vector<std::pair<int, cv::Mat>> UserManager::GetAllProfilePictures() {
 	}
 	pServerConn->Close();
 	return out;
+}
+
+void UserManager::GetAllProfilePictures(std::vector<cv::Mat> &pictures, std::vector<int> &user_ids) {
+	// request images from server
+	io::GetProfilePictures req(pServerConn);
+	pServerConn->Connect();
+	req.SubmitRequest();
+	// wait for reponse
+	io::ProfilePictures resp(pServerConn);
+	int response_code = 0;
+	if (!resp.Load(&response_code)) {
+		// error
+	}
+	else {
+#ifdef _DEBUG_USERMANAGER
+		if (resp.mUserIDs.size() != resp.mUserIDs.size()) {
+			std::cout << "--- Error: size(user_ids) != size(user_profile_pictures)!\n";
+		}
+#endif
+		// load images
+		for (size_t i = 0; i < resp.mUserIDs.size(); i++) {
+			user_ids.push_back(resp.mUserIDs[i]);
+			pictures.push_back(resp.mImages[i]);
+		}
+	}
+	pServerConn->Close();
 }
 
 bool UserManager::GetUserID(const cv::Mat &face_capture, int &user_id) {

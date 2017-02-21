@@ -105,6 +105,7 @@ namespace user
 		std::vector<std::pair<int, int>> GetUserandTrackingID();
 		std::vector<std::pair<int, cv::Mat>> GetSceneProfilePictures();
 		std::vector<std::pair<int, cv::Mat>> GetAllProfilePictures();
+		void GetAllProfilePictures(std::vector<cv::Mat> &pictures, std::vector<int> &user_ids);
 		bool GetUserID(const cv::Mat &face_capture, int &user_id);
 
 	private:

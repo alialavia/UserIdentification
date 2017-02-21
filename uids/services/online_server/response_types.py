@@ -111,9 +111,9 @@ class ProfilePictures:
         # send number of users
         server.send_int(conn, len(user_ids))
 
-        if len(user_ids):
+        if len(user_ids) > 0:
             # send user ids
             for id in user_ids:
-                server.send_int(conn, int(resp_id))
+                server.send_int(conn, int(id))
             # send images
             server.send_image_batch_squared_same_size(conn, pictures)

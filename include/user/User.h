@@ -114,6 +114,18 @@ namespace user
 		bool IsViewedFromFront();
 		bool NeedsProfilePicture(){return (mUpdatingProfilePicture ? false : mProfilePicture.empty());}
 		void SetProfilePicture(cv::Mat picture){mProfilePicture = picture;}
+		bool LooksPhotogenic()
+		{
+			tracking::Face face;
+			bool succ = false;
+			if (GetFaceData(face)) {
+				if (face.IsPhotogenic())
+				{
+					succ = true;
+				}
+			}
+			return succ;
+		}
 		void SetPendingProfilePicture(bool status){mUpdatingProfilePicture = status;}
 		bool GetProfilePicture(cv::Mat &pic);
 
@@ -151,7 +163,11 @@ namespace user
 		}
 
 		bool IsTrackingObject() {
-			if (mNrFramesNoFace > mIsObjectThresh && mNrFramesNoMovement > mIsObjectThresh) {
+			if (
+				(
+				mNrFramesNoFace > mIsObjectCombinedThresh && mNrFramesNoMovement > mIsObjectCombinedThresh) ||
+				mNrFramesNoFace > mIsObjectFaceThresh
+				) {
 				return true;
 			}
 			return false;
@@ -183,7 +199,8 @@ namespace user
 
 		// nr of frames no face has been detected
 		math::CircularBuffer<int> mBBMovement;
-		int mIsObjectThresh = 90;
+		int mIsObjectCombinedThresh = 90;
+		int mIsObjectFaceThresh = 300;
 		int mNrFramesNoFace;
 		int mNrFramesNoMovement;
 
