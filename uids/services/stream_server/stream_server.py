@@ -28,7 +28,6 @@ class IdentificationServer(TCPServerBlocking):
         self.user_db = UserDB()
 
         # Classifier - linked to database
-        # self.classifier = OfflineMultiClassTree(self.user_db, 'OCSVM')
         self.classifier = BatchProcessingMultiClassTree(self.user_db)
 
     def handle_request(self, conn, addr):
