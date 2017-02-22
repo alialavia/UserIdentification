@@ -11,7 +11,8 @@
 	- [ ] Optical flow (implemented yet not integrated)
 - [x] Only take profile picture when user has eyes open and mouth closed
 	- Condition too strong (does take too long to find a good picture)
-	
+- [x] Parallel face detection in case Kinect fails
+	- Threaded parallel Face Detection (HoG). Would slow system down to appox 1fps if detection is done in realtime.
 	
 ------
 
@@ -28,6 +29,14 @@
 - [ ] Refactor One-VS-Rest embeddings model (use general model dir)
 - [ ] Influence of background
 - [ ] Schedule demo scene
+
+
+------
+
+- [ ] Force identification using less samples on timeout
+- [ ] Add categoric "live" confience measure
+- [ ] Streamlining classification/identification/updates (lot of work, need to remodel server and client)
+
 
 **Debug:**
 - [ ] Sinze object detection: Random crash (without Exception) when user leaves scene
