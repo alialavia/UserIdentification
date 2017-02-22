@@ -342,6 +342,19 @@ namespace tracking
 		PointF PointsIR[FacePointType::FacePointType_Count];
 		DetectionResult Properties[FaceProperty::FaceProperty_Count];
 
+		bool IsPhotogenic()
+		{
+			if(
+				!Properties[FaceProperty_MouthOpen]
+				&& !Properties[FaceProperty_LeftEyeClosed]
+				&& !Properties[FaceProperty_RightEyeClosed]
+				)
+			{
+				return true;
+			}
+			return false;
+		}
+
 		std::vector<cv::Point2f> GetLandMarkPoints(std::vector<int> landmark_indices) const{
 			std::vector<cv::Point2f> points;
 			for (size_t i = 0; i < landmark_indices.size();i++) {
