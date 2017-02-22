@@ -55,21 +55,23 @@ namespace user
 
 		bool Init(io::TCPClient* connection, io::NetworkRequestHandler* handler);
 
-		void RefreshUserTracking(
-			const std::vector<int> &user_scene_ids, 
-			std::vector<cv::Rect2f> bounding_boxes
-		);
+		/////////////////////////////////////////////////
+		/// 	Core Methods
 
-		// ------------ feature updaters
+		void RefreshUserTracking(const std::vector<int> &user_scene_ids, std::vector<cv::Rect2f> bounding_boxes);
+		void UpdateTrackingStatus();
+		void ProcessResponses();
+		void GenerateRequests(cv::Mat scene_rgb);
+
+		/////////////////////////////////////////////////
+		/// 	Feature Updates
 
 		// TODO: add templated UpdateFeatures function similar to RequestHandler
 		void UpdateFaceData(std::vector<tracking::Face> faces, std::vector<int> user_ids);
 
-		// ------------
-		void ProcessResponses();
-		void GenerateRequests(cv::Mat scene_rgb);
+		/////////////////////////////////////////////////
+		/// 	Helpers
 
-		// ----------------- helper functions
 		void DrawUsers(cv::Mat &img);
 
 		void RemoveRequestUserLinking(io::NetworkRequest* req) {
@@ -98,10 +100,10 @@ namespace user
 
 		void CancelAndDropAllUserRequests(User* user);
 
-		void UpdateTrackingStatus();
 
+		/////////////////////////////////////////////////
+		/// 	API
 
-		// ========= API
 		std::vector<std::pair<int, int>> GetUserandTrackingID();
 		std::vector<std::pair<int, cv::Mat>> GetSceneProfilePictures();
 		std::vector<std::pair<int, cv::Mat>> GetAllProfilePictures();

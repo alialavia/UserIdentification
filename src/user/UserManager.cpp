@@ -171,8 +171,6 @@ void UserManager::ProcessResponses()
 				{
 					//std::cout << "------ no profile picture was taken before\n";
 				}
-				// update confidence
-				target_user->SetConfidence(response.mConfidence);
 			}
 
 			// reset action status
@@ -241,8 +239,6 @@ void UserManager::ProcessResponses()
 
 			// remove request mapping
 			RemoveRequestUserLinking(target_request);
-			// update confidence
-			target_user->SetConfidence(update_r.mConfidence);
 			// reset action status
 			target_user->SetStatus(ActionStatus_Idle);
 
@@ -925,7 +921,7 @@ void UserManager::DrawUsers(cv::Mat &img)
 			color = cv::Scalar(0, 255, 0);
 
 			// confidence
-			//text1 += " Confidence: " + std::to_string(target_user->GetConfidence());
+
 
 			if (id_status == IDStatus_Uncertain) {
 				if (action == ActionStatus_WaitForCertainTracking) {

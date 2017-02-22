@@ -4,7 +4,82 @@
 
 using namespace user;
 
-// ========= general
+/////////////////////////////////////////////////
+/// 	Sampling
+
+
+bool User::TryToRecordFaceSample(const cv::Mat &scene_rgb)
+{
+	tracking::Face face;
+	bool succ = false;
+	if (GetFaceData(face)) {
+		int roll, pitch, yaw;
+		face.GetEulerAngles(roll, pitch, yaw);
+		if (pGrid->IsFree(roll, pitch, yaw))
+		{
+			cv::Rect2f facebb = GetFaceBoundingBox();
+			cv::Mat face_snap = scene_rgb(facebb);
+			cv::Mat aligned;
+			// TODO: use Microsoft API with Face data
+#ifdef _DLIB_PREALIGN
+			if (pFaceAligner->AlignImage(96, face_snap, aligned))
+#else
+			aligned = face_snap;
+			// resize (requests needs all squared with same size)
+			cv::resize(aligned, aligned, cv::Size(120, 120));
+#endif
+			{
+				try
+				{
+					pGrid->StoreSnapshot(roll, pitch, yaw, aligned);
+					succ = true;
+				}
+				catch (...)
+				{
+				}
+			}
+		}
+
+	}
+	return succ;
+}
+
+
+/////////////////////////////////////////////////
+/// 	Status
+
+void User::SetStatus(ActionStatus status) {
+	mActionStatus = status;
+}
+void User::SetStatus(IdentificationStatus status)
+{
+	mIDStatus = status;
+}
+void User::SetStatus(TrackingConsistency status)
+{
+	mTrackingStatus = status;
+}
+void User::GetStatus(IdentificationStatus &s1, ActionStatus &s2)
+{
+	s1 = mIDStatus;
+	s2 = mActionStatus;
+}
+void User::GetStatus(ActionStatus &s)
+{
+	s = mActionStatus;
+}
+void User::GetStatus(IdentificationStatus &s)
+{
+	s = mIDStatus;
+}
+void User::GetStatus(TrackingConsistency &s)
+{
+	s = mTrackingStatus;
+}
+
+/////////////////////////////////////////////////
+/// 	Identification
+
 void User::ResetUserIdentity() {
 	mUserID = -1;
 	mIDStatus = IDStatus_Unknown;
@@ -25,50 +100,30 @@ void User::ResetUserIdentity() {
 
 }
 
-// ------ user status
-// setters
-void User::SetStatus(ActionStatus status) {
-	mActionStatus = status;
-}
-void User::SetStatus(IdentificationStatus status)
-{
-	mIDStatus = status;
-}
-void User::SetStatus(TrackingConsistency status)
-{
-	mTrackingStatus = status;
-}
-// getters
-void User::GetStatus(IdentificationStatus &s1, ActionStatus &s2)
-{
-	s1 = mIDStatus;
-	s2 = mActionStatus;
-}
-void User::GetStatus(ActionStatus &s)
-{
-	s = mActionStatus;
-}
-void User::GetStatus(IdentificationStatus &s)
-{
-	s = mIDStatus;
-}
-void User::GetStatus(TrackingConsistency &s)
-{
-	s = mTrackingStatus;
-}
-
-// ========= identification
 void User::SetUserID(int id, std::string nice_name)
 {
 	mUserID = id;
 	mUserNiceName = nice_name;
 	mIDStatus = IDStatus_Identified;
 }
+
+void User::GetUserID(int& id, std::string& nice_name) const
+{
+	id = mUserID;
+	nice_name = mUserNiceName;
+}
+
+
+int User::GetUserID() const
+{
+	return mUserID;
+}
+
 void User::UpdateFaceBoundingBox(cv::Rect2f bb)
 {
 	// bb centroid
 	cv::Point2d centroid = cv::Point2d((bb.x + bb.width) / 2, (bb.y + bb.height) / 2);
-	
+
 	if (mFaceBoundingBox.width > 0) {
 		// add bb movement
 		mBBMovement.AddElement(cv::norm(mFaceCenter - centroid));
@@ -81,24 +136,15 @@ void User::UpdateFaceBoundingBox(cv::Rect2f bb)
 		mFaceBoundingBox = bb;
 	}
 }
-void User::SetFaceData(tracking::Face f)
-{
-	// allocate new face
-	mFaceData = new tracking::Face(f);
-}
+
 cv::Rect2f User::GetFaceBoundingBox()
 {
 	return mFaceBoundingBox;
 }
-// ========= features
-bool User::GetFaceData(tracking::Face& f)
-{
-	if (mFaceData == nullptr) {
-		return false;
-	}
-	f = *mFaceData;
-	return true;
-}
+
+
+/////////////////////////////////////////////////
+/// 	Features
 
 void User::ResetSceneFeatures() {
 	// reset all stored features
@@ -108,22 +154,33 @@ void User::ResetSceneFeatures() {
 	}
 }
 
-
-int User::GetUserID() const
+void User::SetFaceData(tracking::Face f)
 {
-	return mUserID;
+	// allocate new face
+	mFaceData = new tracking::Face(f);
 }
 
-void User::GetUserID(int& id, std::string& nice_name) const
+bool User::GetFaceData(tracking::Face& f)
 {
-	id = mUserID;
-	nice_name = mUserNiceName;
+	if (mFaceData == nullptr) {
+		return false;
+	}
+	f = *mFaceData;
+	return true;
 }
+
+/////////////////////////////////////////////////
+/// 	Helpers
 
 void User::PrintStatus()
 {
 	std::cout << "--- id_status: " << mIDStatus << " | action: " << mActionStatus << std::endl;
 }
+
+
+/////////////////////////////////////////////////
+/// 	Profile Picture
+
 /*
 *
 // Client Side Picture Taking
@@ -140,6 +197,7 @@ void User::PrintStatus()
 // solutions
 - also classify profile picture and reject if it does not comply with corresponding ID
 */
+
 bool User::IsViewedFromFront()
 {
 	// get face orientation
@@ -177,40 +235,59 @@ bool User::GetProfilePicture(cv::Mat &pic)
 	return true;
 }
 
-// ========= sampling
-
-bool User::TryToRecordFaceSample(const cv::Mat &scene_rgb)
+bool User::LooksPhotogenic()
 {
 	tracking::Face face;
 	bool succ = false;
 	if (GetFaceData(face)) {
-		int roll, pitch, yaw;
-		face.GetEulerAngles(roll, pitch, yaw);
-		if (pGrid->IsFree(roll, pitch, yaw))
+		if (face.IsPhotogenic())
 		{
-			cv::Rect2f facebb = GetFaceBoundingBox();
-			cv::Mat face_snap = scene_rgb(facebb);
-			cv::Mat aligned;
-			// TODO: use Microsoft API with Face data
-#ifdef _DLIB_PREALIGN
-			if (pFaceAligner->AlignImage(96, face_snap, aligned))
-#else
-			aligned = face_snap;
-			// resize (requests needs all squared with same size)
-			cv::resize(aligned, aligned, cv::Size(120, 120));
-#endif
-			{
-				try
-				{
-					pGrid->StoreSnapshot(roll, pitch, yaw, aligned);
-					succ = true;
-				}
-				catch (...)
-				{
-				}
-			}
+			succ = true;
 		}
-
 	}
 	return succ;
 }
+
+
+/////////////////////////////////////////////////
+/// 	Tracking Status
+
+void User::IncrementFaceDetectionStatus() {
+	if (mFaceData != nullptr) {
+		mNrFramesNoFace = 0;
+	}
+	else {
+		mNrFramesNoFace++;
+	}
+}
+
+std::string User::GetHumanStatusString() {
+	return " Face: " + std::to_string(mNrFramesNoFace) + " | Movement: " + std::to_string(mNrFramesNoMovement);
+}
+
+void User::IncrementBBMovementStatus() {
+	int thresh = 0;
+	float median = 1000.;
+	if (mBBMovement.FullMedian(median)) {
+		if (median <= thresh) {
+			mNrFramesNoMovement++;
+		}
+		else {
+			mNrFramesNoMovement = 0;
+		}
+	}
+	else {
+	}
+}
+
+bool User::IsTrackingObject() {
+	if (
+		(
+			mNrFramesNoFace > mIsObjectCombinedThresh && mNrFramesNoMovement > mIsObjectCombinedThresh) ||
+		mNrFramesNoFace > mIsObjectFaceThresh
+		) {
+		return true;
+	}
+	return false;
+}
+

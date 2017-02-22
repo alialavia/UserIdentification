@@ -35,13 +35,6 @@ namespace user
 		TrackingConsistency_OK = 1
 	};
 
-	// whether or not we are tracking a person
-	enum HumanTrackingStatus
-	{
-		HumanTrackingStatus_Uncertain = 0,
-		HumanTrackingStatus_Certain = 1
-	};
-
 	class User {
 
 	public:
@@ -53,7 +46,7 @@ namespace user
 		// init user status
 		mIDStatus(IDStatus_Unknown), mActionStatus(ActionStatus_Idle), 
 		mTrackingStatus(TrackingConsistency_OK), 
-		mFaceData(nullptr), mUpdatingProfilePicture(false), mConfidence(0), mNrFramesNoFace(0), mNrFramesNoMovement(0)
+		mFaceData(nullptr), mUpdatingProfilePicture(false), mNrFramesNoFace(0), mNrFramesNoMovement(0)
 #ifdef _DLIB_PREALIGN
 			,pFaceAligner(aligner)
 #endif
@@ -72,107 +65,62 @@ namespace user
 			ResetSceneFeatures();
 		}
 
-		// ========= general
-		// reset user completely/delete all user information
-		void ResetUserIdentity();
 
-		// ========= user status
-		// setters
+		/////////////////////////////////////////////////
+		/// 	Sampling
+
+		bool TryToRecordFaceSample(const cv::Mat &scene_rgb);
+		
+		/////////////////////////////////////////////////
+		/// 	Status
+
 		void SetStatus(ActionStatus status);
 		void SetStatus(IdentificationStatus status);
 		void SetStatus(TrackingConsistency status);
-		void SetStatus(HumanTrackingStatus status);
-		// getters
 		void GetStatus(IdentificationStatus &s1, ActionStatus &s2);
 		void GetStatus(ActionStatus &s);
 		void GetStatus(IdentificationStatus &s);
 		void GetStatus(TrackingConsistency &s);
-		void GetStatus(HumanTrackingStatus &s);
 
-		// ========= identification
-		// id
+		/////////////////////////////////////////////////
+		/// 	Identification
+
+		void ResetUserIdentity(); // reset user completely/delete all user information
 		void SetUserID(int id, std::string nice_name);
 		void GetUserID(int& id, std::string& nice_name) const;
 		int GetUserID() const;
-		// bounding box/position
-		void UpdateFaceBoundingBox(cv::Rect2f bb);
+		void UpdateFaceBoundingBox(cv::Rect2f bb); // bounding box/position
 		cv::Rect2f GetFaceBoundingBox();
 
-		// take snapshot of face
-		bool TryToRecordFaceSample(const cv::Mat &scene_rgb);
+		/////////////////////////////////////////////////
+		/// 	Features
 
-		// ========= features
-		// reset all stored features (e.g. mFaceData). Performed after each frame
-		void ResetSceneFeatures();
+		void ResetSceneFeatures(); // reset all stored features (e.g. mFaceData). Performed after each frame
 		void SetFaceData(tracking::Face f);
 		bool GetFaceData(tracking::Face &f);
 
-		// ========= helpers
+		/////////////////////////////////////////////////
+		/// 	Helpers
+
 		void PrintStatus();
 
-		// ========= profile picture utilities
+		/////////////////////////////////////////////////
+		/// 	Profile Picture
+
 		bool IsViewedFromFront();
 		bool NeedsProfilePicture(){return (mUpdatingProfilePicture ? false : mProfilePicture.empty());}
 		void SetProfilePicture(cv::Mat picture){mProfilePicture = picture;}
-		bool LooksPhotogenic()
-		{
-			tracking::Face face;
-			bool succ = false;
-			if (GetFaceData(face)) {
-				if (face.IsPhotogenic())
-				{
-					succ = true;
-				}
-			}
-			return succ;
-		}
+		bool LooksPhotogenic();
 		void SetPendingProfilePicture(bool status){mUpdatingProfilePicture = status;}
 		bool GetProfilePicture(cv::Mat &pic);
 
-		// identification confidence
-		int GetConfidence() { return mConfidence; }
-		void SetConfidence(const int &conf) { mConfidence = conf; }
+		/////////////////////////////////////////////////
+		/// 	Tracking Status
 
-		// ========= Human tracking status
-		void IncrementFaceDetectionStatus() {
-			if (mFaceData != nullptr) {
-				mNrFramesNoFace = 0;
-			}
-			else {
-				mNrFramesNoFace++;
-			}
-		}
-
-		std::string GetHumanStatusString() {
-			return " Face: "+std::to_string(mNrFramesNoFace)+" | Movement: "+std::to_string(mNrFramesNoMovement);
-		}
-
-		void IncrementBBMovementStatus() {
-			int thresh = 0;
-			float median = 1000.;
-			if (mBBMovement.FullMedian(median)) {
-				if (median <= thresh) {
-					mNrFramesNoMovement++;
-				}
-				else {
-					mNrFramesNoMovement = 0;
-				}
-			}
-			else {
-			}
-		}
-
-		bool IsTrackingObject() {
-			if (
-				(
-				mNrFramesNoFace > mIsObjectCombinedThresh && mNrFramesNoMovement > mIsObjectCombinedThresh) ||
-				mNrFramesNoFace > mIsObjectFaceThresh
-				) {
-				return true;
-			}
-			return false;
-		}
-
+		void IncrementFaceDetectionStatus();
+		std::string GetHumanStatusString();
+		void IncrementBBMovementStatus();
+		bool IsTrackingObject();
 
 	private:
 		// user id
@@ -193,9 +141,6 @@ namespace user
 		// profile picture
 		cv::Mat mProfilePicture;
 		bool mUpdatingProfilePicture;
-
-		// current confidence of the identification in %
-		int mConfidence;
 
 		// nr of frames no face has been detected
 		math::CircularBuffer<int> mBBMovement;
