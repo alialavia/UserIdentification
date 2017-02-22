@@ -1,4 +1,4 @@
-from uids.online_learning.OCCTree import OneClassDetectorTree
+from uids.online_learning.OCTree_deprecated import OneClassDetectorTree
 import os
 import pickle
 import numpy as np

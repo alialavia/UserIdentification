@@ -5,9 +5,9 @@ from config import *    # server configuration
 from uids.UserDB import UserDB   # user database
 from uids.features.EmbeddingGen import EmbeddingGen   # CNN embedding generator
 from uids.networking.TCPServer import TCPServerBlocking # tcp networking
-from uids.online_learning.OCCTree import OneClassDBDetectorTree
 from uids.utils.Logger import Logger as log
 from uids.online_learning.MultiClassTree import OnlineMultiClassTree
+
 # import request types
 M_REQUESTS = importlib.import_module("request_types")
 
@@ -28,7 +28,6 @@ class IdentificationServer(TCPServerBlocking):
         self.user_db = UserDB()
 
         # Classifier - linked to database
-        # self.classifier = OneClassDBDetectorTree(self.user_db)
         # self.classifier = OfflineMultiClassTree(self.user_db, 'OCSVM')
         self.classifier = OnlineMultiClassTree(self.user_db)
 
