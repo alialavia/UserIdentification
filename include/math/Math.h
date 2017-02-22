@@ -16,23 +16,6 @@ namespace math {
 		std::vector<T*> mData;
 	public:
 
-		size_t Size(size_t dim) const{
-			size_t s = 0;
-			if (dim == 0) {
-				s = mWidth;
-			}
-			else if (dim == 1) {
-				s = mHeight;
-			}
-			else if (dim == 2) {
-				s = mLength;
-			}
-			else
-			{
-				throw std::invalid_argument("Invalid array dimension.");
-			}
-			return s;
-		}
 		Array3D(size_t x, size_t y, size_t z) :
 			mWidth(x), mHeight(y), mLength(z), mData(x*y*z, nullptr)
 		{}
@@ -69,6 +52,24 @@ namespace math {
 			{
 				return false;
 			}
+		}
+
+		size_t Size(size_t dim) const {
+			size_t s = 0;
+			if (dim == 0) {
+				s = mWidth;
+			}
+			else if (dim == 1) {
+				s = mHeight;
+			}
+			else if (dim == 2) {
+				s = mLength;
+			}
+			else
+			{
+				throw std::invalid_argument("Invalid array dimension.");
+			}
+			return s;
 		}
 
 		// assign pointer
