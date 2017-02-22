@@ -23,6 +23,11 @@ class EnsembleClassifierBase:
         1: 'running'
     }
 
+    # classifier instances (Ensemble)
+    classifiers = {}        # classifier instances
+    classifier_states = {}  # number of trainings/updates classifiers have received
+    nr_classes = 0
+
     # placeholder - implemented in specific classifier
     CLASSIFIER = ''
     VALID_CLASSIFIERS = {}
@@ -49,6 +54,27 @@ class EnsembleClassifierBase:
         self.start_classifier_trainers()
 
         log.info('cl', "{} Classifier Tree initialized".format(self.CLASSIFIER))
+
+    def init_classifier(self, class_id, class_samples):
+        """
+        Initialise a One-Class-Classifier with sample data
+        :param class_id: new class id
+        :param class_samples: samples belonging to the class
+        :return: True/False - success
+        """
+
+        log.info('cl', "Initializing new Classifier for user ID {}".format(class_id))
+        if class_id in self.classifiers:
+            log.severe("Illegal reinitialization of classifier")
+            return False
+        self.classifiers[class_id] = self.generate_classifier()
+        self.nr_classes += 1
+        self.classifier_states[class_id] = 0
+
+        # add samples to update stack
+        self.classifier_update_stacks[class_id] = class_samples
+        # directly train classifier
+        return self.train_classifier(class_id)
 
     # -------- threaded classifier training
 
@@ -85,6 +111,10 @@ class EnsembleClassifierBase:
         """
         e.g.
         self.VALID_CLASSIFIERS = {'OCSVM', 'OCSVM_RBF', 'RF'}
+
+        A Classifier needs the following methods:
+        - fit(samples) (partial or regular)
+        - predict(samples)
         """
         raise NotImplementedError("Classifier options must be defined first.")
 
@@ -120,38 +150,26 @@ class EnsembleClassifierBase:
 
 class EnsembleClassifierTypeA(EnsembleClassifierBase):
     """
-    Goal: labeled classes, user database
-
-
+    Implements decision/class identification method based on ensemble output
 
     Functionality:
     _________________________________________
-    - Classifier Generation (Initialization)
-    - Classifier (re-)training in threads
-
-
+    - Predict specific Class or Unknown based on ensemble output
+    - Compute accuracy/probability measure of ensemble classification
     """
 
-    """
-    A Classifier needs the following methods:
-    - fit(samples) (partial or regular)
-    - predict(samples)
-
-    """
-
-    classifiers = {}    # classifier instances
-    classifier_states = {}
     __decision_function = []
     __decision_nr_samples = 0
-    __nr_classes = 0
     __verbose = False
 
     # database connection
     p_user_db = None
 
     # ---- class prediction threshold
+
+    __min_valid_samples = 0.5   # unused
+
     # TODO: tune these parameters according to comparison with LFW - maybe adaptive threshold
-    __min_valid_samples = 0.5
     __class_thresh = 0.6       # at least X% of samples must uniquely identify a person
     __novelty_thresh = 0.2
 
@@ -159,27 +177,6 @@ class EnsembleClassifierTypeA(EnsembleClassifierBase):
         EnsembleClassifierBase.__init__(self, classifier_type)
         # link database
         self.p_user_db = user_db_
-
-    def init_classifier(self, class_id, class_samples):
-        """
-        Initialise a One-Class-Classifier with sample data
-        :param class_id: new class id
-        :param class_samples: samples belonging to the class
-        :return: True/False - success
-        """
-
-        log.info('cl', "Initializing new Classifier for user ID {}".format(class_id))
-        if class_id in self.classifiers:
-            log.severe("Illegal reinitialization of classifier")
-            return False
-        self.classifiers[class_id] = self.generate_classifier()
-        self.__nr_classes += 1
-        self.classifier_states[class_id] = 0
-
-        # add samples to update stack
-        self.classifier_update_stacks[class_id] = class_samples
-        # train the classifier
-        return self.train_classifier(class_id)
 
     # ------- ensemble prediction
 
@@ -193,7 +190,7 @@ class EnsembleClassifierTypeA(EnsembleClassifierBase):
         # new user
         if user_id == -1:
             # probability that it is none of the users
-            if self.__nr_classes == 0:
+            if self.nr_classes == 0:
                 return 1
 
             for uid, clf in self.classifiers.iteritems():
@@ -219,7 +216,7 @@ class EnsembleClassifierTypeA(EnsembleClassifierBase):
     #     # new user
     #     if user_id == -1:
     #         # probability that it is none of the users
-    #         if self.__nr_classes == 0:
+    #         if self.nr_classes == 0:
     #             return 1
     #
     #         for s in cls_scores:
@@ -451,7 +448,7 @@ class EnsembleClassifierTypeA(EnsembleClassifierBase):
         total_proba = 1
         # is new user
         if user_id == -1:
-            for uid in range(1, self.__nr_classes + 1):
+            for uid in range(1, self.nr_classes + 1):
                 dec_fn = self.decision_function(uid)
                 if dec_fn < 0:
                     total_proba *= abs(dec_fn / float(self.__decision_nr_samples))
@@ -460,7 +457,7 @@ class EnsembleClassifierTypeA(EnsembleClassifierBase):
             return total_proba
 
         # is regular user
-        for uid in range(1, self.__nr_classes + 1):
+        for uid in range(1, self.nr_classes + 1):
             if uid == user_id:
                 # target classifier
                 total_proba *= self.decision_function(uid) / float(self.__decision_nr_samples)
