@@ -15,6 +15,7 @@
 
 
 DEFINE_int32(port, 8080, "Server port");
+DEFINE_bool(face_dect, false, "Detect faces parallel to Kinect.");
 
 int main(int argc, char** argv)
 {
@@ -64,6 +65,11 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
+	// threaded dlib face detector
+	features::AsyncFaceDetector face_dect;
+	if (FLAGS_face_dect) {
+		face_dect.start();
+	}
 
 	while (true) 
 	{
@@ -76,6 +82,12 @@ int main(int argc, char** argv)
 
 			// get color image
 			k.GetImageCopyRGB(color_image);
+
+			// async parallel face detection
+			if (FLAGS_face_dect) {
+				face_dect.TryToDetectFaces(color_image);
+				//std::cout << "==== Faces: " << face_dect.GetNrFaces() << std::endl;
+			}
 
 			// extract skeleton data
 			IBody** bodies = k.GetBodyDataReference();
@@ -111,9 +123,6 @@ int main(int argc, char** argv)
 				// ------------- update features
 				// face data
 				um.UpdateFaceData(faces, face_ids);
-
-
-
 
 				// skeleton data
 
@@ -173,6 +182,10 @@ int main(int argc, char** argv)
 			// error handling (e.g. check if serious crash or just pending frame in case our system runs > 30fps)
 
 		}
+	}
+
+	if (FLAGS_face_dect) {
+		face_dect.stop();
 	}
 
 	// close camera

@@ -1,18 +1,18 @@
 #ifndef FEATURES_FACE_H_
 #define FEATURES_FACE_H_
 
-
+// dlib
 #include <dlib/image_processing/frontal_face_detector.h>
-#include <dlib/gui_widgets.h>
 #include <dlib/image_io.h>
-#include <dlib/image_processing/render_face_detections.h>
 #include <dlib/image_processing.h>
 #include <dlib/opencv.h>
-
+// misc
 #include <opencv2\opencv.hpp>
 #include <Config.h>
-
 #include <tracking\FaceTracker.h>
+// multithreading
+#include <mutex>
+#include <thread>
 
 #define _DEBUG_FACENALIGNER
 
@@ -23,6 +23,10 @@ namespace features{
 	typedef dlib::cv_image<dlib::bgr_pixel> DlibCVMat;
 	typedef std::vector<dlib::point> DlibPoints;
 	typedef std::vector<cv::Point2d> CVPoints;
+
+	/* ======================================== *\
+			Kinect Face Alignment (dev.)
+	\* ======================================== */
 
 	class KinectFaceAligner : public tracking::FaceTracker {
 
@@ -36,12 +40,9 @@ namespace features{
 		{
 			LoadLandmarkReference();
 		}
-
 		void LoadLandmarkReference();
-
 		// get face landmark positions for bounding box
 		CVPoints GetRefFaceLandmarkPos(const cv::Rect2d& faceBB) const;
-
 		void DrawRefLandmarks(cv::Mat &dst, const cv::Rect2d& faceBB) {
 
 			CVPoints pts = GetRefFaceLandmarkPos(faceBB);
@@ -51,7 +52,6 @@ namespace features{
 			}
 
 		}
-		
 		// aling image using facial landmarks
 		bool AlignImage(int imgDim, cv::Mat src_bb, cv::Mat &dst) {
 
@@ -96,48 +96,84 @@ namespace features{
 
 	};
 
-	class DlibFaceAligner
+	/* ======================================== *\
+			Dlib Face Detector
+	\* ======================================== */
+
+	class DlibFaceDetector
+	{
+	protected:
+		dlib::frontal_face_detector mDetector;
+	public:
+		DlibFaceDetector() : mDetector(dlib::get_frontal_face_detector()){
+		}
+		bool GetAllFaceBoundingBoxes(const cv::Mat& cvimg, std::vector<dlib::rectangle> &out);
+		bool GetAllFaceBoundingBoxes(const cv::Mat& cvimg, std::vector<cv::Rect2d> &out);
+		// detect faces and return larges bounding box (area)
+		bool GetLargestFaceBoundingBox(const cv::Mat& cvimg, dlib::rectangle& bb, bool skip_multi = true);
+	};
+
+	/* ======================================== *\
+			Threaded Dlib Face Detector
+	\* ======================================== */
+
+	class AsyncFaceDetector : public DlibFaceDetector
+	{
+	public:
+		AsyncFaceDetector(int _MinFaceSize=80): DlibFaceDetector(), mMinFaceSize(_MinFaceSize){
+		}
+
+		void start();
+		void stop();
+		bool TryToDetectFaces(cv::Mat img);
+		// get most recent number of face detections
+		int GetNrFaces();
+		// get most recent face bounding boxes
+		std::vector<cv::Rect2d> GetFaces();
+		
+	private:
+		// processing method
+		void processInputImage();
+
+		int mMinFaceSize;
+		bool mRunning;
+		cv::Mat mTmpImg;
+		std::vector<cv::Rect2d> mFaces;
+		std::mutex mLockComputation;
+		std::mutex mLockAccess;
+		std::thread mThread;	// processing thread
+	};
+
+	/* ======================================== *\
+			Dlib Face Alignment
+	\* ======================================== */
+
+	class DlibFaceAligner : public DlibFaceDetector
 	{
 
 	private:
-		dlib::frontal_face_detector mDetector;
-		dlib::shape_predictor mShapePredictor;
 		CVPoints mFaceLandmarksReference;
 		CVPoints mMinMaxTemplate;
 		cv::Rect2d mReferenceMinBB;
+		dlib::shape_predictor mShapePredictor;
 
 	public:
-		DlibFaceAligner() : mDetector(dlib::get_frontal_face_detector()) {
-
-		}
-
-		void Init() {
-			std::string path(PATH_MODELS);
-			path += "dlib/shape_predictor_68_face_landmarks.dat";
-
-#ifdef _DEBUG_FACENALIGNER
-			std::cout << "--- Loading facial landmark detector..." << std::endl;
-#endif
-			dlib::deserialize(path) >> mShapePredictor;
+		DlibFaceAligner(): DlibFaceDetector(){
 			// load face model mean/reference
 			LoadLandmarkReference();
 		}
-
+		void Init() {
+			std::string path(PATH_MODELS);
+			path += "dlib/shape_predictor_68_face_landmarks.dat";
+			std::cout << "--- Loading facial landmark detector..." << std::endl;
+			dlib::deserialize(path) >> mShapePredictor;
+		}
 		void LoadLandmarkReference();
-
-		bool GetAllFaceBoundingBoxes(const cv::Mat& cvimg, std::vector<dlib::rectangle> &out);
-
-		// detect faces and return larges bounding box (area)
-		bool GetLargestFaceBoundingBox(const cv::Mat& cvimg, dlib::rectangle& bb, bool skip_multi = true);
-
 		// detect face landmarks
 		bool DetectFaceLandmarks(const cv::Mat& cvImg, const dlib::rectangle& faceBB, DlibPoints &landmarks);
-
 		// get face landmark positions for bounding box
 		std::vector<cv::Point2f> GetRefFaceLandmarkPos(const dlib::rectangle& faceBB, int indices[], int nr_indices) const;
-
 		bool DrawFacePoints(int imgDim, const cv::Mat &src, cv::Mat &dst);
-
 		// aling image using facial landmarks
 		bool AlignImage(int imgDim, cv::Mat src, cv::Mat &dst);
 	};

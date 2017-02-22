@@ -2,6 +2,9 @@
 
 using namespace features;
 
+/* ======================================== *\
+		Kinect Face Alignment (dev.)
+\* ======================================== */
 
 void KinectFaceAligner::LoadLandmarkReference()
 {
@@ -117,7 +120,9 @@ CVPoints KinectFaceAligner::GetRefFaceLandmarkPos(const cv::Rect2d& faceBB) cons
 
 }
 
-// ----- Dlib Aligner
+/* ======================================== *\
+		Dlib Face Detector
+\* ======================================== */
 
 void DlibFaceAligner::LoadLandmarkReference()
 {
@@ -219,7 +224,7 @@ void DlibFaceAligner::LoadLandmarkReference()
 
 }
 
-bool DlibFaceAligner::GetAllFaceBoundingBoxes(const cv::Mat& cvimg, std::vector<dlib::rectangle> &out)
+bool DlibFaceDetector::GetAllFaceBoundingBoxes(const cv::Mat& cvimg, std::vector<dlib::rectangle> &out)
 {
 	std::vector<dlib::rectangle> faces;
 	try
@@ -237,8 +242,19 @@ bool DlibFaceAligner::GetAllFaceBoundingBoxes(const cv::Mat& cvimg, std::vector<
 	return true;
 }
 
+bool DlibFaceDetector::GetAllFaceBoundingBoxes(const cv::Mat& cvimg, std::vector<cv::Rect2d> &out) {
 
-bool DlibFaceAligner::GetLargestFaceBoundingBox(const cv::Mat& cvimg, dlib::rectangle& bb, bool skip_multi)
+	std::vector<dlib::rectangle> faces;
+	if (GetAllFaceBoundingBoxes(cvimg, faces)) {
+		for (size_t i = 0; i < faces.size();i++) {
+			out.push_back(cv::Rect2d(cv::Point(faces[i].left(), faces[i].top()), cv::Point(faces[i].right(), faces[i].bottom())));
+		}
+		return true;
+	}
+	return false;
+}
+
+bool DlibFaceDetector::GetLargestFaceBoundingBox(const cv::Mat& cvimg, dlib::rectangle& bb, bool skip_multi)
 {
 	std::vector<dlib::rectangle> bounding_boxes;
 
@@ -281,6 +297,81 @@ bool DlibFaceAligner::GetLargestFaceBoundingBox(const cv::Mat& cvimg, dlib::rect
 	return true;
 }
 
+/* ======================================== *\
+		Threaded Dlib Face Detector
+\* ======================================== */
+
+void AsyncFaceDetector::start()
+{
+	mRunning = true;
+	mThread = std::thread(&AsyncFaceDetector::processInputImage, this);
+}
+
+void AsyncFaceDetector::stop()
+{
+	mRunning = false;
+	mThread.join();
+}
+
+bool AsyncFaceDetector::TryToDetectFaces(cv::Mat img) {
+	bool succ = false;
+	if (mLockComputation.try_lock()) {
+		if (mTmpImg.empty()) {
+			// resize (standard min detection size of Dlib is 80px)
+			if (mMinFaceSize == 80) {
+				mTmpImg = img.clone();
+			}
+			else {
+				double scale_factor = mMinFaceSize / 80.;
+				cv::resize(img, mTmpImg, cv::Size(img.cols * scale_factor, img.rows * scale_factor));
+			}
+			succ = true;
+		}
+		mLockComputation.unlock();
+	}
+	return succ;
+}
+
+int AsyncFaceDetector::GetNrFaces() {
+	mLockAccess.lock();
+	int nr_faces = mFaces.size();
+	mLockAccess.unlock();
+	return nr_faces;
+}
+
+std::vector<cv::Rect2d> AsyncFaceDetector::GetFaces() {
+	std::vector<cv::Rect2d> tmp_faces;
+	mLockAccess.lock();
+	tmp_faces = mFaces;
+	mLockAccess.unlock();
+	return tmp_faces;
+}
+
+void AsyncFaceDetector::processInputImage() {
+	while (mRunning) {
+		mLockComputation.lock();
+		if (!mTmpImg.empty()) {
+
+			std::vector<cv::Rect2d> tmp_faces;
+			//std::this_thread::sleep_for(std::chrono::milliseconds(4000));
+			if (GetAllFaceBoundingBoxes(mTmpImg, tmp_faces)) {
+				// success
+				mFaces.clear();
+				mLockAccess.lock();
+				mFaces = tmp_faces;
+				mLockAccess.unlock();
+				mTmpImg.release();
+			}
+
+		}
+		mLockComputation.unlock();
+	}
+}
+
+/* ======================================== *\
+		Dlib Face Alignment
+\* ======================================== */
+
 bool DlibFaceAligner::DetectFaceLandmarks(const cv::Mat& cvImg, const dlib::rectangle& faceBB, DlibPoints &landmarks)
 {
 	DlibPoints points;
@@ -300,7 +391,6 @@ bool DlibFaceAligner::DetectFaceLandmarks(const cv::Mat& cvImg, const dlib::rect
 	landmarks = points;
 	return true;
 }
-
 
 // get face landmark positions for bounding box
 std::vector<cv::Point2f> DlibFaceAligner::GetRefFaceLandmarkPos(const dlib::rectangle& faceBB, int indices[], int nr_indices) const {
