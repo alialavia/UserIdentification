@@ -1,5 +1,5 @@
-#ifndef USER_USERMANAGER_H_
-#define USER_USERMANAGER_H_
+#ifndef USER_BASEUSERMANAGER_H_
+#define USER_BASEUSERMANAGER_H_
 
 #include <map>
 #include <set>
@@ -13,11 +13,11 @@
 
 #define _DEBUG_USERMANAGER
 
-namespace io{
-class TCPClient;
-class NetworkRequestHandler;
-class ImageIdentification;
-class NetworkRequest;
+namespace io {
+	class TCPClient;
+	class NetworkRequestHandler;
+	class ImageIdentification;
+	class NetworkRequest;
 }
 
 namespace user
@@ -34,34 +34,35 @@ namespace user
 	- request identification for unknown users
 	*/
 
-	class UserManager {
+	class BaseUserManager {
 	public:
 
-		UserManager() : 
-		pServerConn(nullptr), 
-		pRequestHandler(nullptr)
+		BaseUserManager() :
+			pServerConn(nullptr),
+			pRequestHandler(nullptr)
 #ifdef _DLIB_PREALIGN
-		,mpDlibAligner(nullptr)
+			, mpDlibAligner(nullptr)
 #endif
 		{
 		}
-		~UserManager() {
+		~BaseUserManager() {
 #ifdef _DLIB_PREALIGN
 			delete(mpDlibAligner);
 #endif
-
 			// TODO: do proper cleanup
 		}
 
 		bool Init(io::TCPClient* connection, io::NetworkRequestHandler* handler);
+
+		// To implement in specific managers (batch or stream)
+		virtual void ProcessResponses() = 0;
+		virtual void GenerateRequests(cv::Mat scene_rgb) = 0;
 
 		/////////////////////////////////////////////////
 		/// 	Core Methods
 
 		void RefreshUserTracking(const std::vector<int> &user_scene_ids, std::vector<cv::Rect2f> bounding_boxes);
 		void UpdateTrackingStatus();
-		void ProcessResponses();
-		void GenerateRequests(cv::Mat scene_rgb);
 
 		/////////////////////////////////////////////////
 		/// 	Feature Updates
@@ -110,7 +111,7 @@ namespace user
 		void GetAllProfilePictures(std::vector<cv::Mat> &pictures, std::vector<int> &user_ids);
 		bool GetUserID(const cv::Mat &face_capture, int &user_id);
 
-	private:
+	protected:
 		io::TCPClient* pServerConn;
 		io::NetworkRequestHandler* pRequestHandler;
 

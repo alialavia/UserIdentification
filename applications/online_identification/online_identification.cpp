@@ -7,7 +7,7 @@
 #include <gflags/gflags.h>
 
 
-#include <user\UserManager.h>
+#include <user\BatchUserManager.h>
 #include <user\User.h>
 #include <io/Networking.h>
 #include <io/RequestHandler.h>
@@ -59,7 +59,7 @@ int main(int argc, char** argv)
 	req_handler.start(); // parallel processing
 
 	// user manager
-	user::UserManager um;
+	user::BatchUserManager um;
 	if (!um.Init(&server_conn, &req_handler)) {
 		std::cout << "Could not initialize user manager" << std::endl;
 		return -1;

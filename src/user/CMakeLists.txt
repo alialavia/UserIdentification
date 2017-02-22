@@ -2,12 +2,16 @@ SET(LIB_NAME User)
 SET(HEADER_PATH ${user_identification_SOURCE_DIR}/include/${LIB_NAME})
 SET(TARGET_H
     ${HEADER_PATH}/User.h
-    ${HEADER_PATH}/UserManager.h
+    ${HEADER_PATH}/BaseUserManager.h
+    ${HEADER_PATH}/BatchUserManager.h
+    ${HEADER_PATH}/StreamUserManager.h
 )
 
 SET(TARGET_SRC
 	User.cpp
-	UserManager.cpp
+	BaseUserManager.cpp
+	BatchUserManager.cpp
+	StreamUserManager.cpp
 )
 
 # --------------------------------------------
