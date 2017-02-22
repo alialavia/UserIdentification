@@ -11,6 +11,8 @@
 
 DEFINE_string(output, "output", "Output path");
 
+
+
 int main(int argc, char** argv)
 {
 	io::KinectSensorMultiSource k;
@@ -95,21 +97,22 @@ int main(int argc, char** argv)
 			if (bounding_boxes.size() > 0)
 			{
 
-				face_snap = color_image(bounding_boxes[0]);
+				face_snap = color_image(bounding_boxes[0]).clone();
 
 				// kinect aligner
-				if (false) {
-					k_aligner.DrawRefLandmarks(color_image, bounding_boxes[0]);
+				if (true) {
 					cv::Mat aligned;
-					bool succ = k_aligner.AlignImage(aligned, 200, color_image, bounding_boxes[0]);
-					if (succ) {
+					if (k_aligner.AlignImage(200, face_snap, aligned)
+						) {
 						cv::imshow("Face", aligned);
+						//cv::imshow("Face", aligned);
 						int key = cv::waitKey(3);
 					}
+					k_aligner.DrawRefLandmarks(color_image, bounding_boxes[0]);
 				}
 
 				// dlib aligner
-				if (true) {
+				if (false) {
 					try
 					{
 						cv::Mat aligned;
