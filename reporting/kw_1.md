@@ -48,8 +48,4 @@
 **Pretrained CNN Models**
 - [Caffe List](https://github.com/BVLC/caffe/wiki/Model-Zoo)
 - [Age and Gender: CaffeeNet, Torch](http://www.openu.ac.il/home/hassner/projects/cnn_agegender/)
-
-
-
-
 - [Facial Recognition 97% accuracy](http://www.robots.ox.ac.uk/%7Evgg/software/vgg_face/)

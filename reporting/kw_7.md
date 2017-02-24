@@ -43,6 +43,8 @@
 
 ## Notes/Remarks
 
+- Focusing on Report in the comming weeks
+
 ## Challenges/Problems
 
 ## Literature/Personal Notes
