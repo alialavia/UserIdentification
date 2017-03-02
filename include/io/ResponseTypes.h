@@ -23,6 +23,7 @@ namespace io {
 		NetworkResponse_ProfilePictures = 20,
 		NetworkResponse_Error = 999,
 		NetworkResponse_OK = 111,
+		NetworkResponse_Pong = 222
 	};
 
 
@@ -206,6 +207,13 @@ namespace io {
 		};
 		std::vector<int> mUserIDs;
 		std::vector<cv::Mat> mImages;
+	};
+
+	class Pong : public NetworkResponse
+	{
+	public:
+		Pong(io::TCPClient* conn = nullptr) :NetworkResponse(conn, NetworkResponse_Pong) {}
+		void GetPayload() {};
 	};
 }
 

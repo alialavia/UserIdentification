@@ -29,7 +29,8 @@ namespace io {
 		NetworkRequest_ClassifierTraining = 21,
 		NetworkRequest_ImageAlignment = 22,
 		NetworkRequest_ProfilePictureUpdate = 23,
-		NetworkRequest_GetProfilePictures = 24
+		NetworkRequest_GetProfilePictures = 24,
+		NetworkRequest_Ping = 222
 	};
 
 	// request type
@@ -294,6 +295,11 @@ namespace io {
 	protected: void SubmitPayload() {}
 	};
 
+	class Ping : public NetworkRequest
+	{
+	public: Ping(io::TCPClient* server_conn) :NetworkRequest(server_conn, NetworkRequest_Ping) {}
+	protected: void SubmitPayload() {}
+	};
 }
 
 #endif

@@ -136,3 +136,12 @@ class ProfilePictures:
                 server.send_int(conn, int(id))
             # send images
             server.send_image_batch_squared_same_size(conn, pictures)
+
+
+class Pong:
+
+    def __init__(self, server, conn):
+
+        # send back response identifier
+        resp_id = ROUTING['RESPONSE']['ID'][self.__class__.__name__]
+        server.send_int(conn, int(resp_id))

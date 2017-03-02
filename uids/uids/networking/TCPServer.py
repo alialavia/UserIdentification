@@ -28,6 +28,7 @@ class TCPServer:
 
     HOST = ''     # Symbolic name meaning all available interfaces
     PORT = '8080'  # Arbitrary non-privileged port
+    VERBOSE = True
     SERVER_SOCKET = -1
     SERVER_STATUS = 0
     STATUS_CLEAN = {
@@ -35,12 +36,17 @@ class TCPServer:
         0: 'starting',
         1: 'running'
     },
+    ONE_REQ_PER_CONN = None
 
     def __init__(self, host, port):
         self.HOST = host
         self.PORT = port
 
-    def start_server(self):
+    def start_server(self, one_req_per_conn=True, verbose=True):
+
+        # settings
+        self.ONE_REQ_PER_CONN = one_req_per_conn
+        self.VERBOSE = verbose
 
         self.SERVER_SOCKET = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -395,24 +401,50 @@ class TCPServerBlocking(TCPServer):
         TCPServer.__init__(self, host, port)
 
     def server_loop(self):
-        # server loop
-        while True:
-            # accept new connection - blocking call, wait for new socket to connect to
-            conn, addr = self.SERVER_SOCKET.accept()
-            log.info('server', "--- Connected with {}:{} ---".format(addr[0], addr[1]))
 
-            # handle request
-            self.handle_request(conn, addr)
+        if self.ONE_REQ_PER_CONN:
+            # server loop
+            while True:
+                # accept new connection - blocking call, wait for new socket to connect to
+                conn, addr = self.SERVER_SOCKET.accept()
 
-            # check status - eventually shutdown server
-            if self.SERVER_STATUS == -1:
-                conn.close()    # close connection
-                break
+                if self.VERBOSE:
+                    log.info('server', "--- Connected with {}:{} ---".format(addr[0], addr[1]))
 
-            # block till client has disconnected
-            while 1:
-                data = conn.recv(1024)
-                if not data:
+                # handle request
+                succ = self.handle_request(conn, addr)
+
+                # check status - eventually shutdown server
+                if self.SERVER_STATUS == -1:
+                    conn.close()    # close connection
                     break
-            # close connection - allow new socket connections
-            conn.close()
+
+                # block till client has disconnected
+                while 1:
+                    data = conn.recv(1024)
+                    if not data:
+                        break
+                # close connection - allow new socket connections
+                conn.close()
+        else:
+            # server loop
+            # multiple requests per connection
+            # Todo: implement termination signal to close connection
+            log.info('server', "Bundled-request handling")
+            while True:
+                # accept new connection - blocking call, wait for new socket to connect to
+                conn, addr = self.SERVER_SOCKET.accept()
+                log.info('server', "--- Connected with {}:{} - Ready to process multiple requests ---".format(addr[0], addr[1]))
+
+                # handle request
+                while self.handle_request(conn, addr):
+
+                    # check status - eventually shutdown server
+                    if self.SERVER_STATUS == -1:
+                        conn.close()    # close connection
+                        return
+
+                # client has disconnected
+                # close connection - allow new socket connections
+                conn.close()
+

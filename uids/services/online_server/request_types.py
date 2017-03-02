@@ -320,3 +320,7 @@ class GetProfilePictures:
         r.ProfilePictures(server, conn, uids, pictures)
 
 
+class Ping:
+
+    def __init__(self, server, conn):
+        r.Pong(server, conn)
