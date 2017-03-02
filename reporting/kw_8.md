@@ -6,7 +6,6 @@
 ## Notes/Remarks
 
 **Possible Improvements**
-
 - Test Update Batch with Local Outlier Factor (new SKLearn implementation) or Clustering for inconsistency
 - Inter-Class metric learning, when clusters become too similar (Fowlkes Mallows Index, Calinski and Harabaz score)
 - Template Face Landmark coordinates for Kinect SDK Bounding Box (Kinect face detection is however jittery)
@@ -16,7 +15,7 @@
 - Evaluate feature activation in case two features are very similar (how can we differentiate best between these faces)
 	- idea: outlier detection in subspace, if very similar
 	- feature selection: (incremental-)PCA, Chi-Squared Test etc. [SKLearn tutorial](http://machinelearningmastery.com/feature-selection-machine-learning-python/)
-
+- Keep connection alive during whole application (increase message timeout and implement disconnection message)
 - Avoid too much drift in mean-shift data cluster
 	
 ## Challenges/Problems
