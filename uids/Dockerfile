@@ -14,6 +14,7 @@ MAINTAINER Matthias Bloch
 ADD . /uids
 
 ENV PYTHONPATH $PYTHONPATH:/uids
+ENV PATH $PATH:~/torch/install/bin
 
 # install requirements
 RUN cd /uids && \
