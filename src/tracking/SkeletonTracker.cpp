@@ -105,7 +105,25 @@ void SkeletonTracker::reset()
 
 // --------------- data access
 
-size_t SkeletonTracker::GetJoints(std::vector<std::vector<cv::Point2f>>& joint_coords, DWORD joints, base::ImageSpace space,
+size_t SkeletonTracker::GetJointPosition(DWORD joint_type, std::vector<cv::Point3f>& joints)
+{
+	joints.clear();
+	CameraSpacePoint cameraspace_pt = { 0 };
+	std::vector<cv::Point3f> tmp_user_joints;
+
+	for (size_t i = 0; i < mUserIDs.size(); i++)
+	{
+		size_t iUser = mUserIDs[i];
+		tmp_user_joints.clear();
+
+		cameraspace_pt = mUserJoints[iUser][joint_type].Position;
+		// convert to cv point
+		joints.push_back(cv::Point3f(cameraspace_pt.X, cameraspace_pt.Y, cameraspace_pt.Z));
+	}
+}
+
+
+size_t SkeletonTracker::GetJointProjections(std::vector<std::vector<cv::Point2f>>& joint_coords, DWORD joints, base::ImageSpace space,
 	int outputWidth, int outputHeight) const
 {
 	joint_coords.clear();
@@ -337,7 +355,7 @@ HRESULT SkeletonTracker::RenderFaceBoundingBoxes(cv::Mat &target, base::ImageSpa
 		base::JointType_Head
 		| base::JointType_Neck;
 
-	nr_users = GetJoints(user_joints, joints, space, output_width, output_height);
+	nr_users = GetJointProjections(user_joints, joints, space, output_width, output_height);
 
 	// draw joints
 	for (size_t i = 0; i < user_joints.size(); i++)

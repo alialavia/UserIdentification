@@ -28,6 +28,13 @@ public:
 			EndRow();
 		}
 	}
+	template<class T>
+	void addRow(std::vector<T> values) {
+		for (size_t i = 0; i < values.size(); i++) {
+			addEntry(values[i]);
+		}
+		EndRow();
+	}
 	void changeFile(std::string filename);
 private:
 	std::string filename_;

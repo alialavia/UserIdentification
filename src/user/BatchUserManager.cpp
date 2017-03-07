@@ -431,7 +431,7 @@ void BatchUserManager::GenerateRequests(cv::Mat scene_rgb)
 			{
 				target_user->SetPendingProfilePicture(true);
 				cv::Mat profile_picture = scene_rgb(target_user->GetFaceBoundingBox());
-				// scale
+				// scale profile picture
 				cv::resize(profile_picture, profile_picture, cv::Size(120, 120));
 				// make request
 				io::ProfilePictureUpdate* new_request = new io::ProfilePictureUpdate(pServerConn, target_user->GetUserID(), profile_picture);

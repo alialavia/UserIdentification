@@ -185,6 +185,17 @@ namespace io {
 				mImages.push_back((*images[i]).clone());
 			}
 		}
+		ImageIdentificationAligned(
+			io::TCPClient* server_conn,
+			std::vector<cv::Mat> images
+		) :
+			NetworkRequest(server_conn, NetworkRequest_ImageIdentificationAligned)
+		{
+			// make deep copy of images
+			for (size_t i = 0; i < images.size(); i++) {
+				mImages.push_back(images[i].clone());
+			}
+		}
 
 	protected:
 

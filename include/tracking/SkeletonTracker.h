@@ -30,6 +30,7 @@ namespace tracking
 
 		// --------------- data access
 
+		size_t GetJointPosition(DWORD joint_type, std::vector<cv::Point3f>& joints);
 		/// <summary>
 		/// Get joint coordinates in image frame
 		/// </summary>
@@ -39,7 +40,7 @@ namespace tracking
 		/// <param name="outputWidth">Width of the output space.</param>
 		/// <param name="outputHeight">Height of the output space.</param>
 		/// <returns>int.</returns>
-		size_t GetJoints(std::vector<std::vector<cv::Point2f>>& joint_coords, DWORD joints, base::ImageSpace space,
+		size_t GetJointProjections(std::vector<std::vector<cv::Point2f>>& joint_coords, DWORD joints, base::ImageSpace space,
 							   int outputWidth, int outputHeight) const;
 
 		/// <summary>

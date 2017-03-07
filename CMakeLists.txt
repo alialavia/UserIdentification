@@ -65,6 +65,9 @@ OPTION(BUILD_USER_IDENTIFICATION_EXAMPLES "Enable to build Examples" OFF)
 # Tests
 OPTION(BUILD_USER_IDENTIFICATION_TESTS "Enable to build Tests" ON)
 
+# Benchmarks
+OPTION(BUILD_USER_IDENTIFICATION_BENCHMARKS "Enable to build Benchmarks" ON)
+
 # Folder structure
 set(PROJECT_RESOURCES_PATH "resources" CACHE STRING "Resources path")
 set(PROJECT_MODELS_PATH "models" CACHE STRING "Models path")
@@ -242,5 +245,10 @@ ENDIF()
 # Tests
 IF   (BUILD_USER_IDENTIFICATION_TESTS)
     ADD_SUBDIRECTORY(test)
+ENDIF()
+
+# Tests
+IF   (BUILD_USER_IDENTIFICATION_BENCHMARKS)
+    ADD_SUBDIRECTORY(benchmarking)
 ENDIF()
 
