@@ -35,7 +35,7 @@ void RadialFaceGrid::DumpImageGrid(std::string img_basename, std::string log_nam
 				if (!image_grid.IsFree(r, p, y)) {
 					cv::Mat img = image_grid(r, p, y);
 
-					// write blur
+					// construct filename
 					std::string filename = img_basename + "_" + std::to_string(r) + "_" + std::to_string(p) + "_" + std::to_string(y) + "_" + std::to_string(now) + ".png";
 
 					// save image

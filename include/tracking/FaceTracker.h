@@ -33,9 +33,9 @@ namespace tracking
 			 image_grid(interv_r_, interv_p_, interv_y_)	// init storage container
 		{
 			// calculate index mapping functions
-			a_r = (float)(interv_r - 1) / (cRMax - cRMin);
-			a_p = (float)(interv_p - 1) / (cPMax - cPMin);
-			a_y = (float)(interv_y - 1) / (cYMax - cYMin);
+			a_r = (float)(interv_r_-1) / (cRMax - cRMin);
+			a_p = (float)(interv_p_-1) / (cPMax - cPMin);
+			a_y = (float)(interv_y_-1) / (cYMax - cYMin);
 			b_r = -a_r*cRMin;
 			b_p = -a_p*cPMin;
 			b_y = -a_y*cYMin;
@@ -117,8 +117,8 @@ namespace tracking
 		// image grid resolution
 		const int cRMin = -70;
 		const int cRMax = 70;
-		const int cPMin = -30;
-		const int cPMax = 40;
+		const int cPMin = -50;
+		const int cPMax = 50;
 		const int cYMin = -50;
 		const int cYMax = 50;
 
@@ -182,7 +182,7 @@ namespace tracking
 		// overload with grid index tracking
 		void GetFaceGridPitchYaw(cv::Mat &dst, size_t canvas_height) {
 
-			size_t patch_size = canvas_height / image_grid.Size(1);
+			size_t patch_size = std::floor(canvas_height / (float)image_grid.Size(1));
 			size_t canvas_width = patch_size * image_grid.Size(2);
 
 			mCanvasWidth = canvas_width;
@@ -250,7 +250,24 @@ namespace tracking
 				}
 
 				// copy to left top
-				canvas_copy.copyTo(canvas(cv::Rect(ip*static_cast<int>(patch_size), iy*static_cast<int>(patch_size), canvas_copy.cols, canvas_copy.rows)));
+				cv::Rect roi(iy*static_cast<int>(patch_size), ip*static_cast<int>(patch_size), canvas_copy.cols, canvas_copy.rows);
+#ifdef _DEBUG_FACETRACKER
+				if( roi.x < 0 || roi.width < 0 || roi.y < 0 || roi.height < 0)
+				{
+						std::cout << "invalid roi (<0)" << std::endl;
+				}
+				if (roi.x + roi.width > canvas.cols)
+				{
+					std::cout << "col overflow" << std::endl;
+
+				}
+				else if (roi.y + roi.height > canvas.rows)
+				{
+					std::cout << "row overflow" << std::endl;
+				}
+#endif
+
+				canvas_copy.copyTo(canvas(roi));
 			}
 
 			dst = canvas;
