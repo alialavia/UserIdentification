@@ -1,3 +1,6 @@
+import csv
+import datetime
+import time
 
 class BGColor:
     black = '40m '
@@ -40,6 +43,11 @@ class Logger:
     Todo: Add logging to harddrive
     """
 
+    # log files
+    log_to_file = False
+    filemode = 'ab'
+    filename = 'debug.log'
+
     # output format \033[ text_style text_color bg_color
     endc = '\033[0m'
     thresh = 0
@@ -62,27 +70,53 @@ class Logger:
         pass
 
     @classmethod
-    def severe(self, msg):
+    def Config(self, dump_log=False, filemode='ab', filename=None):
+        if filemode not in {'ab', 'wb'}:
+            print "Logger Config: Please choose between modes: {ab, wb}"
+        self.log_to_file = dump_log
+        self.filemode = filemode
+        if filename is not None:
+            self.filename = filename
+
+    @classmethod
+    def write_log(self, scope='', msg='', level=''):
+        if self.log_to_file is False:
+            return
+        try:
+            with open(self.filename, self.filemode) as f:
+                writer = csv.writer(f, delimiter=',')
+                timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+                writer.writerow([timestamp, scope, level, msg])
+        except:
+            print "\033[0;" + FontColor.black + ";" + BGColor.red + "Could not write log file" + self.endc
+
+    @classmethod
+    def severe(self, msg, scope=None):
         print "\033[0;" + FontColor.black + ";" + BGColor.red + msg + self.endc
+        self.write_log(scope, msg, 'severe')
 
     @classmethod
-    def error(self, msg):
+    def error(self, msg, scope=None):
         print "\033[0;" + FontColor.white + ";" + BGColor.red + msg + self.endc
+        self.write_log(scope, msg, 'error')
 
     @classmethod
-    def warning(self, msg):
+    def warning(self, msg, scope=None):
         if self.thresh < 4:
             print "\033[0;" + FontColor.black + ";" + BGColor.yellow + msg + self.endc
+            self.write_log(scope, msg, 'warning')
 
     @classmethod
     def debug(self, scope, msg):
         if self.thresh < 3:
             self.print_msg(scope, msg)
+            self.write_log(scope, msg, 'debug')
 
     @classmethod
     def info(self, scope, msg):
         if self.thresh < 2:
             self.print_msg(scope, msg)
+            self.write_log(scope, msg, 'info')
 
     @classmethod
     def print_msg(self, scope, msg):
