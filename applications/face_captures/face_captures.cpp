@@ -9,7 +9,9 @@
 
 DEFINE_string(stat_file, "labeled_focus_measures.csv", "Statistics file name");
 DEFINE_string(output_folder, "pictures", "Output path");
-DEFINE_string(img_basename, "picture", "Image basename path");
+DEFINE_string(img_basename, "picture", "Image basename");
+DEFINE_string(lock_axis, "", "Axis to lock: {roll, pitch, yaw}. Only takes picture if this axis is near zero (+-1°)");
+DEFINE_bool(subtract_bg, false, "Save a copy of the images with subtracted background");
 
 tracking::RadialFaceGridLabeled* g_ptr;
 
@@ -56,7 +58,19 @@ int main(int argc, char** argv)
 	}
 
 	tracking::FaceTracker ft(pSensor);
-	tracking::RadialFaceGridLabeled grid(5,10,10);
+
+	//if(FLAGS_lock_axis == "roll")
+	//{
+	//	res_roll = 1;
+	//}else if (FLAGS_lock_axis == "pitch")
+	//{
+	//	res_pitch = 1;
+	//}else if (FLAGS_lock_axis == "yaw")
+	//{
+	//	res_yaw = 1;
+	//}
+
+	tracking::RadialFaceGridLabeled grid(5,10,20);
 	g_ptr = &grid;	// set global ptr
 	cv::Mat face_snap;
 	enum State STATE = State_none;
@@ -120,15 +134,14 @@ int main(int argc, char** argv)
 				ft.GetFaceBoundingBoxesRobust(bounding_boxes, base::ImageSpace_Color);
 
 
-
 				if (bounding_boxes.size() > 0)
 				{
 
 					cv::Rect2d bb = bounding_boxes[0];
-			/*		bb.x -= 5;
-					bb.y -= 5;
-					bb.width += 5;
-					bb.height += 5;*/
+		/*			bb.x -= 10;
+					bb.y -= 10;
+					bb.width += 10;
+					bb.height += 10;*/
 
 					face_snap = color_image(bb);
 				}
@@ -141,6 +154,43 @@ int main(int argc, char** argv)
 
 					int roll, pitch, yaw;
 					faces[i].GetEulerAngles(roll, pitch, yaw);
+
+
+					if (
+						FLAGS_lock_axis == "roll" &&
+						(roll > 5 || roll < -5)
+						)
+					{
+						std::cout << "roll: " << roll << std::endl;
+						continue;
+					}
+					if (
+						FLAGS_lock_axis == "pitch" &&
+						(pitch > 5 || pitch < -5)
+						)
+					{
+						std::cout << "pitch: " << pitch << std::endl;
+						continue;
+					}
+					if (
+						FLAGS_lock_axis == "yaw" &&
+						(yaw > 5 || yaw < -5)
+						)
+					{
+						std::cout << "yaw: " << yaw << std::endl;
+						continue;
+					}
+
+					// fix roll axis
+					if(FLAGS_lock_axis == "yaw" || FLAGS_lock_axis == "pitch")
+					{
+						if (
+							(roll > 5 || roll < -5)
+							)
+						{
+							continue;
+						}
+					}
 
 					try
 					{
@@ -156,8 +206,6 @@ int main(int argc, char** argv)
 							if (imgproc::FocusMeasure::LAPD(greyMat) > 4) {
 
 							}
-
-
 
 							//int iroll = grid.iRoll(roll);
 							//int	ipitch = grid.iPitch(pitch);
@@ -204,7 +252,7 @@ int main(int argc, char** argv)
 				}
 				else if ((int)('2') == key) {
 					// autosave
-					if (grid.nr_images() > 20) {
+					if (grid.nr_images() > 5) {
 						std::cout << "Autosaving..." << std::endl;
 						grid.DumpImageGrid(FLAGS_img_basename, "picture_log.csv", FLAGS_output_folder, true);
 						grid.Clear();
