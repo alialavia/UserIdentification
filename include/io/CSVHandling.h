@@ -36,6 +36,7 @@ public:
 		EndRow();
 	}
 	void changeFile(std::string filename);
+	static bool dirExists(const std::string& dirName_in);
 private:
 	std::string filename_;
 	std::ofstream* filehandle_;
