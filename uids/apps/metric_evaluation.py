@@ -448,6 +448,39 @@ def plot_pitch_yaw_comparison():
     plt.show()
 
 
+def plot_background_influence():
+    emb = load_data("mat_bg.pkl")
+    neutral = emb[0,:]
+    rest = emb[1:,:]
+    metric = 'cosine'
+
+    # best order
+    # switched = np.array([emb[2,:], emb[0,:], emb[3,:], emb[1,:], emb[4,:]])
+
+    sep = pairwise_distances(emb, emb, metric=metric)
+
+    # plt.figure()
+    # plt.imshow(sep, cmap='GnBu', interpolation='nearest')
+    # plt.colorbar()
+    plt.figure()
+    plt.imshow(sep, cmap='Blues_r', interpolation='nearest')
+    cbar = plt.colorbar()
+
+    cl = plt.getp(cbar.ax, 'ymajorticklabels')
+    plt.setp(cl, fontsize=16)
+
+    if metric == 'cosine':
+        # cbar.set_ticks([0, 0.05, 0.1, 0.15, 0.2])
+        pass
+    else:
+        cbar.set_ticks([0,0.2, 0.4, 0.6])
+
+    plt.show()
+    print sep
+
+
+
 if __name__ == '__main__':
     # plot_pitch_yaw_comparison()
-    # plot_facial_expression_dist()
+    plot_facial_expression_dist()
+    # plot_background_influence()
