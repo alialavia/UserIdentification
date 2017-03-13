@@ -383,6 +383,71 @@ def run_blur_evaluation():
         plt.show()
 
 
+def plot_facial_expression_dist():
+    emb = load_data("facial_expressions.pkl")
+    neutral = emb[0,:]
+    rest = emb[1:,:]
+    metric = 'cosine'
+
+    # best order
+    switched = np.array([emb[2,:], emb[0,:], emb[3,:], emb[1,:], emb[4,:]])
+
+    sep = pairwise_distances(emb, emb, metric=metric)
+    sep2 = pairwise_distances(switched, switched, metric=metric)
+    # plt.figure()
+    # plt.imshow(sep, cmap='GnBu', interpolation='nearest')
+    # plt.colorbar()
+    plt.figure()
+    plt.imshow(sep2, cmap='Blues_r', interpolation='nearest')
+    cbar = plt.colorbar()
+
+    cl = plt.getp(cbar.ax, 'ymajorticklabels')
+    plt.setp(cl, fontsize=16)
+
+    if metric == 'cosine':
+        cbar.set_ticks([0, 0.05, 0.1, 0.15, 0.2])
+    else:
+        cbar.set_ticks([0,0.2, 0.4, 0.6])
+
+    plt.show()
+    print sep
+
+
+def plot_pitch_yaw_comparison():
+
+    emb_pitch = load_data("pitch_face_embeddings.pkl")
+    emb_yaw = load_data("yaw_face_embeddings.pkl")
+
+    metric = 'euclidean'
+
+    # select range
+    emb_yaw = emb_yaw[0:-2,:]
+    emb_pitch = emb_pitch[1:,:]
+
+    sep = pairwise_distances(emb_yaw, emb_pitch, metric=metric)
+    plt.imshow(sep, cmap='GnBu_r', interpolation='nearest')
+    cbar = plt.colorbar()
+    # cbar = pl.colorbar(G, ticks=range(g1, g2 + 1))
+    # cbar.ax.set_ylabel('Gradient (%)', fontsize=10)
+
+    cl = plt.getp(cbar.ax, 'ymajorticklabels')
+    plt.setp(cl, fontsize=16)
+
+    if metric == 'cosine':
+        cbar.set_ticks([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
+    else:
+        cbar.set_ticks([0.3, 0.5, 0.7, 0.9, 1.1])
+
+    # cbar.set_ticklabels([mn, md, mx])
+
+
+    plt.xticks([0, 3, 7, 11, 15])
+    plt.xlim([-0.5,14.5])
+    plt.yticks([0, 3, 7, 11, 15])
+    plt.ylim([-0.5,14.5])
+    plt.show()
+
 
 if __name__ == '__main__':
-    run_blur_evaluation()
+    # plot_pitch_yaw_comparison()
+    # plot_facial_expression_dist()
