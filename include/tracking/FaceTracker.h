@@ -403,7 +403,7 @@ namespace tracking
 			dPitch = atan2(2 * (y * z + w * x), w * w - x * x - y * y + z * z) / M_PI * 180.0;
 			dYaw = asin(2 * (w * y - x * z)) / M_PI * 180.0;
 			dRoll = atan2(2 * (x * y + w * z), w * w + x * x - y * y - z * z) / M_PI * 180.0;
-			const double c_FaceRotationIncrementInDegrees = 5.0f;
+			const double c_FaceRotationIncrementInDegrees = 2.0f;
 			// clamp rotation values in degrees to a specified range of values to control the refresh rate
 			double increment = c_FaceRotationIncrementInDegrees;
 			pitch = static_cast<int>(floor((dPitch + increment / 2.0 * (dPitch > 0 ? 1.0 : -1.0)) / increment) * increment);

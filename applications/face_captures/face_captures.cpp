@@ -5,13 +5,16 @@
 #include "tracking/FaceTracker.h"
 #include "io/ImageHandler.h"
 #include <gflags/gflags.h>
+#include "tracking/SkeletonTracker.h"
 
 
 DEFINE_string(stat_file, "labeled_focus_measures.csv", "Statistics file name");
 DEFINE_string(output_folder, "pictures", "Output path");
 DEFINE_string(img_basename, "picture", "Image basename");
 DEFINE_string(lock_axis, "", "Axis to lock: {roll, pitch, yaw}. Only takes picture if this axis is near zero (+-1°)");
-DEFINE_bool(subtract_bg, false, "Save a copy of the images with subtracted background");
+DEFINE_bool(subtract_bg, false, "Save a copy of the images with subtracted background (only for single picture capturing with skeleton tracking)");
+DEFINE_bool(skeleton_tracking, false, "Use skeleton tracking");
+DEFINE_int32(auto_save_interval, 10, "Safe images/log after X images have been taken");
 
 tracking::RadialFaceGridLabeled* g_ptr;
 
@@ -25,7 +28,7 @@ enum State
 	State_none = 0,
 	State_capturing = 1,
 	State_dump_blur_stats = 2,
-	State_dump_images = 3
+	State_single_pictures = 3
 };
 
 int main(int argc, char** argv)
@@ -41,6 +44,7 @@ int main(int argc, char** argv)
 
 
 	cv::Mat color_image;
+	cv::Mat bg_subtracted;
 
 	// initialize sens
 	if (FAILED(k.Open())) {
@@ -58,19 +62,29 @@ int main(int argc, char** argv)
 	}
 
 	tracking::FaceTracker ft(pSensor);
+	tracking::SkeletonTracker st(pSensor);
+	if(FLAGS_skeleton_tracking)
+	{
+		if (FAILED(st.Init()))
+		{
+			std::cout << "Skeleton tracker initialization failed" << std::endl;
+			return -1;
+		}
+	}
 
-	//if(FLAGS_lock_axis == "roll")
-	//{
-	//	res_roll = 1;
-	//}else if (FLAGS_lock_axis == "pitch")
-	//{
-	//	res_pitch = 1;
-	//}else if (FLAGS_lock_axis == "yaw")
-	//{
-	//	res_yaw = 1;
-	//}
+	int res_roll = 5;
+	int res_pitch = 10;
+	int res_yaw = 10;
+	if(FLAGS_lock_axis == "yaw")
+	{
+		res_pitch = 20;
+	}else if(FLAGS_lock_axis == "pitch")
+	{
+		res_yaw = 20;
+	}
 
-	tracking::RadialFaceGridLabeled grid(5,10,20);
+	tracking::RadialFaceGridLabeled grid(res_roll,res_pitch,res_yaw);
+	io::ImageHandler ih;
 	g_ptr = &grid;	// set global ptr
 	cv::Mat face_snap;
 	enum State STATE = State_none;
@@ -83,6 +97,7 @@ int main(int argc, char** argv)
 		"		[s]: save blur statistics\n"
 		"		[i]: save images\n"
 		"[2]: autocollect face snapshots (unlimited, savepoint triggered in intervals)\n"
+		"[3]: take picture, when [i] is beeing pressed\n"
 		"[q]: Quit\n"
 		"--------------------------------------\n"
 		"During picture collection use [LMB], [RMB], [MMB] to flag, reset or ignore individual pictures\n"
@@ -102,6 +117,11 @@ int main(int argc, char** argv)
 
 			// get color image
 			k.GetImageCopyRGB(color_image);
+			if (FLAGS_subtract_bg)
+			{
+				k.GetImageCopyRGBSubtracted(bg_subtracted);
+			}
+
 
 
 			// mode selection
@@ -112,6 +132,11 @@ int main(int argc, char** argv)
 					STATE = State_capturing;
 					std::cout << "--- Start image capturing...\n";
 				}
+				else if ((int)('3') == key)
+				{
+					STATE = State_single_pictures;
+					std::cout << "--- Take single pictures...\n";
+				}				
 				else if ((int)('q') == key)
 				{
 					std::cout << "--- Terminating...\n";
@@ -119,8 +144,63 @@ int main(int argc, char** argv)
 				}
 			}
 
+			if(STATE == State_single_pictures)
+			{
+				std::vector<cv::Rect2f> bounding_boxes;
+				std::vector<int> user_scene_ids;
+
+
+				if(FLAGS_skeleton_tracking)
+				{
+					// extract skeleton data
+					IBody** bodies = k.GetBodyDataReference();
+					st.ExtractJoints(bodies);
+
+					// extract face bb from skeleton: extract corresponding users ids
+					// this is not the same as st.GetUserSceneIDs(user_scene_ids); - this gives all users in the scene (even not trackeable users)
+					st.GetFaceBoundingBoxesRobust(bounding_boxes, user_scene_ids, base::ImageSpace_Color);
+				}else
+				{
+					// extract raw face data
+					FaceData* face_data_raw = k.GetFaceDataReference();
+
+					// copy/convert
+					ft.ExtractFacialData(face_data_raw);
+
+					// get face bounding boxes
+					ft.GetFaceBoundingBoxesRobust(bounding_boxes, base::ImageSpace_Color);
+				}
+
+				if (bounding_boxes.size() > 0)
+				{
+
+					cv::Rect2d bb = bounding_boxes[0];
+					bb.x -= 20;
+					bb.y -= 20;
+					bb.width += 20;
+					bb.height += 20;
+
+					
+					if(FLAGS_subtract_bg)
+					{
+						face_snap = bg_subtracted(bb);
+					}else
+					{
+						face_snap = color_image(bb);
+					}
+
+					cv::imshow(cWindowLabel, face_snap);
+					key_save = cv::waitKey(5);
+
+					if ((int)('i') == key_save) {
+						std::cout << "--- Saving snapshot...\n";
+						ih.SaveImageIndexed(face_snap, FLAGS_output_folder, "face_capture.png");
+					}
+				}
+			}
+
 			// face grid
-			if (STATE == State_capturing)
+			else if (STATE == State_capturing)
 			{
 
 				// extract raw face data
@@ -138,10 +218,10 @@ int main(int argc, char** argv)
 				{
 
 					cv::Rect2d bb = bounding_boxes[0];
-		/*			bb.x -= 10;
-					bb.y -= 10;
-					bb.width += 10;
-					bb.height += 10;*/
+					bb.x -= 20;
+					bb.y -= 20;
+					bb.width += 20;
+					bb.height += 20;
 
 					face_snap = color_image(bb);
 				}
@@ -252,7 +332,7 @@ int main(int argc, char** argv)
 				}
 				else if ((int)('2') == key) {
 					// autosave
-					if (grid.nr_images() > 5) {
+					if (grid.nr_images() == FLAGS_auto_save_interval) {
 						std::cout << "Autosaving..." << std::endl;
 						grid.DumpImageGrid(FLAGS_img_basename, "picture_log.csv", FLAGS_output_folder, true);
 						grid.Clear();

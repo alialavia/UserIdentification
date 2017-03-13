@@ -44,7 +44,7 @@ def align_images_in_folder(in_folder, cleanup=False, save=False, replace=False):
 
             aligned = align_face(image)
             if aligned is None:
-                print "--- could not align face"
+                print "--- could not align face (img: {})".format(file)
                 if cleanup is True:
                     os.remove(path_in+file)
                 removed = removed + 1
@@ -122,6 +122,5 @@ if __name__ == '__main__':
 
     # parse arguments
     args = parser.parse_args()
-
 
     aligned_faces = align_images_in_folder(args.imf, cleanup=args.clean, save=args.save, replace=args.replace)
