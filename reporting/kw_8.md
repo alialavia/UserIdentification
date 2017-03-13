@@ -22,6 +22,8 @@
 	- Confusion matrix: evaluate in original 128dim space and reduced class space (approx 30dims)
 - Keep connection alive during whole application (increase message timeout and implement disconnection message)
 - Avoid too much drift in mean-shift data cluster
+- For larger set size: Consider only those clusters, where the mean is in near range of the input set
+- Evaluate feature variance component wise
 	
 	
 ## Challenges/Problems
