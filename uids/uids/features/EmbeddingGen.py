@@ -16,8 +16,9 @@ openfaceModelDir = os.path.join(modelDir, 'openface')
 
 class EmbeddingGen:
     """
-    TODO:
-    - implement embedding confidence (based on normalization measure)
+    INPUT FORMATS:
+    - aligned (face alignment)
+    - RGB image, size 96 squared
     """
 
     # settings
@@ -42,10 +43,10 @@ class EmbeddingGen:
         log.info('cnn', "EmbeddingGen: model loading took {} seconds".format("%.3f" % (time.time() - start)))
 
     #  ----------- EMBEDDING GENERATION
-    def get_embeddings(self, input_images, align=True):
+    def get_embeddings(self, rgb_images, align=True):
         """
         Calculate deep face embeddings for input images
-        :param input_images:
+        :param rgb_images: RGB (!) images
         :param align:
         :return: np.array embedding vectors
         """
@@ -56,8 +57,8 @@ class EmbeddingGen:
 
         # normalize images
         if align is True:
-            if len(input_images) > 0:
-                for imgObject in input_images:
+            if len(rgb_images) > 0:
+                for imgObject in rgb_images:
                     # align face - ignore images with multiple bounding boxes
                     aligned = self.align_face(imgObject, self.landmarks, self.size)
                     if aligned is not None:
@@ -66,12 +67,12 @@ class EmbeddingGen:
             # print status
             if self.verbose is True:
                 if len(images_normalized) > 0:
-                    log.debug('cnn', "Alignment took {} seconds - {}/{} images suitable".format(time.time() - start, len(images_normalized), len(input_images)))
+                    log.debug('cnn', "Alignment took {} seconds - {}/{} images suitable".format(time.time() - start, len(images_normalized), len(rgb_images)))
                 else:
                     log.warning("No suitable images (no faces detected)")
                     return np.array(embeddings)
         else:
-            images_normalized = input_images
+            images_normalized = rgb_images
 
         # generate embeddings
         start = time.time()
@@ -84,14 +85,14 @@ class EmbeddingGen:
 
         return np.array(embeddings)
 
-    def get_embedding(self, user_img, align=True):
+    def get_embedding(self, rgb_img, align=True):
         # align image
         if align:
-            normalized = self.align_face(user_img, self.landmarks, self.size)
+            normalized = self.align_face(rgb_img, self.landmarks, self.size)
             if normalized is None:
                 return None
         else:
-            normalized = user_img
+            normalized = rgb_img
 
         # generate embedding
         rep = self.neural_net.forward(normalized)
