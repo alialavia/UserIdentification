@@ -11,14 +11,19 @@ CSVWriter::CSVWriter(std::string filename) :filename_(filename), col_nr(0), line
 	filehandle_ = new std::ofstream();
 	// create directory
 	std::size_t botDirPos = filename.find_last_of("/");
-	// get directory
-	std::string dir = filename.substr(0, botDirPos);
-	// get file
-	std::string file = filename.substr(botDirPos, filename.length());
 
-	if(!dirExists(dir))
-	{
-		CreateDirectory(dir.c_str(), NULL);
+	// save in subdirectory
+	if (botDirPos != std::string::npos) {
+		// get directory
+		std::string dir = filename.substr(0, botDirPos);
+
+		if (!dirExists(dir))
+		{
+			CreateDirectory(dir.c_str(), NULL);
+		}
+
+		// get file
+		std::string file = filename.substr(botDirPos, filename.length());
 	}
 	
 	// check if file exists

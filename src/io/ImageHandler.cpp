@@ -102,7 +102,7 @@ bool ImageHandler::FileExists(const std::string& name) {
 size_t ImageHandler::LoadImageBatch(std::vector<cv::Mat> &img_batch, std::vector<std::string> &filenames, int batch_size) {
 
 	if (!mValidDirectory) {
-		return false;
+		return 0;
 	}
 
 	img_batch.clear();
@@ -137,7 +137,7 @@ size_t ImageHandler::LoadImageBatch(std::vector<cv::Mat> &img_batch, std::vector
 		// increment batch size
 		i++;
 
-	} while (i <= batch_size && FindNextFile(mDirHandle, &mCurrentFile));
+	} while (i < batch_size && FindNextFile(mDirHandle, &mCurrentFile));
 
 	return img_batch.size();
 
