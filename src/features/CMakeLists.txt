@@ -2,10 +2,12 @@ SET(LIB_NAME Features)
 SET(HEADER_PATH ${user_identification_SOURCE_DIR}/include/${LIB_NAME})
 SET(TARGET_H
     ${HEADER_PATH}/Face.h
+    ${HEADER_PATH}/Skin.h
 )
 
 SET(TARGET_SRC
 	Face.cpp
+	Skin.cpp
 )
 
 # --------------------------------------------

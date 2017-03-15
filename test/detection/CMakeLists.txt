@@ -29,3 +29,19 @@ SET(TARGET_EXTERNAL_LIBRARIES
 )
 
 SETUP_APPLICATION(lower_body_detection Tests)
+
+# ------------
+SET(TARGET_SRC
+    skinDetection.cpp
+)
+SET(TARGET_H
+    # header.h
+)
+
+SET(TARGET_EXTERNAL_LIBRARIES
+	Tracking
+	Recognition
+	Features
+)
+
+SETUP_APPLICATION(skin_detection Tests)
