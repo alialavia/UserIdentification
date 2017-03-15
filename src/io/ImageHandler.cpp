@@ -19,8 +19,13 @@ ImageHandler::~ImageHandler()
 	
 }
 
-void ImageHandler::MakeIndexedName(std::string path, std::string &filename_orig, bool start_with_index)
+void ImageHandler::MakeIndexedName(std::string &path, std::string &filename_orig, bool start_with_index)
 {
+
+	if (path.back() != '/')
+	{
+		path += "/";
+	}
 
 	size_t lastindex = filename_orig.find_last_of(".");
 	std::string rawname = filename_orig;

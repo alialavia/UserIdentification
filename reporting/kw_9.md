@@ -5,9 +5,14 @@
 ## Notes/Remarks
 
 **ToDos**
-- [ ] Fix RGB/BGR channel swapping
+- [x] Fix RGB/BGR channel swapping
 
 ## Challenges/Problems
+
+- Patterns projected onto faces
+	- [x] use skin color detection
+	- Test influence of color
+	- Test embeddings of grayscale (HSV?) images (more robust to color variations)
 
 ## Literature/Personal Notes
 
