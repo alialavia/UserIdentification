@@ -103,10 +103,9 @@ bool ImageHandler::FileExists(const std::string& name) {
 	return (stat(name.c_str(), &buffer) == 0);
 }
 
-
 size_t ImageHandler::LoadImageBatch(std::vector<cv::Mat> &img_batch, std::vector<std::string> &filenames, int batch_size) {
 
-	if (!mValidDirectory) {
+	if (!mValidDirectory || mAllFilesLoaded) {
 		return 0;
 	}
 
@@ -116,14 +115,15 @@ size_t ImageHandler::LoadImageBatch(std::vector<cv::Mat> &img_batch, std::vector
 
 	int i = 0;
 	do {
-		const std::string file_name = mCurrentFile.cFileName;
-		const std::string full_file_name = mDirectory + "/" + file_name;
-		const bool is_directory = (mCurrentFile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 
-		if (file_name[0] == '.')
+		const bool is_directory = (mCurrentFile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+		if (is_directory)
 			continue;
 
-		if (is_directory)
+		const std::string file_name = mCurrentFile.cFileName;
+		const std::string full_file_name = mDirectory + "/" + file_name;
+
+		if (file_name[0] == '.')
 			continue;
 
 		if (!IsImage(file_name))
@@ -142,7 +142,7 @@ size_t ImageHandler::LoadImageBatch(std::vector<cv::Mat> &img_batch, std::vector
 		// increment batch size
 		i++;
 
-	} while (i < batch_size && FindNextFile(mDirHandle, &mCurrentFile));
+	} while (i < batch_size && (mAllFilesLoaded = !FindNextFile(mDirHandle, &mCurrentFile)) == false);
 
 	return img_batch.size();
 
@@ -168,6 +168,7 @@ bool ImageHandler::ChangeDirectory(const std::string &directory) {
 
 	FindClose(mDirHandle);
 	mValidDirectory = false;
+	mAllFilesLoaded = false;
 
 	// check if exists
 	if ((mDirHandle = FindFirstFile((directory + "/*").c_str(), &mCurrentFile)) == INVALID_HANDLE_VALUE) {

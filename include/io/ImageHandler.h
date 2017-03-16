@@ -32,8 +32,9 @@ namespace io
 	protected:
 		std::string mDirectory = "";
 		WIN32_FIND_DATA mCurrentFile;
-		HANDLE mDirHandle;
+		HANDLE mDirHandle = INVALID_HANDLE_VALUE;
 		bool mValidDirectory = false;
+		bool mAllFilesLoaded = false;
 
 	};
 }
