@@ -24,3 +24,17 @@ SET(TARGET_EXTERNAL_LIBRARIES
 )
 
 SETUP_APPLICATION(CSVHandling Unit Tests)
+
+
+SET(TARGET_SRC
+    ImageHandler.cpp 
+)
+SET(TARGET_H
+    # header.h
+)
+
+SET(TARGET_EXTERNAL_LIBRARIES
+	Math
+)
+
+SETUP_APPLICATION(ImageHandler Unit Tests)

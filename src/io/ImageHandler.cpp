@@ -103,6 +103,7 @@ bool ImageHandler::FileExists(const std::string& name) {
 	return (stat(name.c_str(), &buffer) == 0);
 }
 
+
 size_t ImageHandler::LoadImageBatch(std::vector<cv::Mat> &img_batch, std::vector<std::string> &filenames, int batch_size) {
 
 	if (!mValidDirectory || mAllFilesLoaded) {

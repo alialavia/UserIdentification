@@ -10,6 +10,7 @@
 DEFINE_string(input, "", "Input image folder");
 DEFINE_string(output, "converted", "Output folder");
 DEFINE_bool(grayscale, false, "Convert images to grayscale");
+DEFINE_bool(grayscale_rgb, false, "Convert images to grayscale - save as rgb image");
 DEFINE_bool(hsv, false, "Convert images to grayscale");
 
 int main(int argc, char** argv)
@@ -38,6 +39,13 @@ int main(int argc, char** argv)
 			{
 				cv::Mat converted;
 				cv::cvtColor(images[i], converted, CV_RGB2GRAY);
+				ih.SaveImageIndexed(converted, FLAGS_output, filenames[i]);
+			}
+			else if (FLAGS_grayscale_rgb)
+			{
+				cv::Mat converted;
+				cv::cvtColor(images[i], converted, CV_RGB2GRAY);
+				cv::cvtColor(converted, converted, CV_GRAY2RGB);
 				ih.SaveImageIndexed(converted, FLAGS_output, filenames[i]);
 			}
 			else if(FLAGS_hsv)
