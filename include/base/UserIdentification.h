@@ -68,6 +68,33 @@ namespace base
 		+ base::JointType_FootRight
 		+ base::JointType_Neck;
 
+	static const DWORD JOINT_INDICES_ALL =
+		base::JointType_SpineBase
+		+ base::JointType_SpineMid
+		+ base::JointType_Neck
+		+ base::JointType_Head
+		+ base::JointType_ShoulderLeft
+		+ base::JointType_ElbowLeft
+		+ base::JointType_WristLeft
+		+ base::JointType_HandLeft
+		+ base::JointType_ShoulderRight
+		+ base::JointType_ElbowRight
+		+ base::JointType_WristRight
+		+ base::JointType_HandRight
+		+ base::JointType_HipLeft
+		+ base::JointType_KneeLeft
+		+ base::JointType_AnkleLeft
+		+ base::JointType_FootLeft
+		+ base::JointType_HipRight
+		+ base::JointType_KneeRight
+		+ base::JointType_AnkleRight
+		+ base::JointType_FootRight
+		+ base::JointType_SpineShoulder
+		+ base::JointType_HandTipLeft
+		+ base::JointType_ThumbLeft
+		+ base::JointType_HandTipRight
+		+ base::JointType_ThumbRight;
+
 	enum StreamType
 	{
 		StreamType_Depth = 1 << 0,

@@ -45,3 +45,19 @@ SET(TARGET_EXTERNAL_LIBRARIES
 )
 
 SETUP_APPLICATION(skin_detection Tests)
+
+# ------------
+SET(TARGET_SRC
+    bodyPartSegmentation.cpp
+)
+SET(TARGET_H
+    # header.h
+)
+
+SET(TARGET_EXTERNAL_LIBRARIES
+	Tracking
+	Recognition
+	Features
+)
+
+SETUP_APPLICATION(body_part_segmentation Tests)

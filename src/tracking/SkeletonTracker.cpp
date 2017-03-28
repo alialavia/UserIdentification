@@ -333,17 +333,6 @@ size_t SkeletonTracker::GetUserSceneIDs(std::vector<int> &ids) const
 
 HRESULT SkeletonTracker::RenderFaceBoundingBoxes(cv::Mat &target, base::ImageSpace space) const
 {
-	int srcWidth, srcHeight;
-	if ((base::ImageSpace_Color & space) == base::ImageSpace_Color)
-	{
-		srcWidth = base::StreamSize_WidthColor;
-		srcHeight = base::StreamSize_HeightColor;
-	}
-	else
-	{
-		srcWidth = base::StreamSize_WidthDepth;
-		srcHeight = base::StreamSize_HeightDepth;
-	}
 
 	int output_width, output_height;
 	output_width = target.cols;
@@ -404,6 +393,34 @@ HRESULT SkeletonTracker::RenderFaceBoundingBoxes(cv::Mat &target, base::ImageSpa
 
 	return S_OK;
 }
+
+HRESULT SkeletonTracker::RenderAllBodyJoints(cv::Mat &target, base::ImageSpace space) const
+{
+
+
+	int output_width, output_height;
+	output_width = target.cols;
+	output_height = target.rows;
+
+	// get joints
+	std::vector<std::vector<cv::Point2f>> user_joints;
+	size_t nr_users = 0;
+
+	nr_users = GetJointProjections(user_joints, base::JOINT_INDICES_ALL, space, output_width, output_height);
+
+	// draw joints
+	for (size_t i = 0; i < user_joints.size(); i++)
+	{
+		for (size_t j = 0; j<user_joints[i].size(); j++)
+		{
+			cv::circle(target, user_joints[i][j], 4, cv::Scalar(0, 255, 0), cv::LINE_4);
+		}
+	}
+
+	return S_OK;
+}
+
+
 
 void SkeletonTracker::ExtractFacesPatches(cv::Mat img, int patch_size, std::vector<cv::Mat> &patches, std::vector<int> &user_ids) const
 {

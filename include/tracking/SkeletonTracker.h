@@ -67,6 +67,8 @@ namespace tracking
 		/// <returns>HRESULT.</returns>
 		HRESULT RenderFaceBoundingBoxes(cv::Mat &target, base::ImageSpace space) const;
 
+		HRESULT RenderAllBodyJoints(cv::Mat &target, base::ImageSpace space) const;
+
 		void ExtractFacesPatches(cv::Mat img, int patch_size, std::vector<cv::Mat> &patches, std::vector<int> &user_ids) const;
 
 	private:

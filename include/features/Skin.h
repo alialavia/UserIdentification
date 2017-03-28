@@ -32,6 +32,51 @@ namespace features{
 		}
 
 	public:
+
+		static cv::Mat SubtractSkin(cv::Mat src)
+		{
+
+			// allocate the result matrix
+			cv::Mat dst = src.clone();
+
+			cv::Vec3b cwhite = cv::Vec3b::all(255);
+			cv::Vec3b cblack = cv::Vec3b::all(0);
+
+			cv::Mat src_ycrcb, src_hsv;
+			cvtColor(src, src_ycrcb, CV_BGR2YCrCb);
+			src.convertTo(src_hsv, CV_32FC3);
+			cvtColor(src_hsv, src_hsv, CV_BGR2HSV);
+			normalize(src_hsv, src_hsv, 0.0, 255.0, cv::NORM_MINMAX, CV_32FC3);
+
+			for (int i = 0; i < src.rows; i++) {
+				for (int j = 0; j < src.cols; j++) {
+					cv::Vec3b pix_bgr = src.ptr<cv::Vec3b>(i)[j];
+					int B = pix_bgr.val[0];
+					int G = pix_bgr.val[1];
+					int R = pix_bgr.val[2];
+					// apply rgb rule
+					bool a = R1(R, G, B);
+
+					cv::Vec3b pix_ycrcb = src_ycrcb.ptr<cv::Vec3b>(i)[j];
+					int Y = pix_ycrcb.val[0];
+					int Cr = pix_ycrcb.val[1];
+					int Cb = pix_ycrcb.val[2];
+					// apply ycrcb rule
+					bool b = R2(Y, Cr, Cb);
+
+					cv::Vec3f pix_hsv = src_hsv.ptr<cv::Vec3f>(i)[j];
+					float H = pix_hsv.val[0];
+					float S = pix_hsv.val[1];
+					float V = pix_hsv.val[2];
+					// apply hsv rule
+					bool c = R3(H, S, V);
+					if (a&&b&&c)
+						dst.ptr<cv::Vec3b>(i)[j] = cblack;
+				}
+			}
+			return dst;
+		}
+
 		static cv::Mat GetSkin(cv::Mat src)
 		{
 			

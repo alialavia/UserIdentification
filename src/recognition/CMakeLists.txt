@@ -3,11 +3,13 @@ SET(HEADER_PATH ${user_identification_SOURCE_DIR}/include/${LIB_NAME})
 SET(TARGET_H
     ${HEADER_PATH}/TorsoRecognition.h
     ${HEADER_PATH}/LowerBodyRecognition.h
+    ${HEADER_PATH}/BodyParts.h
 )
 
 SET(TARGET_SRC
 	TorsoRecognition.cpp
 	LowerBodyRecognition.cpp
+	BodyParts.cpp
 )
 
 # --------------------------------------------
