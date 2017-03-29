@@ -1,5 +1,5 @@
 SET(TARGET_SRC
-    Array3D.cpp 
+    UniqueSetAssoc.cpp 
 )
 SET(TARGET_H
     # header.h
@@ -10,4 +10,4 @@ SET(TARGET_EXTERNAL_LIBRARIES
 	Tracking
 )
 
-SETUP_APPLICATION(Array3D Unit Tests)
+SETUP_APPLICATION(UniqueSetAssoc Unit Tests)
