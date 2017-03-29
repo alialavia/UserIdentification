@@ -4,6 +4,8 @@
 #include <opencv2/core/mat.hpp>
 #include <iostream>
 #include <unordered_set>
+#include <stdarg.h>
+#include <iostream>
 
 namespace math {
 
@@ -322,6 +324,18 @@ namespace math {
 			}
 		}
 
+		bool HasIntersection(KEY key1, KEY key2)
+		{
+			bool intersection = false;
+			if (
+				mKeys.find(key1) != mKeys.end() ||
+				mKeys.find(key2) != mKeys.end()
+				) {
+				intersection = true;
+			}
+			return intersection;
+		}
+
 		bool HasIntersection(UniqueSetAssoc<KEY, VAL> other)
 		{
 			bool intersection = false;
@@ -366,30 +380,30 @@ namespace math {
 		}
 
 
-		bool Insert(KEY key, VAL val)
-		{
-			// insert key
-			auto p = mKeys.insert(key);
+		//bool Insert(KEY key, VAL val)
+		//{
+		//	// insert key
+		//	auto p = mKeys.insert(key);
 
-			// insert value
-			mValues.insert(val);
-			return p.second;
-		}
+		//	// insert value
+		//	mValues.insert(val);
+		//	return p.second;
+		//}
 
 
 		// return: if key was already present
-		bool Insert(KEY key, std::vector<VAL> values)
-		{
-			// insert key
-			auto p = mKeys.insert(value);
+		//bool Insert(KEY key, std::vector<VAL> values)
+		//{
+		//	// insert key
+		//	auto p = mKeys.insert(value);
 
-			// insert values
-			for (auto it = values.begin(), end = values.end(); it != end; ++it)
-			{
-				mValues.insert(*it);
-			}
-			return p.second;
-		}
+		//	// insert values
+		//	for (auto it = values.begin(), end = values.end(); it != end; ++it)
+		//	{
+		//		mValues.insert(*it);
+		//	}
+		//	return p.second;
+		//}
 
 		size_t Insert(std::vector<KEY> keys, std::vector<VAL> values)
 		{
@@ -414,25 +428,25 @@ namespace math {
 			return insertions;
 		}
 
-		size_t Insert(std::vector<KEY> keys, VAL val)
-		{
-			// insert keys
-			size_t insertions = 0;
-			for (auto it = keys.begin(), end = keys.end(); it != end; ++it)
-			{
+		//size_t Insert(std::vector<KEY> keys, VAL val)
+		//{
+		//	// insert keys
+		//	size_t insertions = 0;
+		//	for (auto it = keys.begin(), end = keys.end(); it != end; ++it)
+		//	{
 
-				auto p = mKeys.insert(*it);
-				if (p.second)
-				{
-					insertions++;
-				}
-			}
+		//		auto p = mKeys.insert(*it);
+		//		if (p.second)
+		//		{
+		//			insertions++;
+		//		}
+		//	}
 
-			// insert values
-			mValues.insert(val);
+		//	// insert values
+		//	mValues.insert(val);
 
-			return insertions;
-		}
+		//	return insertions;
+		//}
 
 		void Print()
 		{
@@ -452,6 +466,56 @@ namespace math {
 
 		std::unordered_set<KEY> mKeys;
 		std::unordered_set<VAL> mValues;
+	};
+
+
+
+	template <typename KEY, typename  VAL>
+	class UniqueSetList
+	{
+	public:
+		UniqueSetList()
+		{
+		}
+		void Update(KEY key1, KEY key2, VAL val1, VAL val2)
+		{
+
+			std::vector<std::vector<UniqueSetAssoc<KEY, VAL>>::iterator> merge_iterators;
+
+			// build new one
+			UniqueSetAssoc<KEY, VAL> merged;
+			// add new values
+			merged.Insert({ key1, key2 }, { val1, val2 });
+
+
+			for (auto it = mSets.begin(); it != mSets.end();)
+			{
+				if (it->HasIntersection(key1, key2))
+				{
+					//merge_iterators.push_back(it);
+					// merge, then delete
+					merged.Merge(*it);
+					it = mSets.erase(it);
+				}else
+				{
+					++it;
+				}
+			}
+
+			// insert merged set
+			mSets.push_back(merged);
+		}
+
+		void Print()
+		{
+			for (size_t i = 0; i<mSets.size(); i++)
+			{
+				std::cout << "Set Nr. " << i << "\n---------------" << std::endl;
+				mSets[i].Print();
+			}
+		}
+
+		std::vector<UniqueSetAssoc<KEY, VAL>> mSets;
 	};
 
 
