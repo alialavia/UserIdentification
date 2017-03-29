@@ -48,3 +48,23 @@ python ../test/tcp_connection/server.py
 ```bash
 python ../test/tcp_connection/client.py
 ```
+
+## Q/A and Errors
+
+### 1. Invalid Env. Variables
+
+> docker: An error occurred trying to connect: Post http://%2F%2F.%2Fpipe%2Fdocker
+_engine/v1.24/containers/create: open //./pipe/docker_engine: Das System kann di
+e angegebene Datei nicht finden..
+
+Solution:
+
+```bash
+$ docker-machine env
+```
+Where `C:\lib\Docker Toolbox\docker-machine.exe` is the path to your docker machine:
+```bash
+$ eval $("C:\lib\Docker Toolbox\docker-machine.exe" env)
+```
+
+
