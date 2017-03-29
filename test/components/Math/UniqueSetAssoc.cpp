@@ -52,6 +52,16 @@ void TestListSet()
 	set.Print();
 	set.Update(3, 2, "aa32_1", "aa32_2");
 	set.Print();
+
+	std::cout << "Extracted Elements: \n";
+	std::unordered_set<std::string> extracted;
+	if(set.ValuesByKey(2, extracted))
+	{
+		for (const auto& elem : extracted) {
+			std::cout << elem << " | ";
+		}
+	}
+
 }
 
 

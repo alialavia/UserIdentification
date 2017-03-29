@@ -299,6 +299,12 @@ namespace math {
 		{
 		}
 
+		size_t DeleteKey(KEY key)
+		{
+			mKeys.erase(key);
+			return mKeys.size();
+		}
+
 		bool MergeIntersection(UniqueSetAssoc<KEY, VAL> other)
 		{
 			bool intersection = HasIntersection(other);
@@ -322,6 +328,11 @@ namespace math {
 			{
 				mValues.insert(*it);
 			}
+		}
+
+		bool HasIntersection(KEY key1)
+		{
+			return mKeys.find(key1) != mKeys.end();
 		}
 
 		bool HasIntersection(KEY key1, KEY key2)
@@ -504,6 +515,38 @@ namespace math {
 
 			// insert merged set
 			mSets.push_back(merged);
+		}
+
+		bool RemoveKey(KEY key)
+		{
+			for (auto it = mSets.begin(); it != mSets.end(); )
+			{
+				if (
+					(*it).HasIntersection(key) &&
+					(*it).DeleteKey(key) == 0
+					)
+				{
+					// delete whole set
+					it = mSets.erase(it);
+				}else
+				{
+					++it;
+				}
+			}
+		}
+
+		bool ValuesByKey(KEY key, std::unordered_set<VAL> &values)
+		{
+			for (auto it = mSets.begin(); it != mSets.end(); it++)
+			{
+				if((*it).HasIntersection(key))
+				{
+					values = (*it).mValues;
+					return true;
+				}
+			}
+			
+			return false;
 		}
 
 		void Print()
