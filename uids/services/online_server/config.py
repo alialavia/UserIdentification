@@ -6,6 +6,7 @@ ROUTING = {
        "ID": {
            "ImageIdentification": 1,  # identify user from image
            "ImageIdentificationPrealigned": 2,
+           "ImageIdentificationPrealignedCS": 3,
            "Update": 10,  # collect embeddings from images for user with ID XY
            "UpdateRobust": 11,
            "UpdatePrealigned": 12,
@@ -13,11 +14,13 @@ ROUTING = {
            "ImageAlignment": 22,
            "ProfilePictureUpdate": 23,
            "GetProfilePictures": 24,
-           "Ping": 222
+           "Ping": 222,
+           "Disconnect": 223
        },
        "NAME": {
            1: "ImageIdentification",
            2: "ImageIdentificationPrealigned",
+           3: "ImageIdentificationPrealignedCS",
            10: "Update",
            11: "UpdateRobust",
            12: "UpdatePrealigned",
@@ -25,7 +28,8 @@ ROUTING = {
            22: "ImageAlignment",
            23: "ProfilePictureUpdate",
            24: "GetProfilePictures",
-           222: "Ping"
+           222: "Ping",
+           223: "Disconnect"
         }
    },
    "RESPONSE": {  # response id range: integer

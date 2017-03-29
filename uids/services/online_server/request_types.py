@@ -10,7 +10,7 @@ r.ROUTING = ROUTING
 
 class ImageIdentification:
 
-    def __init__(self, server, conn):
+    def __init__(self, server, conn, handle):
 
         # receive images
         images = server.receive_image_batch_squared_same_size(conn)
@@ -54,7 +54,7 @@ class ImageIdentification:
 
 class ImageIdentificationPrealigned:
 
-    def __init__(self, server, conn):
+    def __init__(self, server, conn, handle):
 
         # receive images
         images = server.receive_image_batch_squared_same_size(conn)
@@ -96,11 +96,53 @@ class ImageIdentificationPrealigned:
         log.info('server', "User identification complete: {} [ID], {} [Username]".format(user_id, user_name))
         r.Identification(server, conn, int(user_id), user_name, confidence=confidence, profile_picture=profile_picture)
 
+
+class ImageIdentificationPrealignedCS:
+
+    def __init__(self, server, conn, handle):
+
+        nr_users = server.receive_uint(conn)
+        target_users = []
+        for x in range(0, nr_users):
+            # get target class ids (uint)
+            user_id = server.receive_uint(conn)
+            target_users.append(user_id)
+
+        # receive images
+        images = server.receive_image_batch_squared_same_size(conn)
+
+        # generate embedding
+        embeddings = server.embedding_gen.get_embeddings(images, False)
+
+        if not embeddings.any():
+            r.Error(server, conn, "Could not generate face embeddings.")
+            return
+
+        # closed set user id prediction
+        user_id = server.classifier.predict_closed_set(target_users, embeddings)
+
+        if user_id is None:
+            r.Error(server, conn, "Label could not be predicted - Samples are contradictory.")
+            return
+
+        # get user nice name
+        user_name = server.user_db.get_name_from_id(user_id)
+
+        if user_name is None:
+            user_name = "unnamed"
+
+        # get profile picture
+        profile_picture = server.user_db.get_profile_picture(user_id)
+        log.info('server', "User identification complete: {} [ID], {} [Username]".format(user_id, user_name))
+        r.Identification(server, conn, int(user_id), user_name,
+                         profile_picture=profile_picture)
+
+
 # --------------- UPDATE
 
 class Update:
 
-    def __init__(self, server, conn):
+    def __init__(self, server, conn, handle):
         # receive user id
         user_id = server.receive_uint(conn)
 
@@ -133,7 +175,7 @@ class Update:
 
 class UpdateRobust:
 
-    def __init__(self, server, conn):
+    def __init__(self, server, conn, handle):
         # receive user id
         user_id = server.receive_uint(conn)
 
@@ -175,7 +217,7 @@ class UpdatePrealigned:
     - Assumes given label/id is correct
     """
 
-    def __init__(self, server, conn):
+    def __init__(self, server, conn, handle):
         # receive user id
         user_id = server.receive_uint(conn)
 
@@ -208,7 +250,7 @@ class UpdatePrealignedRobust:
     - Checks
     """
 
-    def __init__(self, server, conn):
+    def __init__(self, server, conn, handle):
         # receive user id
         user_id = server.receive_uint(conn)
 
@@ -243,7 +285,7 @@ class UpdatePrealignedRobust:
 
 class SaveDatabase:
 
-    def __init__(self, server, conn):
+    def __init__(self, server, conn, handle):
 
         # save user database
         server.user_db.save()
@@ -253,7 +295,7 @@ class SaveDatabase:
 
 class ImageAlignment:
 
-    def __init__(self, server, conn):
+    def __init__(self, server, conn, handle):
 
         log.info('server', "Image alignment")
 
@@ -274,7 +316,7 @@ class ImageAlignment:
 
 class ProfilePictureUpdate:
 
-    def __init__(self, server, conn):
+    def __init__(self, server, conn, handle):
         # receive user id
         user_id = server.receive_uint(conn)
 
@@ -310,7 +352,7 @@ class ProfilePictureUpdate:
 
 class GetProfilePictures:
 
-    def __init__(self, server, conn):
+    def __init__(self, server, conn, handle):
 
         log.info('server', 'Getting all profile pictures')
 
@@ -322,5 +364,11 @@ class GetProfilePictures:
 
 class Ping:
 
-    def __init__(self, server, conn):
+    def __init__(self, server, conn, handle):
         r.Pong(server, conn)
+
+
+class Disconnect:
+    def __init__(self, server, conn, handle):
+        # break connection
+        handle[0] = False

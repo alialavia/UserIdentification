@@ -3,6 +3,7 @@
 #include "ResponseTypes.h"
 #include <opencv2/core/mat.hpp>
 #include <io/Networking.h>
+#include <unordered_set>
 
 namespace io {
 	class TCPClient;
@@ -20,6 +21,7 @@ namespace io {
 	{
 		NetworkRequest_ImageIdentification = 1,
 		NetworkRequest_ImageIdentificationAligned = 2,
+		NetworkRequest_ImageIdentificationAlignedCS = 3,
 		NetworkRequest_EmbeddingCollectionByID = 10,
 		NetworkRequest_EmbeddingCollectionByIDRobust = 11,
 		NetworkRequest_EmbeddingCollectionByIDAligned = 12,
@@ -30,7 +32,8 @@ namespace io {
 		NetworkRequest_ImageAlignment = 22,
 		NetworkRequest_ProfilePictureUpdate = 23,
 		NetworkRequest_GetProfilePictures = 24,
-		NetworkRequest_Ping = 222
+		NetworkRequest_Ping = 222,
+		NetworkRequest_Disconnect = 223
 	};
 
 	// request type
@@ -56,6 +59,18 @@ namespace io {
 		// submit specific payload (data size and data)
 		virtual void SubmitPayload() = 0;
 
+	};
+
+	class ClientDisconnect : public NetworkRequest
+	{
+	public: ClientDisconnect(io::TCPClient* server_conn) :NetworkRequest(server_conn, NetworkRequest_Disconnect) {}
+	protected: void SubmitPayload() {}
+	};
+
+	class Ping : public NetworkRequest
+	{
+	public: Ping(io::TCPClient* server_conn) :NetworkRequest(server_conn, NetworkRequest_Ping) {}
+	protected: void SubmitPayload() {}
 	};
 
 	// -----------------------------------------
@@ -170,6 +185,55 @@ namespace io {
 
 
 	// ---------- online requests
+
+	// closed set image identification
+	class ImageIdentificationAlignedCS : public NetworkRequest
+	{
+	public:
+		ImageIdentificationAlignedCS(
+			io::TCPClient* server_conn,
+			std::vector<cv::Mat*> images,
+			std::unordered_set<int> ids
+		) :
+			NetworkRequest(server_conn, NetworkRequest_ImageIdentificationAlignedCS)
+		{
+			// make deep copy of images
+			for (size_t i = 0; i < images.size(); i++) {
+				mImages.push_back((*images[i]).clone());
+			}
+			mIDs = ids;
+		}
+		ImageIdentificationAlignedCS(
+			io::TCPClient* server_conn,
+			std::vector<cv::Mat> images,
+			std::unordered_set<int> ids
+		) :
+			NetworkRequest(server_conn, NetworkRequest_ImageIdentificationAlignedCS)
+		{
+			// make deep copy of images
+			for (size_t i = 0; i < images.size(); i++) {
+				mImages.push_back(images[i].clone());
+			}
+			mIDs = ids;
+		}
+
+	protected:
+
+		// submit specific payload
+		void SubmitPayload() {
+			pServerConn->SendUInt(mIDs.size());
+			for (auto const& id : mIDs) {
+				pServerConn->SendUInt(id);
+			}
+			pServerConn->SendImageBatchQuadraticSameSize(mImages);
+		}
+
+		// payload: quadratic(!) images of same size
+		std::vector<cv::Mat> mImages;
+		// possible ids
+		std::unordered_set<int> mIDs;
+
+	};
 
 	class ImageIdentificationAligned : public NetworkRequest
 	{
@@ -306,11 +370,7 @@ namespace io {
 	protected: void SubmitPayload() {}
 	};
 
-	class Ping : public NetworkRequest
-	{
-	public: Ping(io::TCPClient* server_conn) :NetworkRequest(server_conn, NetworkRequest_Ping) {}
-	protected: void SubmitPayload() {}
-	};
+
 }
 
 #endif

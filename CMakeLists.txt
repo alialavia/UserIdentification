@@ -185,6 +185,8 @@ SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 #SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
 #SET(CMAKE_VERBOSE_MAKEFILE ON)
 
+
+add_definitions(-D_KEEP_SERVER_CONNECTION)
 # use facegrid recording (pose dependent image capturing)
 add_definitions(-DFACEGRID_RECORDING)
 # check tracking confidence (reidentification in critical situations)

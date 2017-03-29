@@ -77,10 +77,10 @@ int main(int argc, char** argv)
 	int res_yaw = 10;
 	if(FLAGS_lock_axis == "yaw")
 	{
-		res_pitch = 20;
+		res_pitch = 21;
 	}else if(FLAGS_lock_axis == "pitch")
 	{
-		res_yaw = 20;
+		res_yaw = 21;
 	}
 
 	tracking::RadialFaceGridLabeled grid(res_roll,res_pitch,res_yaw);
@@ -175,19 +175,27 @@ int main(int argc, char** argv)
 				{
 
 					cv::Rect2d bb = bounding_boxes[0];
-					bb.x -= 20;
-					bb.y -= 20;
-					bb.width += 20;
-					bb.height += 20;
+					bb.x -= 40;
+					bb.y -= 40;
+					bb.width += 80;
+					bb.height += 80;
 
-					
-					if(FLAGS_subtract_bg)
+
+					try
 					{
-						face_snap = bg_subtracted(bb);
-					}else
+						if (FLAGS_subtract_bg)
+						{
+							face_snap = bg_subtracted(bb);
+						}
+						else
+						{
+							face_snap = color_image(bb);
+						}
+					} catch(...)
 					{
-						face_snap = color_image(bb);
+						continue;
 					}
+
 
 					cv::imshow(cWindowLabel, face_snap);
 					key_save = cv::waitKey(5);
@@ -218,10 +226,10 @@ int main(int argc, char** argv)
 				{
 
 					cv::Rect2d bb = bounding_boxes[0];
-					bb.x -= 20;
-					bb.y -= 20;
-					bb.width += 20;
-					bb.height += 20;
+					bb.x -= 40;
+					bb.y -= 40;
+					bb.width += 80;
+					bb.height += 80;
 
 					face_snap = color_image(bb);
 				}
@@ -238,7 +246,7 @@ int main(int argc, char** argv)
 
 					if (
 						FLAGS_lock_axis == "roll" &&
-						(roll > 5 || roll < -5)
+						(roll > 2. || roll < -2.)
 						)
 					{
 						std::cout << "roll: " << roll << std::endl;
@@ -246,7 +254,7 @@ int main(int argc, char** argv)
 					}
 					if (
 						FLAGS_lock_axis == "pitch" &&
-						(pitch > 5 || pitch < -5)
+						(pitch > 2. || pitch < -2.)
 						)
 					{
 						std::cout << "pitch: " << pitch << std::endl;
@@ -254,7 +262,7 @@ int main(int argc, char** argv)
 					}
 					if (
 						FLAGS_lock_axis == "yaw" &&
-						(yaw > 5 || yaw < -5)
+						(yaw > 2. || yaw < -2.)
 						)
 					{
 						std::cout << "yaw: " << yaw << std::endl;
@@ -265,7 +273,7 @@ int main(int argc, char** argv)
 					if(FLAGS_lock_axis == "yaw" || FLAGS_lock_axis == "pitch")
 					{
 						if (
-							(roll > 5 || roll < -5)
+							(roll > 2. || roll < -2.)
 							)
 						{
 							continue;

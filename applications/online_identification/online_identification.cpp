@@ -54,6 +54,11 @@ int main(int argc, char** argv)
 	io::TCPClient server_conn;
 	server_conn.Config("127.0.0.1", FLAGS_port);
 
+#ifdef _KEEP_SERVER_CONNECTION
+	server_conn.Connect();
+#endif
+	
+
 	// start request handler
 	io::NetworkRequestHandler req_handler;
 	req_handler.start(); // parallel processing
@@ -70,6 +75,15 @@ int main(int argc, char** argv)
 	if (FLAGS_face_dect) {
 		face_dect.start();
 	}
+
+	// print instructions
+	std::cout << "=====================================\n"
+				"          INSTRUCTIONS\n"
+				"=====================================\n"
+				"[1]: Show all profile pictures of the server\n"
+				"[q]: Disconnect client\n"
+				"--------------------------------------\n"
+				"\n\n";
 
 	while (true) 
 	{
@@ -155,7 +169,7 @@ int main(int argc, char** argv)
 			// get all profile pictures from server
 			if (c == '1')
 			{
-				std::vector<std::pair<int, cv::Mat>> profile_pictures = um.GetAllProfilePictures();
+				//::vector<std::pair<int, cv::Mat>> profile_pictures = um.GetAllProfilePictures();
 				std::vector<int> user_ids;
 				std::vector<cv::Mat> profile_pics;
 				um.GetAllProfilePictures(profile_pics, user_ids);
@@ -174,7 +188,10 @@ int main(int argc, char** argv)
 				{
 					std::cout << "No profile pictures taken yet...\n";
 				}
-
+			}else if(c == 'q')
+			{
+				// disconnect client
+				break;
 			}
 
 		}
@@ -191,6 +208,12 @@ int main(int argc, char** argv)
 	// close camera
 	k.Close();
 
+#ifdef _KEEP_SERVER_CONNECTION
+	// send disconnection signal to server
+	io::ClientDisconnect disc(&server_conn);
+	disc.SubmitRequest();
+	server_conn.Close();
+#endif
 
 
 	return 0;

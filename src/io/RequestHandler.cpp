@@ -147,8 +147,10 @@ void NetworkRequestHandler::processRequests()
 			// extract server connection
 			io::TCPClient* socket = request_ptr->GetServerConnection();
 
+#ifndef _KEEP_SERVER_CONNECTION
 			// connect to server
 			socket->Connect();
+#endif
 
 			// submit
 			request_ptr->SubmitRequest();
@@ -183,8 +185,10 @@ void NetworkRequestHandler::processRequests()
 			}
 			mRespondsLock.unlock();
 
+#ifndef _KEEP_SERVER_CONNECTION
 			// disconnect from server
 			socket->Close();
+#endif
 
 #ifdef _DEBUG_REQUESTHANDLER
 			std::cout << "--- Request terminated - Disconnected from server " << std::endl;

@@ -45,24 +45,32 @@ void BatchUserManager::ProcessResponses()
 			bool duplicate_user = false;
 			int duplicate_id = -1;
 
-			// Check for duplicate IDs
-			for (auto its = mFrameIDToUser.begin(); its != mFrameIDToUser.end(); ++its)
+			
+			if(target_user->GetUserID() == response.mUserID)
 			{
-				// check if has assigned id - equals identified
-				if((duplicate_id = its->second->GetUserID()) > 0 && duplicate_id == response.mUserID)
+				// revalidation - might assign different user	
+			}else
+			{
+				// Check for duplicate IDs
+				for (auto its = mFrameIDToUser.begin(); its != mFrameIDToUser.end(); ++its)
 				{
-					// person with same id is already in scene
-					// reset both tracking instances and force reidentification
-					its->second->ResetUserIdentity();
-					target_user->ResetUserIdentity();
-					// cancel all requests for the two users
-					CancelAndDropAllUserRequests(its->second);
-					CancelAndDropAllUserRequests(target_user);
+					// check if has assigned id - equals identified
+					if ((duplicate_id = its->second->GetUserID()) > 0 && duplicate_id == response.mUserID)
+					{
+						// person with same id is already in scene
+						// reset both tracking instances and force reidentification
+						its->second->ResetUserIdentity();
+						target_user->ResetUserIdentity();
+						// cancel all requests for the two users
+						CancelAndDropAllUserRequests(its->second);
+						CancelAndDropAllUserRequests(target_user);
 
-					duplicate_user = true;
-					break;
+						duplicate_user = true;
+						break;
+					}
 				}
 			}
+
 			
 			if(duplicate_user)
 			{
@@ -381,14 +389,40 @@ void BatchUserManager::GenerateRequests(cv::Mat scene_rgb)
 			// collect images for identification
 			if (action == ActionStatus_DataCollection) {
 
-// ------ closed set
+				// ------ closed set
 #ifdef _CLOSED_SET_REVALIDATION
 		// TODO: custom request
+		// Todo: check if -1 in closed set: apply open set classification
+				if (target_user->TryToRecordFaceSample(scene_rgb))
+				{
+					// if enough images, request identification
+					if (target_user->pGrid->nr_images() > 3) {
+
+						std::vector<cv::Mat*> face_patches = target_user->pGrid->ExtractGrid();
+						std::unordered_set<int> closed_set = target_user->mClosedSetConfusionIDs;
+						closed_set.insert(target_user->GetUserID());
+#ifdef _DLIB_PREALIGN
+						io::ImageIdentificationAlignedCS* new_request = new io::ImageIdentificationAlignedCS(
+							pServerConn, face_patches, closed_set
+						);
+
+						pRequestHandler->addRequest(new_request, true);
+
+						// update linking
+						mRequestToUser[new_request] = target_user;
+						mUserToRequests[target_user].insert(new_request);
+
+						// set user action status
+						target_user->SetStatus(ActionStatus_Waiting);
+						target_user->pGrid->Clear();
+#endif
+					}
+				}
+
 
 // ------ open set
 #else
 
-#endif
 
 				if (target_user->TryToRecordFaceSample(scene_rgb))
 				{
@@ -421,6 +455,12 @@ void BatchUserManager::GenerateRequests(cv::Mat scene_rgb)
 						target_user->pGrid->Clear();
 					}
 				}
+
+
+
+#endif
+
+
 
 
 

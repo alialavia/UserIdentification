@@ -67,7 +67,6 @@ namespace io {
 
 		void cancelPendingRequest(io::NetworkRequest* request);
 
-
 		template<class T>
 		bool PopResponse(T *response_container, NetworkRequest* &req_lookup, NetworkRequestType* request_type = nullptr)
 		{

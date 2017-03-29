@@ -246,6 +246,27 @@ class EnsembleClassifierTypeA(EnsembleClassifierBase):
                 predictions.append(__clf.predict(samples))
         return np.array(predictions), np.array(class_ids)
 
+
+    def predict_closed_set(self, target_classes, samples):
+
+        # choose nearest class
+        mean_dist_cosine = []
+        class_ids = []
+
+        for class_id, __clf in self.classifiers.iteritems():
+            if class_id in target_classes:
+                class_ids.append(class_id)
+                mean_dist_cosine.append(self.classifiers[class_id].mean_dist(samples))
+
+        if len(class_ids) == 0:
+            return None
+
+        log.info('cl', "Closed set distance scores: {} | max: {}".format(class_ids, mean_dist_cosine))
+
+        min_index = mean_dist_cosine.index(min(mean_dist_cosine))
+        return class_ids[min_index]
+
+
     def predict(self, samples):
         """
         Prediction cases:

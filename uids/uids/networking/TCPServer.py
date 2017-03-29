@@ -278,18 +278,18 @@ class TCPServer:
         msg = self.receive_message(client_socket, msg_size)
         return msg
 
-    def receive_char(self, client_socket):
+    def receive_char(self, client_socket, timeout=2):
         """1 byte - unsigned: 0 .. 255"""
         # read 1 byte = char = 8 bit (2^8), BYTE datatype: minimum value of -127 and a maximum value of 127
-        raw_msg = self.receive_message(client_socket, 1)
+        raw_msg = self.receive_message(client_socket, 1, timeout=timeout)
         if not raw_msg:
             return None
         # 8-bit string to integer
         numerical = ord(raw_msg)
         return numerical
 
-    def receive_uchar(self, client_socket):
-        return self.receive_char(client_socket)
+    def receive_uchar(self, client_socket, timeout=2):
+        return self.receive_char(client_socket, timeout=timeout)
 
     def receive_short(self, client_socket):
         """read 2 bytes"""
@@ -430,13 +430,14 @@ class TCPServerBlocking(TCPServer):
             # server loop
             # multiple requests per connection
             # Todo: implement termination signal to close connection
-            log.info('server', "Bundled-request handling")
+            log.info('server', "Bundled-request handling (keep connection open)")
             while True:
                 # accept new connection - blocking call, wait for new socket to connect to
                 conn, addr = self.SERVER_SOCKET.accept()
                 log.info('server', "--- Connected with {}:{} - Ready to process multiple requests ---".format(addr[0], addr[1]))
 
                 # handle request
+                # while connection open
                 while self.handle_request(conn, addr):
 
                     # check status - eventually shutdown server

@@ -192,6 +192,14 @@ namespace io {
 	{
 	public:
 		ProfilePictures(io::TCPClient* conn = nullptr) :NetworkResponse(conn, NetworkResponse_ProfilePictures) {}
+		ProfilePictures(const ProfilePictures& other) :NetworkResponse(other)
+		{
+			for (auto const& img : other.mImages) {
+				cv::Mat copy = img.clone();
+				mImages.push_back(copy);
+			}
+			mUserIDs = other.mUserIDs;
+		}
 		void GetPayload() { 
 			// number of users
 			int nr_users = pConn->Receive32bit<int>();
@@ -208,6 +216,7 @@ namespace io {
 		std::vector<int> mUserIDs;
 		std::vector<cv::Mat> mImages;
 	};
+
 
 	class Pong : public NetworkResponse
 	{

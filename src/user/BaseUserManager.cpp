@@ -285,59 +285,99 @@ std::vector<std::pair<int, cv::Mat>> BaseUserManager::GetAllProfilePictures() {
 	std::vector<std::pair<int, cv::Mat>> out;
 	// request images from server
 	io::GetProfilePictures req(pServerConn);
-	pServerConn->Connect();
-	req.SubmitRequest();
-	// wait for reponse
-	io::ProfilePictures resp(pServerConn);
-	int response_code = 0;
-	if (!resp.Load(&response_code)) {
-		// error
+
+	// submit priority request
+	pRequestHandler->addRequest(&req, true);
+
+	// wait for response (blocking)
+	io::NetworkRequest* request_lookup = nullptr;	// careful! the request corresponding to this pointer is already deleted!
+	user::IdentificationStatus id_status;
+
+	io::ProfilePictures response;
+
+	while (!pRequestHandler->PopResponse(&response, request_lookup))
+	{
+		// breaks when response is received
 	}
-	else {
-#ifdef _DEBUG_BaseUserManager
-		if (resp.mUserIDs.size() != resp.mUserIDs.size()) {
-			std::cout << "--- Error: size(user_ids) != size(user_profile_pictures)!\n";
-		}
-#endif
-		// load images
-		for (size_t i = 0; i < resp.mUserIDs.size(); i++) {
-			out.push_back(std::make_pair(resp.mUserIDs[i], resp.mImages[i]));
-		}
+
+	// load images
+	for (size_t i = 0; i < response.mUserIDs.size(); i++) {
+		std::cout << "here\n";
+		out.push_back(std::make_pair(response.mUserIDs[i], response.mImages[i]));
 	}
-	pServerConn->Close();
+
 	return out;
 }
 
+//std::vector<std::pair<int, cv::Mat>> BaseUserManager::GetAllProfilePictures() {
+//	std::vector<std::pair<int, cv::Mat>> out;
+//	// request images from server
+//	io::GetProfilePictures req(pServerConn);
+//#ifndef _KEEP_SERVER_CONNECTION
+//	pServerConn->Connect();
+//#endif
+//	req.SubmitRequest();
+//	// wait for reponse
+//	io::ProfilePictures resp(pServerConn);
+//	int response_code = 0;
+//	if (!resp.Load(&response_code)) {
+//		// error
+//	}
+//	else {
+//#ifdef _DEBUG_BaseUserManager
+//		if (resp.mUserIDs.size() != resp.mUserIDs.size()) {
+//			std::cout << "--- Error: size(user_ids) != size(user_profile_pictures)!\n";
+//		}
+//#endif
+//		// load images
+//		for (size_t i = 0; i < resp.mUserIDs.size(); i++) {
+//			out.push_back(std::make_pair(resp.mUserIDs[i], resp.mImages[i]));
+//		}
+//	}
+//#ifndef _KEEP_SERVER_CONNECTION
+//	pServerConn->Close();
+//#endif
+//	return out;
+//}
+
 void BaseUserManager::GetAllProfilePictures(std::vector<cv::Mat> &pictures, std::vector<int> &user_ids) {
+
 	// request images from server
 	io::GetProfilePictures req(pServerConn);
-	pServerConn->Connect();
-	req.SubmitRequest();
-	// wait for reponse
-	io::ProfilePictures resp(pServerConn);
-	int response_code = 0;
-	if (!resp.Load(&response_code)) {
-		// error
+
+	// submit priority request
+	pRequestHandler->addRequest(&req);
+
+	// wait for response (blocking)
+	io::NetworkRequest* request_lookup = nullptr;	// careful! the request corresponding to this pointer is already deleted!
+	user::IdentificationStatus id_status;
+
+	io::ProfilePictures response;
+
+	while (!pRequestHandler->PopResponse(&response, request_lookup))
+	{
+		// breaks when response is received
 	}
-	else {
-#ifdef _DEBUG_BaseUserManager
-		if (resp.mUserIDs.size() != resp.mUserIDs.size()) {
-			std::cout << "--- Error: size(user_ids) != size(user_profile_pictures)!\n";
-		}
-#endif
+
+	std::cout << "test" << std::endl;
+	// load images
+	for (size_t i = 0; i < response.mUserIDs.size(); i++) {
+		std::cout << "here\n";
 		// load images
-		for (size_t i = 0; i < resp.mUserIDs.size(); i++) {
-			user_ids.push_back(resp.mUserIDs[i]);
-			pictures.push_back(resp.mImages[i]);
+		for (size_t i = 0; i < response.mUserIDs.size(); i++) {
+			user_ids.push_back(response.mUserIDs[i]);
+			pictures.push_back(response.mImages[i]);
 		}
 	}
-	pServerConn->Close();
+
 }
 
 bool BaseUserManager::GetUserID(const cv::Mat &face_capture, int &user_id) {
 	std::vector<cv::Mat> face_patches = { face_capture };
 	IDReq id_request(pServerConn, face_patches);
+#ifndef _KEEP_SERVER_CONNECTION
 	pServerConn->Connect();
+#endif
 	id_request.SubmitRequest();
 	user_id = -1;
 	bool succ = false;
@@ -351,7 +391,9 @@ bool BaseUserManager::GetUserID(const cv::Mat &face_capture, int &user_id) {
 		succ = true;
 		user_id = id_response.mUserID;
 	}
+#ifndef _KEEP_SERVER_CONNECTION
 	pServerConn->Close();
+#endif
 	return succ;
 }
 
