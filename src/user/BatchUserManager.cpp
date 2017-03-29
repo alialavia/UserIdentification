@@ -376,8 +376,19 @@ void BatchUserManager::GenerateRequests(cv::Mat scene_rgb)
 				target_user->pGrid->Clear();
 			}
 
+
+
 			// collect images for identification
 			if (action == ActionStatus_DataCollection) {
+
+// ------ closed set
+#ifdef _CLOSED_SET_REVALIDATION
+		// TODO: custom request
+
+// ------ open set
+#else
+
+#endif
 
 				if (target_user->TryToRecordFaceSample(scene_rgb))
 				{
@@ -410,6 +421,9 @@ void BatchUserManager::GenerateRequests(cv::Mat scene_rgb)
 						target_user->pGrid->Clear();
 					}
 				}
+
+
+
 			}
 		}
 		// ============================================= //

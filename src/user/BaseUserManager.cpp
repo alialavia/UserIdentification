@@ -171,6 +171,10 @@ void BaseUserManager::UpdateTrackingStatus() {
 			for (auto it2 = std::next(uit1); it2 != mFrameIDToUser.end(); ++it2) {
 				cv::Rect r1 = uit1->second->GetFaceBoundingBox();
 				cv::Rect r2 = it2->second->GetFaceBoundingBox();
+				
+				// expand height
+				r1.height = std::min(r1.height, 200);
+				r2.height = std::min(r2.height, 200);
 
 				// bbs intersect if area > 0
 				bool intersect = ((r1 & r2).area() > 0);
@@ -178,6 +182,10 @@ void BaseUserManager::UpdateTrackingStatus() {
 					// track scene ids
 					scene_ids_uncertain[uit1->first] = true;
 					scene_ids_uncertain[it2->first] = true;
+
+					// update possible user confusions
+					uit1->second->mClosedSetConfusionIDs.insert(it2->second->GetUserID());
+					it2->second->mClosedSetConfusionIDs.insert(uit1->second->GetUserID());
 				}
 			}
 		}
@@ -420,10 +428,9 @@ void BaseUserManager::DrawUsers(cv::Mat &img)
 			//text1 = "Status: " + nice_name + " - ID" + std::to_string(user_id);
 			color = cv::Scalar(0, 255, 0);
 
-			// confidence
-
-
+			// unsafe tracking
 			if (id_status == IDStatus_Uncertain) {
+
 				if (action == ActionStatus_WaitForCertainTracking) {
 					text1 += " | waiting for safe tracking";
 				}
@@ -432,6 +439,11 @@ void BaseUserManager::DrawUsers(cv::Mat &img)
 				}
 				else if (action == ActionStatus_DataCollection) {
 					text1 += " | sampling (" + std::to_string(target_user->pGrid->nr_images()) + ")";
+				}
+
+				text1 += " | ID confusion : ";
+				for (auto conf_id : target_user->mClosedSetConfusionIDs) {
+					text1 += " " + std::to_string(conf_id);
 				}
 			}
 

@@ -54,6 +54,10 @@ void User::SetStatus(ActionStatus status) {
 void User::SetStatus(IdentificationStatus status)
 {
 	mIDStatus = status;
+	if(status == IDStatus_Identified)
+	{
+		mClosedSetConfusionIDs.clear();
+	}
 }
 void User::SetStatus(TrackingConsistency status)
 {
@@ -93,6 +97,8 @@ void User::ResetUserIdentity() {
 		mProfilePicture.release();
 	}
 
+	mClosedSetConfusionIDs.clear();
+
 #ifdef FACEGRID_RECORDING
 	// reset face grid
 	pGrid->Clear();
@@ -105,6 +111,7 @@ void User::SetUserID(int id, std::string nice_name)
 	mUserID = id;
 	mUserNiceName = nice_name;
 	mIDStatus = IDStatus_Identified;
+	mClosedSetConfusionIDs.clear();
 }
 
 void User::GetUserID(int& id, std::string& nice_name) const

@@ -202,6 +202,8 @@ endif()
 # always do robust updates (chances are that reinitialization is triggered too often)
 add_definitions(-D_ALWAYS_DO_SAFE_UPDATE)
 
+add_definitions(-D_CLOSED_SET_REVALIDATION)
+
 
 #-------------------------------------------------
 # Config Header

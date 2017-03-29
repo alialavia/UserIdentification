@@ -3,6 +3,7 @@
 #include <string>
 #include <tracking\FaceTracker.h>
 #include <opencv2/core.hpp>
+#include <unordered_set>
 
 namespace features
 {
@@ -121,6 +122,9 @@ namespace user
 		std::string GetHumanStatusString();
 		void IncrementBBMovementStatus();
 		bool IsTrackingObject();
+
+		// ids of possible confused users (for closed set identification)
+		std::unordered_set<int> mClosedSetConfusionIDs;
 
 	private:
 		// user id
