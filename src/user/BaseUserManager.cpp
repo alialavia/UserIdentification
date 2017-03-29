@@ -468,7 +468,7 @@ void BaseUserManager::DrawUsers(cv::Mat &img)
 			target_user->GetUserID(user_id, nice_name);
 			text1 = "Status: ID" + std::to_string(user_id);
 			//text1 = "Status: " + nice_name + " - ID" + std::to_string(user_id);
-			color = cv::Scalar(0, 255, 0);
+			color = cv::Scalar(255, 255, 255);
 
 			// unsafe tracking
 			if (id_status == IDStatus_Uncertain) {
@@ -488,6 +488,34 @@ void BaseUserManager::DrawUsers(cv::Mat &img)
 					text1 += " " + std::to_string(conf_id);
 				}
 			}
+
+			// ID dependent background
+			if (user_id==1) {
+				// red
+				bg_color = cv::Scalar(0, 0, 255);
+			}
+			else if (user_id==2) {
+				// green
+				bg_color = cv::Scalar(50, 205, 50);
+			}
+			else if (user_id==3) {
+				// blue
+				bg_color = cv::Scalar(255, 0, 0);
+			}
+			else if (user_id==4) {
+				// orange
+				bg_color = cv::Scalar(0, 140, 255);
+			}
+			else if (user_id==5) {
+				// light blue
+				bg_color = cv::Scalar(170, 178, 32);
+			}
+			else if (user_id==6) {
+				// violett
+				bg_color = cv::Scalar(133, 21, 199);
+			} 
+
+			
 
 		}
 		else if (id_status == IDStatus_IsObject) {
