@@ -116,7 +116,7 @@ int main(int argc, char** argv)
 				um.ProcessResponses();
 
 				// draw users
-				um.DrawUsers(color_image);
+				um.RenderGUI(color_image);
 
 				// Generate requests
 				// - request identification for unknown users

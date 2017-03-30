@@ -109,13 +109,10 @@ size_t SkeletonTracker::GetJointPosition(DWORD joint_type, std::vector<cv::Point
 {
 	joints.clear();
 	CameraSpacePoint cameraspace_pt = { 0 };
-	std::vector<cv::Point3f> tmp_user_joints;
 
 	for (size_t i = 0; i < mUserIDs.size(); i++)
 	{
 		size_t iUser = mUserIDs[i];
-		tmp_user_joints.clear();
-
 		cameraspace_pt = mUserJoints[iUser][joint_type].Position;
 		// convert to cv point
 		joints.push_back(cv::Point3f(cameraspace_pt.X, cameraspace_pt.Y, cameraspace_pt.Z));

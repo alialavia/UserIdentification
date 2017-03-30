@@ -61,7 +61,7 @@ namespace user
 		/////////////////////////////////////////////////
 		/// 	Core Methods
 
-		void RefreshUserTracking(const std::vector<int> &user_scene_ids, std::vector<cv::Rect2f> bounding_boxes);
+		void RefreshUserTracking(const std::vector<int> &user_scene_ids, std::vector<cv::Rect2f> bounding_boxes, std::vector<cv::Point3f> positions);
 		void UpdateTrackingStatus();
 
 		/////////////////////////////////////////////////
@@ -73,7 +73,7 @@ namespace user
 		/////////////////////////////////////////////////
 		/// 	Helpers
 
-		void DrawUsers(cv::Mat &img);
+		void RenderGUI(cv::Mat &img);
 
 		void RemoveRequestUserLinking(io::NetworkRequest* req) {
 			// remove req->user mapping

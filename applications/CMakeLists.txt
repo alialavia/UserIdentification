@@ -15,6 +15,7 @@ SET(TARGET_COMMON_LIBRARIES
 	User
 	gflags
 	ImgProc
+	GUI
 )
 
 ADD_SUBDIRECTORY(face_captures)

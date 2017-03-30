@@ -92,6 +92,8 @@ namespace user
 		int GetUserID() const;
 		void UpdateFaceBoundingBox(cv::Rect2f bb); // bounding box/position
 		cv::Rect2f GetFaceBoundingBox();
+		void SetPosition3D(const cv::Point3f &pos);
+		cv::Point3f GetPosition3D() const;
 
 		/////////////////////////////////////////////////
 		/// 	Features
@@ -133,6 +135,7 @@ namespace user
 		// localization/tracking: must be set at all times
 		cv::Rect2f mFaceBoundingBox;
 		cv::Point2d mFaceCenter;
+		cv::Point3f mPosition3D;	// position of spine center
 
 		// status
 		IdentificationStatus mIDStatus;

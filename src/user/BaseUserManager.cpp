@@ -6,6 +6,8 @@
 #include <io/ResponseTypes.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <tracking\FaceTracker.h>
+#include <gui/GUI.h>
+#include <gui/UserView.h>
 
 using namespace  user;
 
@@ -47,7 +49,8 @@ void BaseUserManager::UpdateFaceData(std::vector<tracking::Face> faces, std::vec
 // refresh tracked users: scene_id, bounding boxes
 void BaseUserManager::RefreshUserTracking(
 	const std::vector<int> &user_scene_ids, 
-	std::vector<cv::Rect2f> bounding_boxes
+	std::vector<cv::Rect2f> bounding_boxes,
+	std::vector<cv::Point3f> positions
 )
 {
 	// add new user for all scene ids that are new
@@ -78,6 +81,8 @@ void BaseUserManager::RefreshUserTracking(
 		{
 			// user is in scene - update scene data (bounding box, position etc.)
 			target_user->UpdateFaceBoundingBox(bounding_boxes[user_index]);
+			// update position in 3D
+			target_user->SetPosition3D(positions[user_index]);
 			// reset feature tracking
 			target_user->ResetSceneFeatures();
 			++it;
@@ -130,48 +135,46 @@ void BaseUserManager::UpdateTrackingStatus() {
 
 	IdentificationStatus ids;
 
+	std::map<int, bool> scene_ids_uncertain;
+
 	// check human user tracking status
-	for (auto it = mFrameIDToUser.begin(); it != mFrameIDToUser.end(); ++it)
+	for (auto uit1 = mFrameIDToUser.begin(); uit1 != mFrameIDToUser.end(); ++uit1)
 	{
-		it->second->GetStatus(ids);
+
+		// ------------------------ check human status
+
+
+		uit1->second->GetStatus(ids);
 
 		// update face detection counter
-		it->second->IncrementFaceDetectionStatus();
+		uit1->second->IncrementFaceDetectionStatus();
 
 		// increment bounding box movement status
-		it->second->IncrementBBMovementStatus();
+		uit1->second->IncrementBBMovementStatus();
 
 		// update overall status
 		if (ids == IDStatus_IsObject) {
-			if (!it->second->IsTrackingObject()) {
-				it->second->SetStatus(IDStatus_Unknown);
+			if (!uit1->second->IsTrackingObject()) {
+				uit1->second->SetStatus(IDStatus_Unknown);
 			}
 		}
 		else {
-			if (it->second->IsTrackingObject()) {
+			if (uit1->second->IsTrackingObject()) {
 				// reset UserID
-				it->second->ResetUserIdentity();
+				uit1->second->ResetUserIdentity();
 				// set to object
-				it->second->SetStatus(IDStatus_IsObject);
+				uit1->second->SetStatus(IDStatus_IsObject);
 			}
 		}
 
-
-	}
-
-	// check tracking confidence
+		// ------------------------ check tracker safety
 #ifdef _CHECK_TRACKING_CONF
-	std::map<int, bool> scene_ids_uncertain;
-
-	// get current tracking status
-	for (auto uit1 = mFrameIDToUser.begin(); uit1 != mFrameIDToUser.end(); ++uit1)
-	{
 		// choose pair (if not last element)
 		if (uit1 != std::prev(mFrameIDToUser.end())) {
 			for (auto it2 = std::next(uit1); it2 != mFrameIDToUser.end(); ++it2) {
 				cv::Rect r1 = uit1->second->GetFaceBoundingBox();
 				cv::Rect r2 = it2->second->GetFaceBoundingBox();
-				
+
 				// expand height
 				r1.height = std::min(r1.height, 200);
 				r2.height = std::min(r2.height, 200);
@@ -179,6 +182,11 @@ void BaseUserManager::UpdateTrackingStatus() {
 				// bbs intersect if area > 0
 				bool intersect = ((r1 & r2).area() > 0);
 				if (intersect) {
+
+					// check position
+					float dist_1 = 
+
+
 					// track scene ids
 					scene_ids_uncertain[uit1->first] = true;
 					scene_ids_uncertain[it2->first] = true;
@@ -189,7 +197,12 @@ void BaseUserManager::UpdateTrackingStatus() {
 				}
 			}
 		}
+#endif
 	}
+
+	// ------------------check tracking confidence
+#ifdef _CHECK_TRACKING_CONF
+
 
 	for (auto it = mFrameIDToUser.begin(); it != mFrameIDToUser.end(); ++it)
 	{
@@ -399,7 +412,7 @@ bool BaseUserManager::GetUserID(const cv::Mat &face_capture, int &user_id) {
 
 // ----------------- helper functions
 
-void BaseUserManager::DrawUsers(cv::Mat &img)
+void BaseUserManager::RenderGUI(cv::Mat &img)
 {
 	for (auto it = mFrameIDToUser.begin(); it != mFrameIDToUser.end(); ++it)
 	{
@@ -411,37 +424,7 @@ void BaseUserManager::DrawUsers(cv::Mat &img)
 		cv::Mat profile_image;
 		if (target_user->GetProfilePicture(profile_image))
 		{
-			cv::resize(profile_image, profile_image, cv::Size(100, 100));
-
-			if(bb.y > 0 && bb.x < img.cols)
-			{
-				// check if roi overlapps image borders
-				cv::Rect target_roi = cv::Rect(bb.x, bb.y - profile_image.rows, profile_image.cols, profile_image.rows);
-				cv::Rect src_roi = cv::Rect(0, 0, profile_image.cols, profile_image.rows);
-
-				if(target_roi.y < 0)
-				{
-					src_roi.y = -target_roi.y;
-					src_roi.height += target_roi.y;
-					target_roi.height += target_roi.y;
-					target_roi.y = 0;
-				}
-
-				if (target_roi.x + profile_image.cols > img.cols)
-				{
-					src_roi.width = target_roi.x + profile_image.cols - img.cols;
-					target_roi.width = target_roi.x + profile_image.cols - img.cols;
-				}
-
-				try {
-					profile_image = profile_image(src_roi);
-					profile_image.copyTo(img(target_roi));
-				}
-				catch (...) {
-					// ...
-				}
-
-			}
+			gui::safe_copyTo(img, profile_image, cv::Rect(bb.x, bb.y - 100, 100, 100));
 
 			// render inside bb
 			if(false)

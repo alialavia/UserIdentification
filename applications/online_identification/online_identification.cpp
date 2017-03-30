@@ -108,11 +108,14 @@ int main(int argc, char** argv)
 			st.ExtractJoints(bodies);
 
 			std::vector<cv::Rect2f> bounding_boxes;
+			std::vector<cv::Point3f> user_positions;
 			std::vector<int> user_scene_ids;
 
 			// extract face bb from skeleton: extract corresponding users ids
 			// this is not the same as st.GetUserSceneIDs(user_scene_ids); - this gives all users in the scene (even not trackeable users)
 			st.GetFaceBoundingBoxesRobust(bounding_boxes, user_scene_ids, base::ImageSpace_Color);
+
+			st.GetJointPosition(base::JointType_SpineMid, user_positions);
 
 			// extract raw face data
 			FaceData* face_data_raw = k.GetFaceDataReference();
@@ -132,7 +135,7 @@ int main(int argc, char** argv)
 			//if (user_scene_ids.size() > 0)
 			{
 				// refresh users (add/remove users, reset features)
-				um.RefreshUserTracking(user_scene_ids, bounding_boxes);
+				um.RefreshUserTracking(user_scene_ids, bounding_boxes, user_positions);
 
 				// ------------- update features
 				// face data
@@ -159,7 +162,7 @@ int main(int argc, char** argv)
 				um.GenerateRequests(color_image);
 
 				// draw users
-				um.DrawUsers(color_image);
+				um.RenderGUI(color_image);
 			}
 
 			// display image

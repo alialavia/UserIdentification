@@ -149,6 +149,14 @@ cv::Rect2f User::GetFaceBoundingBox()
 	return mFaceBoundingBox;
 }
 
+void User::SetPosition3D(const cv::Point3f &pos) {
+	mPosition3D = pos;
+}
+
+cv::Point3f User::GetPosition3D() const {
+	return mPosition3D;
+}
+
 
 /////////////////////////////////////////////////
 /// 	Features
