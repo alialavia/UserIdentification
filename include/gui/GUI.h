@@ -7,7 +7,7 @@ namespace gui {
 
 	void safe_copyTo(cv::Mat &target, const cv::Mat &input, cv::Rect dst) {
 
-		cv::Mat img_copy = input;
+		cv::Mat img_copy = input.clone();
 
 		// resize
 		if (input.cols != dst.width || input.rows != dst.height) {

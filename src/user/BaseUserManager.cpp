@@ -172,28 +172,31 @@ void BaseUserManager::UpdateTrackingStatus() {
 		// choose pair (if not last element)
 		if (uit1 != std::prev(mFrameIDToUser.end())) {
 			for (auto it2 = std::next(uit1); it2 != mFrameIDToUser.end(); ++it2) {
-				cv::Rect r1 = uit1->second->GetFaceBoundingBox();
-				cv::Rect r2 = it2->second->GetFaceBoundingBox();
 
-				// expand height
-				r1.height = std::min(r1.height, 200);
-				r2.height = std::min(r2.height, 200);
+				// check position
+				cv::Point3f p1 = uit1->second->GetPosition3D();
+				cv::Point3f p2 = it2->second->GetPosition3D();
 
-				// bbs intersect if area > 0
-				bool intersect = ((r1 & r2).area() > 0);
-				if (intersect) {
+				// if users closer than 0.8 m
+				if (abs(p1.z - p2.z)<0.8) {
+					cv::Rect r1 = uit1->second->GetFaceBoundingBox();
+					cv::Rect r2 = it2->second->GetFaceBoundingBox();
 
-					// check position
-					float dist_1 = 
+					// expand height
+					r1.height = std::min(r1.height, 200);
+					r2.height = std::min(r2.height, 200);
 
+					// bbs intersect if area > 0
+					bool intersect = ((r1 & r2).area() > 0);
+					if (intersect) {
+						// track scene ids
+						scene_ids_uncertain[uit1->first] = true;
+						scene_ids_uncertain[it2->first] = true;
 
-					// track scene ids
-					scene_ids_uncertain[uit1->first] = true;
-					scene_ids_uncertain[it2->first] = true;
-
-					// update possible user confusions
-					uit1->second->mClosedSetConfusionIDs.insert(it2->second->GetUserID());
-					it2->second->mClosedSetConfusionIDs.insert(uit1->second->GetUserID());
+						// update possible user confusions
+						uit1->second->mClosedSetConfusionIDs.insert(it2->second->GetUserID());
+						it2->second->mClosedSetConfusionIDs.insert(uit1->second->GetUserID());
+					}
 				}
 			}
 		}
