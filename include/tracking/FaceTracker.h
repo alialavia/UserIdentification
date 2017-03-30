@@ -49,6 +49,19 @@ namespace tracking
 		std::vector<cv::Mat*> ExtractGrid();
 		void GetFaceGridPitchYaw(cv::Mat &dst, size_t canvas_height=500);
 
+		bool HasEnoughOrGoodPictures(int min_nr_pictures) {
+			// enough images
+			if (nr_images() >= min_nr_pictures) {
+				return true;
+			}
+			// good images
+			if (frontal_images > 0) {
+				return true;
+			}
+
+			return false;
+		}
+
 		bool IsFree(int roll, int pitch, int yaw) {
 
 			// out of range
@@ -78,6 +91,12 @@ namespace tracking
 
 			// store rotation
 			angles[ptr] = ang;
+
+			// register frontal pictures
+			if (abs(pitch) < cPFrontal && abs(yaw) < cYFrontal) {
+				frontal_images++;
+			}
+
 			return true;
 		}
 
@@ -87,6 +106,7 @@ namespace tracking
 		{
 			image_grid.Reset();
 			angles.clear();
+			frontal_images = 0;
 		}
 
 		size_t nr_images() {
@@ -110,6 +130,8 @@ namespace tracking
 		// array3d index to precies angles
 		std::map<cv::Mat*, cv::Vec3d> angles;
 
+		size_t frontal_images = 0;
+
 		size_t interv_r;
 		size_t interv_p;
 		size_t interv_y;
@@ -121,6 +143,10 @@ namespace tracking
 		const int cPMax = 50;
 		const int cYMin = -50;
 		const int cYMax = 50;
+
+		// frontal view boundaries
+		const int cPFrontal = 10;
+		const int cYFrontal = 10;
 
 		// index mapper
 		float a_r;
