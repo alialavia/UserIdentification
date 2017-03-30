@@ -240,10 +240,21 @@ class EnsembleClassifierTypeA(EnsembleClassifierBase):
         predictions = []
         class_ids = []
 
+        # TODO: instead of mean thresh, count min. percent of samples near class mean
+
         with self.training_lock:
             for class_id, __clf in self.classifiers.iteritems():
-                class_ids.append(class_id)
-                predictions.append(__clf.predict(samples))
+                # log.error("cluster mean: {}".format(__clf.data_cluster.data_mean))
+
+                # only predict for "reasonable"/near classes
+                range = np.mean(self.classifiers[class_id].class_mean_dist(samples))
+                if range < 0.7:
+                    class_ids.append(class_id)
+                    predictions.append(__clf.predict(samples))
+                    log.info('cl', "Class {} range: {}".format(class_id, range))
+                else:
+                    log.info('cl', "Class {} out of range (0.7 [ref] < {})".format(class_id, range))
+
         return np.array(predictions), np.array(class_ids)
 
 
@@ -256,7 +267,7 @@ class EnsembleClassifierTypeA(EnsembleClassifierBase):
         for class_id, __clf in self.classifiers.iteritems():
             if class_id in target_classes:
                 class_ids.append(class_id)
-                mean_dist_cosine.append(self.classifiers[class_id].mean_dist(samples))
+                mean_dist_cosine.append(self.classifiers[class_id].class_mean_dist(samples))
 
         if len(class_ids) == 0:
             return None
@@ -285,6 +296,11 @@ class EnsembleClassifierTypeA(EnsembleClassifierBase):
             return -1
 
         predictions, class_ids = self.__predict(samples)
+
+        if len(predictions) == 0:
+            # no class in reach - classify as novel class
+            self.__decision_function = np.array([len(samples)]), np.array([-1])
+            return -1
 
         # calc nr of positive class detections
         cls_scores = (predictions > 0).sum(axis=1)
@@ -376,6 +392,12 @@ class EnsembleClassifierTypeA(EnsembleClassifierBase):
             return -1
 
         predictions, class_ids = self.__predict(samples)
+
+        if len(predictions) == 0:
+            # no class in reach - classify as novel class
+            self.__decision_function = np.array([len(samples)]), np.array([-1])
+            return -1
+
         cls_scores = np.sum(predictions, axis=1)
         self.__decision_function = cls_scores, class_ids
         nr_samples = len(samples)
