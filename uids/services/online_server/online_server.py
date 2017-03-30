@@ -38,7 +38,14 @@ class IdentificationServer(TCPServerBlocking):
         general request handler
         return: Breaks user connection, in case batch request handling is enabled, else: ignored
         """
-        request_id = self.receive_uchar(conn, timeout=9999)
+        # request_id = self.receive_uchar(conn, timeout=9999)
+
+        byte = conn.recv(1)
+        if not byte:
+            log.info('server', "Client has disconnected")
+            return False
+
+        request_id = ord(byte)
 
         if request_id in self.req_lookup:
             req_type = self.req_lookup[request_id]
