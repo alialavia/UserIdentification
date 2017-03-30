@@ -308,10 +308,11 @@ class EnsembleClassifierTypeA(EnsembleClassifierBase):
                 # use average to-class-distance to select best choice
                 mean_dist_cosine = []
                 mean_dist_euclidean = []
+
+                # todo: mean dist or mean dist to cluster mean
                 for class_id in ids:
                     mean_dist_cosine.append(self.classifiers[class_id].mean_dist(samples))
                     mean_dist_euclidean.append(self.classifiers[class_id].mean_dist(samples, 'euclidean'))
-
 
                 id_index_cosine = mean_dist_cosine.index(min(mean_dist_cosine))
                 id_index_euclidean = mean_dist_euclidean.index(min(mean_dist_euclidean))
@@ -324,8 +325,9 @@ class EnsembleClassifierTypeA(EnsembleClassifierBase):
                     print self.classifiers[class_id].class_mean_dist(samples, 'cosine')
 
                 mean_dist_cosine = np.array(mean_dist_cosine)
+
                 if np.sum((mean_dist_cosine - min(mean_dist_cosine)) < 0.05) > 1:
-                    print "------------- samples discarged - inambiguous"
+                    log.severe("SAMPLES DISCARGED: Average distance to data inambiguous")
                     return None
 
                 return int(ids[id_index_cosine])

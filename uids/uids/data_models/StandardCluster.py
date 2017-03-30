@@ -18,7 +18,7 @@ class StandardCluster(ClusterBase):
     data = []
     data_mean = None
 
-    def __init__(self, max_size=70):
+    def __init__(self, max_size=40):
         ClusterBase.__init__(self)
         self.__max_size = max_size
 
