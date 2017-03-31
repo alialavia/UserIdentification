@@ -55,7 +55,7 @@ namespace tracking
 				return true;
 			}
 			// good images
-			if (frontal_images > 0) {
+			if (frontal_images > 1) {
 				return true;
 			}
 

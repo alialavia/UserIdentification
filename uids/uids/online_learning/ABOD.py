@@ -74,7 +74,10 @@ class ABOD:
     def get_proba(self):
         # probability that it is the class (uncertain samples not counted)
         cls_scores = (self.prediction > 0).sum()
-        return cls_scores / float(len(self.prediction[self.prediction != 0]))
+        nr_triggered = len(self.prediction[self.prediction != 0])
+        if nr_triggered == 0:
+            return 1
+        return cls_scores / float(nr_triggered)
 
     def mean_dist(self, samples):
         return np.mean(pairwise_distances(samples, self.data, metric='cosine'))
@@ -157,6 +160,19 @@ class ABOD:
 
         # print np.shape(dist_lookup[0])
         factors = []
+
+        # if only one sample: cannot calculate abof
+        if len(pt_list) < 2:
+            log.severe('Cannot calculate ABOF with {} reference samples'.format(len(pt_list)))
+            fake_abod = 0
+            if dist_lookup[0][0] < 0.3:
+                fake_abod = 3
+            else:
+                fake_abod = 0.1
+
+            factors.append(fake_abod)
+            return factors
+
         for i_sample, A in enumerate(samples):
             varList = []
             for i in range(len(pt_list)):

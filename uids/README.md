@@ -49,9 +49,11 @@ python ../test/tcp_connection/server.py
 python ../test/tcp_connection/client.py
 ```
 
-## Q/A and Errors
+## Q/A and Problem Solving
 
-### 1. Invalid Env. Variables
+### Known Problems
+
+#### 1. Invalid Env. Variables
 
 > docker: An error occurred trying to connect: Post http://%2F%2F.%2Fpipe%2Fdocker
 _engine/v1.24/containers/create: open //./pipe/docker_engine: Das System kann di
@@ -66,5 +68,12 @@ Where `C:\lib\Docker Toolbox\docker-machine.exe` is the path to your docker mach
 ```bash
 $ eval $("C:\lib\Docker Toolbox\docker-machine.exe" env)
 ```
+### FAQ
+
+#### My server is slow, how do I boost performance?
+- Assign more memory to the VM
+- Assign **multiple** cores to the VM (huge performance increase)
+
+
 
 
