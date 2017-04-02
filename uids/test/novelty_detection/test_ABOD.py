@@ -17,6 +17,7 @@ import pickle
 from uids.utils.DataAnalysis import *
 from uids.online_learning.ABOD import ABOD
 from sklearn.svm import SVC
+from uids.online_learning.BinaryThreshold import BinaryThreshold
 
 # path managing
 fileDir = os.path.dirname(os.path.realpath(__file__))
@@ -171,9 +172,68 @@ def cascaded_classifiers():
     print "Total error (outliers not detected): {}%".format(float((len(errors))/float(len(ul))))
     print "{}/{} additional outliers have been detected".format(len(abod_values[abod_values < 0]), len(filtered))
 
+
+def test_against_threshold():
+    emb1 = load_embeddings("embeddings_matthias.pkl")
+    emb2 = load_embeddings("embeddings_matthias_big.pkl")
+    emb3 = load_embeddings("embeddings_laia.pkl")
+    emb4 = load_embeddings("embeddings_christian.pkl")
+    emb_lfw = load_embeddings("embeddings_lfw.pkl")
+
+    # random.shuffle(emb1)
+    random.shuffle(emb2)
+    # random.shuffle(emb4)
+
+
+    train = emb1[0:50]
+    test = emb2[0:50]
+    ul = emb4
+
+    # ------ ABOD
+    if False:
+
+        clf = ABOD()
+        clf.fit(train)
+        pred_abod = clf.predict(ul)
+        print "Misdetections ABOD (ul): {}".format(len(pred_abod[pred_abod > 0]))
+
+        pred_abod = clf.predict(test)
+        print "Misdetections ABOD (test): {}".format(len(pred_abod[pred_abod < 0]))
+
+    # ------ THRESHOLDING
+
+    t = BinaryThreshold()
+    t.partial_fit(train)
+
+    pred_thresh = t.predict(ul, True)
+
+    print pred_thresh
+
+    print "Misdetections Thresholding (ul): {}".format(len(pred_thresh[pred_thresh > 0]))
+
+
+
+
+
+    print np.where(pred_thresh == False)[0]
+
+
+    print np.nonzero(pred_thresh == 0)[0]
+
+    pred_thresh = t.predict(test, True)
+
+
+
+
+    print "Misdetections Thresholding (test): {}".format(len(pred_thresh[pred_thresh == 0]))
+
+
+
+
 # ================================= #
 #              Main
 
 if __name__ == '__main__':
-    cascaded_classifiers()
+    # cascaded_classifiers()
     # test_ABOD()
+    test_against_threshold()
