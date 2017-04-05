@@ -77,7 +77,8 @@ def calc_embeddings_recursive(in_folder, gen, output, batch_size = 100, cleanup 
     print "--- useable: {}/{} images".format(tot_files - removed, tot_files)
     return embeddings
 
-def calc_embeddings(in_folder, gen, cleanup=False, align=True, log=''):
+
+def calc_embeddings(in_folder, gen, cleanup=False, align=True, log='', save_pose=False):
 
     path_in = os.path.join(fileDir, in_folder)
     print "--- starting to generate embeddings..."
@@ -88,17 +89,29 @@ def calc_embeddings(in_folder, gen, cleanup=False, align=True, log=''):
     removed = 0
     file_nr = 1
     embeddings = []
+    pose = []
     start = time.time()
     nr_processed = 0
 
     if log != '':
         with open(os.path.join(path_in, log), 'rb') as csvfile:
             print "Opended log: {}".format(os.path.join(path_in, log))
-            spamreader = csv.reader(csvfile, delimiter=';')
-            for row in spamreader:
+
+            dialect = csv.Sniffer().sniff(csvfile.read(1024))
+            csvfile.seek(0)
+            reader = csv.reader(csvfile, dialect)
+
+            # spamreader = csv.reader(csvfile, delimiter=';')
+            for row in reader:
                 tot_files += 1
                 img_path = os.path.join(path_in, row[0])
+
+                if not os.path.exists(img_path):
+                    "--- File {} does not exists. Skipping...".format(row[0])
+                    continue
+
                 image = misc.imread(img_path)
+
                 embedding = gen.get_embedding(image, align=align)
                 if embedding is None:
                     print "--- could not generate face embedding: file {}".format(row[0])
@@ -110,6 +123,9 @@ def calc_embeddings(in_folder, gen, cleanup=False, align=True, log=''):
                     nr_processed = nr_processed + 1
                     print "--- Processed {} images".format(nr_processed)
                     embeddings.append(embedding)
+                    # save pose
+                    if save_pose:
+                        pose.append([row[1], row[2], row[3]])
     else:
         print "Scanning directory for images..."
         tot_files = len(os.listdir(path_in))
@@ -132,7 +148,7 @@ def calc_embeddings(in_folder, gen, cleanup=False, align=True, log=''):
 
     print "--- embedding calculation took {} seconds".format(time.time()-start)
     print "--- useable: {}/{} images".format(tot_files-removed, tot_files)
-    return embeddings
+    return embeddings, pose
 
 # ================================= #
 #              Main
@@ -151,11 +167,14 @@ if __name__ == '__main__':
     parser.add_argument('--no-recursive', dest='recursive', action='store_false')
     parser.add_argument('--align', dest='align', action='store_true')
     parser.add_argument('--no-align', dest='align', action='store_false')
+    parser.add_argument('--save_pose', dest='save_pose', action='store_true')
+    parser.add_argument('--no-save_pose', dest='save_pose', action='store_false')
     parser.add_argument('--log', help="Log file ", default="")
     parser.set_defaults(save_embeddings=False)
     parser.set_defaults(clean=False)
     parser.set_defaults(recursive=False)
     parser.set_defaults(align=True)
+    parser.set_defaults(save_pose=False)
 
     # parse arguments
     args = parser.parse_args()
@@ -163,16 +182,26 @@ if __name__ == '__main__':
     if args.output != "face_embeddings":
         args.save_embeddings = True
 
+    if args.save_pose is True and args.log == '':
+        print "Please specify a --log if you want to extract the face poses"
+
     emb_gen = EmbeddingGen()
 
     # do calculations
     if args.recursive:
         embeddings = calc_embeddings_recursive(args.img_folder, emb_gen, args.output, args.batch_size, args.clean, align=args.align)
     else:
-        embeddings = calc_embeddings(args.img_folder, emb_gen, args.clean, align=args.align, log=args.log)
+        embeddings, pose = calc_embeddings(args.img_folder, emb_gen, args.clean, align=args.align, log=args.log, save_pose=args.save_pose)
         if args.save_embeddings is True:
             filename = "{}.pkl".format(args.output)
             print("--- Saving face embeddings to '{}'".format(filename))
             with open(filename, 'wb') as f:
-                pickle.dump(embeddings,f)
+                pickle.dump(embeddings, f)
                 f.close()
+
+            if len(pose) > 0:
+                filename = "{}_poses.pkl".format(args.output)
+                print("--- Saving face poses to '{}'".format(filename))
+                with open(filename, 'wb') as f:
+                    pickle.dump(pose, f)
+                    f.close()
