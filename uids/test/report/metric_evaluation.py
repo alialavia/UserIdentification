@@ -159,15 +159,12 @@ def density_est_kde(ds1, ds2, metric='euclidean'):
     plt.show()
 
 
-
-
-
-
 def density_est_histo(metric, ref_data, *comparison_data):
 
     bin_nr = 50
     plot_values = True
     plot_gaussian = True
+    square = True
 
     if metric == 'cosine_similarity':
         sep_intra = cosine_similarity(ref_data, ref_data)
@@ -176,6 +173,9 @@ def density_est_histo(metric, ref_data, *comparison_data):
 
     sep_intra = sep_intra[sep_intra > 0]
     sep_intra = sep_intra.flatten()
+
+    if square:
+        sep_intra = np.square(sep_intra)
 
     max_out = np.amax(sep_intra)
     min_out = np.amin(sep_intra)
@@ -210,6 +210,9 @@ def density_est_histo(metric, ref_data, *comparison_data):
             sep_inter = pairwise_distances(ref_data, dataset, metric=metric)
 
         sep_inter = sep_inter.flatten()
+
+        if square:
+            sep_inter = np.square(sep_inter)
 
         max_out = np.amax(sep_inter)
         min_out = np.amin(sep_inter)
@@ -274,15 +277,28 @@ def build_sum_timeseries(ts, bin_width):
 
 
 
-def density_overlapp(metric, ref_data, *comparison_data):
+def density_overlapp(metric_string, ref_data, *comparison_data):
 
-    bin_nr = 50
+    bin_nr = 300
     plot_values = True
     plot_gaussian = True
+    square = False
+
+    if metric_string=='cosine_squared':
+        square = True
+        metric = 'cosine'
+    elif metric_string=='euclidean_squared':
+        square = True
+        metric = 'euclidean'
+    else:
+        metric = metric_string
 
     sep_intra = pairwise_distances(ref_data, ref_data, metric=metric)
     sep_intra = sep_intra[sep_intra > 0]
     sep_intra = sep_intra.flatten()
+
+    if square:
+        sep_intra = np.square(sep_intra)
 
     max_out = np.amax(sep_intra)
     min_out = np.amin(sep_intra)
@@ -306,6 +322,10 @@ def density_overlapp(metric, ref_data, *comparison_data):
     for k, dataset in enumerate(comparison_data):
         sep_inter = pairwise_distances(ref_data, dataset, metric=metric)
         sep_inter = sep_inter.flatten()
+
+        if square:
+            sep_inter = np.square(sep_inter)
+
         n, bins, patches = plt.hist(np.transpose(sep_inter), bin_nr, normed=1, facecolor='white', edgecolor='none', alpha=0.9)
 
         bin_width = bins[1] - bins[0]
@@ -316,16 +336,31 @@ def density_overlapp(metric, ref_data, *comparison_data):
         print list(x)
         print build_sum_timeseries(n, bin_width)
 
-
-    plt.axhline(y=0.95)
-
-    # 20 % overlapp
-    plt.axhline(y=0.2)
-    plt.axhline(y=0.976)
-    plt.axvline(x=1.05)
-
-    # stated boundary
-    plt.axvline(x=0.99)
+    if metric_string == 'euclidean_squared':
+        # intra acc
+        plt.axhline(y=0.9529)
+        # inter:similar
+        plt.axhline(y=0.09178)
+        # inter:lfw
+        plt.axhline(y=0.016624)
+        # stated boundary
+        plt.axvline(x=0.99)
+    elif metric_string=='euclidean':
+        plt.axhline(y=0.9529)
+    elif metric_string == 'cosine':
+        plt.axhline(y=0.9529)
+        # resulting boundary
+        plt.axvline(x=0.4949)
+        # similar
+        plt.axhline(y=0.09167)
+        # lfw
+        plt.axhline(y=0.01660)
+    elif metric_string=='cosine_squared':
+        plt.axhline(y=0.9529)
+        # resulting boundary
+        plt.axvline(x=0.24458)
+        plt.axhline(y=0.09278)
+        plt.axhline(y=0.0170)
 
     plt.ylim([0,1])
     plt.ylabel('Cumulative Distribution Function (CDF)')
@@ -379,10 +414,15 @@ if __name__ == '__main__':
     # density_est_kde(emb_2, emb_lfw[0:5000,:])
 
     # plot histogram density estimation
-    density_est_histo('euclidean', emb_2, emb_5, emb_lfw)
+    # density_est_histo('cosine', emb_2, emb_5, emb_lfw)
+    # density_est_histo('cosine_similarity', emb_2, emb_5, emb_lfw)
+    # density_est_histo('euclidean', emb_2, emb_5, emb_lfw)
+
+
 
     # plot cumulative density function
     # density_overlapp('euclidean', emb_2, emb_5, emb_lfw)
+    density_overlapp('euclidean_squared', emb_2, emb_5, emb_lfw)
 
     plt.show()
 
