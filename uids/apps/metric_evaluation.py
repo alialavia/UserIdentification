@@ -103,6 +103,8 @@ def plot_inter_class_separation(ds1, ds2, metric='euclidean'):
     else:
         sep = pairwise_distances(ds1, ds2, metric=metric)
 
+    sep = sep.flatten()
+
     max_out = np.amax(sep)
     min_out = np.amin(sep)
     mean = np.mean(sep)
@@ -390,10 +392,16 @@ def plot_facial_expression_dist():
     metric = 'cosine'
 
     # best order
-    switched = np.array([emb[2,:], emb[0,:], emb[3,:], emb[1,:], emb[4,:]])
+    switched = np.array([emb[0,:], emb[2,:], emb[3,:], emb[1,:], emb[4,:]])
+
+
 
     sep = pairwise_distances(emb, emb, metric=metric)
     sep2 = pairwise_distances(switched, switched, metric=metric)
+
+    # remove autocorrelation
+    sep2[sep2==0] = sep2[sep2 !=0 ].min()
+
     # plt.figure()
     # plt.imshow(sep, cmap='GnBu', interpolation='nearest')
     # plt.colorbar()
@@ -413,18 +421,48 @@ def plot_facial_expression_dist():
     print sep
 
 
+def plot_shading_variance():
+    emb = load_data("shading.pkl")
+
+    metric = 'cosine'
+
+    # best order
+    # switched = np.array([emb[0,:], emb[2,:], emb[3,:], emb[1,:], emb[4,:]])
+    sep2 = pairwise_distances(emb, emb, metric=metric)
+
+    # remove autocorrelation
+    sep2[sep2==0] = sep2[sep2 !=0 ].min()
+
+    plt.figure()
+    plt.imshow(sep2, cmap='Blues_r', interpolation='nearest')
+    cbar = plt.colorbar()
+
+    cl = plt.getp(cbar.ax, 'ymajorticklabels')
+    plt.setp(cl, fontsize=16)
+
+    if metric == 'cosine':
+        cbar.set_ticks([0.7, 0.5, 0.3])
+
+    else:
+        cbar.set_ticks([0,0.2, 0.4, 0.6])
+
+    plt.show()
+
+
 def plot_pitch_yaw_comparison():
 
-    emb_pitch = load_data("pitch_face_embeddings.pkl")
-    emb_yaw = load_data("yaw_face_embeddings.pkl")
+    emb_pitch = load_data("embeddings_pitch.pkl")
+    emb_yaw = load_data("embeddings_yaw.pkl")
 
     metric = 'euclidean'
 
-    # select range
-    emb_yaw = emb_yaw[0:-2,:]
-    emb_pitch = emb_pitch[1:,:]
+    emb_pitch = emb_pitch[::-1]
 
-    sep = pairwise_distances(emb_yaw, emb_pitch, metric=metric)
+    # select range
+    # emb_yaw = emb_yaw[0:-2,:]
+    # emb_pitch = emb_pitch[1:,:]
+
+    sep = pairwise_distances(emb_pitch, emb_yaw, metric=metric)
     plt.imshow(sep, cmap='GnBu_r', interpolation='nearest')
     cbar = plt.colorbar()
     # cbar = pl.colorbar(G, ticks=range(g1, g2 + 1))
@@ -440,11 +478,10 @@ def plot_pitch_yaw_comparison():
 
     # cbar.set_ticklabels([mn, md, mx])
 
-
-    plt.xticks([0, 3, 7, 11, 15])
-    plt.xlim([-0.5,14.5])
-    plt.yticks([0, 3, 7, 11, 15])
-    plt.ylim([-0.5,14.5])
+    plt.xticks([0, 3, 6, 9, 12])
+    plt.xlim([-0.5, 12.5])
+    plt.yticks([0, 3, 6, 9, 12])
+    plt.ylim([-0.5, 12.5])
     plt.show()
 
 
@@ -482,5 +519,23 @@ def plot_background_influence():
 
 if __name__ == '__main__':
     # plot_pitch_yaw_comparison()
-    plot_facial_expression_dist()
+    # plot_shading_variance()
     # plot_background_influence()
+    # emb = load_data("color_embeddings.pkl")
+    # sep = pairwise_distances(emb[0,:], emb[1:,:], metric='cosine')
+    # sep = pairwise_distances(emb[0,:], emb[1:,:], metric='cosine')
+    # print sep
+    # sep = pairwise_distances(emb[1,:], emb[4,:], metric='cosine')
+    # print sep
+    # sep = pairwise_distances(emb[2,:], emb[5,:], metric='cosine')
+
+
+    # load embeddings
+    emb_1 = load_data('embeddings_matthias.pkl')
+    emb_2 = load_data('embeddings_matthias_3.pkl')
+    emb_3 = load_data('embeddings_matthias_clean.pkl')
+    emb_4 = load_data('embeddings_matthias_logged.pkl')
+    emb_5 = load_data('embeddings_elias.pkl')
+    emb_6 = load_data('embeddings_laia.pkl')
+    emb_lfw = load_data('embeddings_lfw.pkl')
+    plot_inter_class_separation(emb_1, emb_lfw)
