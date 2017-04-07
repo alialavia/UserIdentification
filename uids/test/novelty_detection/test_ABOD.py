@@ -24,7 +24,7 @@ fileDir = os.path.dirname(os.path.realpath(__file__))
 modelDir = os.path.join(fileDir, '../..', 'models', 'embedding_samples')	# path to the model directory
 
 
-def load_embeddings(filename):
+def load_file(filename):
     filename = "{}/{}".format(modelDir, filename)
     # print filename
     if os.path.isfile(filename):
@@ -46,16 +46,17 @@ def load_labels(filename):
 # ================================= #
 #        Test Functions
 
-def test_ABOD():
+
+def plot_threshold_influence():
 
     clf = ABOD()
 
-    emb1 = load_embeddings("embeddings_elias.pkl")
-    emb2 = load_embeddings("embeddings_matthias.pkl")
-    emb3 = load_embeddings("embeddings_matthias_big.pkl")
-    emb4 = load_embeddings("embeddings_laia.pkl")
-    emb5 = load_embeddings("embeddings_christian.pkl")
-    emb_lfw = load_embeddings("embeddings_lfw.pkl")
+    emb1 = load_file("embeddings_elias.pkl")
+    emb2 = load_file("embeddings_matthias.pkl")
+    emb3 = load_file("embeddings_matthias_big.pkl")
+    emb4 = load_file("embeddings_laia.pkl")
+    emb5 = load_file("embeddings_christian.pkl")
+    emb_lfw = load_file("embeddings_lfw.pkl")
 
     clf.fit(emb2[0:100])
 
@@ -89,12 +90,12 @@ def test_ABOD():
     print "error ul: {}/{} : {}%".format(len(abod_outliers[abod_outliers>0.2]), len(abod_outliers),float(len(abod_outliers[abod_outliers>0.2]))/len(abod_outliers)*100.0)
 
 
-def test1():
-    emb1 = load_embeddings("embeddings_matthias.pkl")
-    emb2 = load_embeddings("embeddings_matthias_big.pkl")
-    emb3 = load_embeddings("embeddings_laia.pkl")
-    emb4 = load_embeddings("embeddings_christian.pkl")
-    emb_lfw = load_embeddings("embeddings_lfw.pkl")
+def compare_abod_to_svm():
+    emb1 = load_file("embeddings_matthias.pkl")
+    emb2 = load_file("embeddings_matthias_big.pkl")
+    emb3 = load_file("embeddings_laia.pkl")
+    emb4 = load_file("embeddings_christian.pkl")
+    emb_lfw = load_file("embeddings_lfw.pkl")
 
     clf = SVC(kernel='linear', probability=True)
     clf2 = ABOD()
@@ -122,11 +123,11 @@ def test1():
 
 
 def cascaded_classifiers():
-    emb1 = load_embeddings("embeddings_matthias.pkl")
-    emb2 = load_embeddings("embeddings_matthias_big.pkl")
-    emb3 = load_embeddings("embeddings_laia.pkl")
-    emb4 = load_embeddings("embeddings_christian.pkl")
-    emb_lfw = load_embeddings("embeddings_lfw.pkl")
+    emb1 = load_file("embeddings_matthias.pkl")
+    emb2 = load_file("embeddings_matthias_big.pkl")
+    emb3 = load_file("embeddings_laia.pkl")
+    emb4 = load_file("embeddings_christian.pkl")
+    emb_lfw = load_file("embeddings_lfw.pkl")
 
     clf = SVC(kernel='linear', probability=True, C=1)
     clf2 = ABOD()
@@ -174,58 +175,66 @@ def cascaded_classifiers():
 
 
 def test_against_threshold():
-    emb1 = load_embeddings("embeddings_matthias.pkl")
-    emb2 = load_embeddings("embeddings_matthias_big.pkl")
-    emb3 = load_embeddings("embeddings_laia.pkl")
-    emb4 = load_embeddings("embeddings_christian.pkl")
-    emb_lfw = load_embeddings("embeddings_lfw.pkl")
+    emb1 = load_file("embeddings_matthias.pkl")
+    emb2 = load_file("embeddings_matthias_big.pkl")
+    emb3 = load_file("embeddings_laia.pkl")
+    # emb4 = load_file("embeddings_christian.pkl")
+    emb4 = load_file("embeddings_christian_clean.pkl")
+    emb_lfw = load_file("embeddings_lfw.pkl")
 
     # random.shuffle(emb1)
     random.shuffle(emb2)
+    random.shuffle(emb4)
     # random.shuffle(emb4)
-
 
     train = emb1[0:50]
     test = emb2[0:50]
-    ul = emb4
+    ul = emb4[0:50]
 
     # ------ ABOD
-    if False:
-
+    if True:
+        print "----------------ABOD-----------------"
         clf = ABOD()
         clf.fit(train)
         pred_abod = clf.predict(ul)
-        print "Misdetections ABOD (ul): {}".format(len(pred_abod[pred_abod > 0]))
+        error_rate = float(len(pred_abod[pred_abod > 0])) / float(len(ul)) * 100
+        print "Misdetections ABOD (ul): {} - {}%".format(len(pred_abod[pred_abod > 0]), error_rate)
 
         pred_abod = clf.predict(test)
-        print "Misdetections ABOD (test): {}".format(len(pred_abod[pred_abod < 0]))
+        error_rate = float(len(pred_abod[pred_abod > 0])) / float(len(ul)) * 100
+        print "Misdetections ABOD (test): {} - {}%".format(len(pred_abod[pred_abod < 0]), error_rate)
 
     # ------ THRESHOLDING
-
+    print "--------------THRESHOLDING-------------------"
     t = BinaryThreshold()
     t.partial_fit(train)
 
+    # test on outliers
     pred_thresh = t.predict(ul, True)
+    error_rate = float(len(pred_thresh[pred_thresh > 0]))/float(len(pred_thresh))*100
+    print "Misdetections Thresholding (ul): {}/{} - {}%".format(len(pred_thresh[pred_thresh > 0]), len(pred_thresh), error_rate)
 
-    print pred_thresh
+    # print np.where(pred_thresh == False)[0]
+    # print np.nonzero(pred_thresh == 0)[0]
+    # pred_thresh = t.predict(test, True)
 
-    print "Misdetections Thresholding (ul): {}".format(len(pred_thresh[pred_thresh > 0]))
-
-
-
-
-
-    print np.where(pred_thresh == False)[0]
-
-
-    print np.nonzero(pred_thresh == 0)[0]
-
+    # test on inliers
     pred_thresh = t.predict(test, True)
+    print "Misdetections Thresholding (test): {}/{}".format(len(np.where(pred_thresh == False)[0]), len(pred_thresh))
+
+
+def test_weighted_abod():
+    emb1 = load_file("embeddings_matthias.pkl")
+    emb2 = load_file("embeddings_matthias_big.pkl")
+    emb3 = load_file("embeddings_christian_clean.pkl")
+    
+    pose_2 = load_file("embeddings_matthias_big.pkl")
+
+    # classify files individually
 
 
 
-
-    print "Misdetections Thresholding (test): {}".format(len(pred_thresh[pred_thresh == 0]))
+    # weight
 
 
 
@@ -236,4 +245,5 @@ def test_against_threshold():
 if __name__ == '__main__':
     # cascaded_classifiers()
     # test_ABOD()
+    # test_against_threshold()
     test_against_threshold()

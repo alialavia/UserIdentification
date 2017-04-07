@@ -28,7 +28,7 @@ class BinaryThreshold:
     def class_mean_dist(self, samples, metric='cosine'):
         return self.data_cluster.class_mean_dist(samples, metric)
 
-    def predict(self, samples, class_mean=False):
+    def predict(self, samples, class_mean=False, thresh=None):
 
         print "--- classifying {} samples...".format(len(samples))
 
@@ -46,10 +46,11 @@ class BinaryThreshold:
         avg = np.average(dist_squared, axis=0)
         self.avg = avg
 
-        print avg
-
         # threshold
-        return avg < self.thresh
+        if thresh is not None:
+            return avg < thresh
+        else:
+            return avg < self.thresh
 
     def decision_function(self, samples):
         pass
