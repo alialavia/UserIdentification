@@ -107,12 +107,12 @@ def calc_embeddings(in_folder, gen, cleanup=False, align=True, log='', save_pose
                 img_path = os.path.join(path_in, row[0])
 
                 if not os.path.exists(img_path):
-                    "--- File {} does not exists. Skipping...".format(row[0])
+                    print "--- File {} does not exists. Skipping...".format(row[0])
                     continue
 
                 image = misc.imread(img_path)
-
                 embedding = gen.get_embedding(image, align=align)
+
                 if embedding is None:
                     print "--- could not generate face embedding: file {}".format(row[0])
                     if cleanup is True:
@@ -147,7 +147,7 @@ def calc_embeddings(in_folder, gen, cleanup=False, align=True, log='', save_pose
                 continue
 
     print "--- embedding calculation took {} seconds".format(time.time()-start)
-    print "--- useable: {}/{} images".format(tot_files-removed, tot_files)
+    print "--- useable: {}/{} images".format(nr_processed, tot_files)
     return embeddings, pose
 
 # ================================= #
