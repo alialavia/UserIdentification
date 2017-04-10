@@ -19,7 +19,6 @@ class ABOD:
     # impl. : see https://github.com/MarinYoung4596/OutlierDetection
     basis = None
     mean = None
-    __verbose = False
 
     # prediction
     prediction = None
@@ -36,6 +35,10 @@ class ABOD:
         u = 0.99  # probability that any selected data point is an inlier
         N = np.log10(1-p)/np.log10(1-np.power(u, knn))
         return N
+
+    def set_params(self, **params):
+        for key, value in params.iteritems():
+            setattr(self, key, value)
 
     def fit(self, data, dim_reduction=False):
         """
