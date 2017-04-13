@@ -4,27 +4,12 @@ from sklearn.ensemble import IsolationForest
 import time
 import pickle
 import os
-from sklearn import svm
-from sklearn import linear_model
-
 import numpy as np
 import matplotlib.pyplot as plt
-from itertools import cycle
-
 from sklearn import svm, datasets
 from sklearn.metrics import roc_curve, auc
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import label_binarize
-from sklearn.multiclass import OneVsRestClassifier
-from scipy import interp
-from sklearn import datasets
-from sklearn.model_selection import train_test_split
-from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import classification_report
-from sklearn.svm import SVC
 from sklearn.model_selection import KFold
 from sklearn.metrics import precision_recall_curve
-from sklearn.model_selection import StratifiedKFold
 import csv
 from numpy import random
 from uids.online_learning.ABOD import ABOD
@@ -77,7 +62,7 @@ def get_all_param_variants(pgrid):
     return pairs
 
 
-def tune_classifier(clf, param_grid, avg_cycles=10):
+def tune_classifier(clf, param_grid, avg_cycles=10, nr_training_samples=50, kfold=4, combine_scenes=True):
     # param_grid = {'nu': np.arange(0.001, 0.1, 0.001), 'kernel': ['rbf']}
     # clf = svm.OneClassSVM()
 
@@ -93,13 +78,15 @@ def tune_classifier(clf, param_grid, avg_cycles=10):
 
 
     # PARAMETERS
-    nr_training_samples = 50
-    nr_splits = 4
+    nr_splits = kfold
     verbose = False
     save_csv = True
-    combine_scenes = True
     randomize = True
     rdm_avg_cycles = avg_cycles
+    objective = 'f1'
+
+    if objective not in {'f1', 'youden'}:
+        raise ValueError
 
     class_ds1 = emb1
     class_ds2 = emb2
@@ -189,14 +176,18 @@ def tune_classifier(clf, param_grid, avg_cycles=10):
                 fp = np.count_nonzero(labels_predicted[len(test_indices):] == 1)
                 tn = len(outliers)-fp
                 fpr = float(fp)/float(fp+tn)
-                f1_score = 2*float(tp)/float(2*tp+fp+fn)
+
 
                 try:
                     precision = float(tp) / float(tp + fp)
+                    f1_score = 2 * float(precision * recall) / float(precision + recall)
                 except ZeroDivisionError:
                     precision = 0
+                    f1_score = 0
 
                 recall = float(tp)/float(tp+fn)
+
+
 
                 # print "tp: {}, tn: {}    ||   fn: {}, fp: {}, ".format(tp, fn, fp, tn)
                 # print "precision: {}     ||   recall: {} ".format(precision, recall)
@@ -229,10 +220,14 @@ def tune_classifier(clf, param_grid, avg_cycles=10):
 
         # --------------- BEST PARAMETERS
 
-        best_index = np.argmax(youden_index)
+        if objective == 'f1':
+            best_index = np.argmax(f1_scores)
+        elif objective == 'youden':
+            best_index = np.argmax(youden_index)
+
         best_params = param_combinations[best_index]
         print "_______________________________________________________"
-        print "Best parameters (Youden-Index {}): {}".format(np.max(youden_index), best_params)
+        print "Best parameters (Youden-Index {}, F1: {}): {}".format(np.max(youden_index), np.max(f1_scores), best_params)
         print "Precision: {}     ||     Recall: {}".format(precision_values[best_index], recall_values[best_index])
         iter_precision.append(precision_values[best_index])
         iter_recall.append(recall_values[best_index])
@@ -258,89 +253,26 @@ def tune_classifier(clf, param_grid, avg_cycles=10):
             # write configuration of best results over multiple random tests
             writer = csv.writer(csvfile, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
 
+            writer.writerow(["Set mixing : {}".format(np.mean(iter_precision), 2*np.std(iter_precision))])
             writer.writerow(["Precision Avg, std: {} +- {}".format(np.mean(iter_precision), 2*np.std(iter_precision))])
             writer.writerow(["Recall Avg, std: {} +- {}".format(np.mean(iter_recall), 2 * np.std(iter_recall))])
             writer.writerow(["F1 score, std: {} +- {}".format(np.mean(iter_f1_scores), 2 * np.std(iter_f1_scores))])
             writer.writerow(["Batch size: training: {}, prediction: {}".format(nr_training_samples, nr_training_samples*(nr_splits-1)*2)])
+
+
             writer.writerow("")
             writer.writerow(iter_precision)
             writer.writerow(iter_recall)
             writer.writerow(iter_training_time)
-            writer.writerow(iter_params)
+
+            if clf_name == 'OneClassSVM':
+                writer.writerow(["Nu:"])
+                nus = [tmp['nu'] for tmp in iter_params]
+                writer.writerow(nus)
+            else:
+                writer.writerow(iter_params)
             writer.writerow("")
             # roc curve - save all precision and recall values
-
-
-
-def ABOD_ROC():
-
-
-    # PARAMETERS
-    nr_training_samples = 20
-    nr_test_samples = 400
-
-    save_csv = True
-    combine_scenes = False
-
-    emb0 = load_embeddings("embeddings_matthias.pkl")
-    emb1 = load_embeddings("matthias_test.pkl")
-    emb2 = load_embeddings("matthias_test2.pkl")
-    emb3 = load_embeddings("embeddings_christian_clean.pkl")
-    emb_lfw = load_embeddings("embeddings_lfw.pkl")
-
-    class_ds1 = emb1
-    class_ds2 = emb2
-    outlier_ds = emb_lfw
-
-    # combine the two scene datasets
-    if combine_scenes:
-        num_samples_each = np.max([len(class_ds1), len(class_ds2)])
-        class_ds_combined = np.concatenate((class_ds1[0:num_samples_each], class_ds2[0:num_samples_each]))
-    else:
-        class_ds_combined = class_ds1
-    # shuffle
-    random.shuffle(class_ds_combined)
-
-    # fit
-    # clf = svm.OneClassSVM(kernel='linear')
-    clf = ABOD()
-    clf.fit(class_ds_combined[0:nr_training_samples])
-
-    # true labels
-    labels = np.concatenate((np.repeat(1, nr_test_samples/2), np.repeat(2, nr_test_samples/2)))
-
-    test_samples = np.concatenate((emb2[0:nr_test_samples/2], emb3[0:nr_test_samples/2]))
-
-    # scores which are thresholded
-    scores = clf.decision_function(test_samples)
-
-    fpr, tpr, thresholds = metrics.roc_curve(labels, scores, pos_label=1)
-    auc_val = auc(fpr, tpr)
-
-    print "AUC: {}".format(auc_val)
-    print "tpr: ", tpr
-    print "fpr: ", fpr
-    print "thresholds: ", thresholds
-
-
-
-
-    # plt.plot(fpr, tpr)
-    # plt.show()
-
-    precision, recall, _ = precision_recall_curve(labels, scores, pos_label=1)
-    # print "Precision: ", precision
-    # print "Recall: ", recall
-
-    plt.plot(recall, precision)
-
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
-    plt.title('Extension of Precision-Recall curve to multi-class')
-    plt.legend(loc="lower right")
-    plt.show()
 
 
 # ================================= #
@@ -348,10 +280,10 @@ def ABOD_ROC():
 
 if __name__ == '__main__':
 
-    if False:
+    if True:
         params_svm = {'nu': np.arange(0.001, 0.1, 0.001), 'kernel': ['rbf']}
         clf = svm.OneClassSVM()
-        tune_classifier(clf, params_svm, avg_cycles=2)
+        tune_classifier(clf, params_svm, avg_cycles=5)
 
     if False:
         params_if = {'contamination': np.arange(0.005, 0.1, 0.005)}
@@ -362,5 +294,3 @@ if __name__ == '__main__':
         params_abod = {'uncertainty_bandwidth': [0], 'threshold': np.arange(0.05, 0.5, 0.05)}
         clf = ABOD()
         tune_classifier(clf, params_abod, avg_cycles=2)
-
-    ABOD_ROC()
