@@ -15,12 +15,14 @@ class StandardCluster(ClusterBase):
     # ========= parameters
 
     # ========= internal state
-    data = []
     data_mean = None
 
     def __init__(self, max_size=40):
         ClusterBase.__init__(self)
         self.__max_size = max_size
+
+    def mean(self):
+        return self.data_mean
 
     def __reduce_after(self, metric='cosine', reverse=True):
         if len(self.data) < self.__max_size:
@@ -42,11 +44,9 @@ class StandardCluster(ClusterBase):
         self.data = np.delete(self.data, indices_to_delete, axis=0)
 
     def update(self, samples):
-        if len(self.data) == 0:
-            self.data = samples
-        else:
-            self.data_mean = np.mean(self.data, axis=0).reshape(1, -1)
-            # opt. 2
-            self.data = np.concatenate((self.data, samples))
-            # reduce data
-            self.__reduce_after()
+        # add data
+        self.data = np.concatenate((self.data, samples)) if self.data.size else np.array(samples)
+        # calculate mean
+        self.data_mean = np.mean(self.data, axis=0).reshape(1, -1)
+        # reduce data
+        self.__reduce_after()
