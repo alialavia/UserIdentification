@@ -91,6 +91,9 @@ void User::ResetUserIdentity() {
 	mTrackingStatus = TrackingConsistency_OK;
 	mUpdatingProfilePicture = false;
 
+	mUserIDPredicted = 0;
+	mPredictionConfidence = 0;
+
 	// release profile image
 	if (!mProfilePicture.empty())
 	{
@@ -104,6 +107,14 @@ void User::ResetUserIdentity() {
 	pGrid->Clear();
 #endif
 
+}
+
+void User::SetTrackingID(int id) {
+	mTrackingID = id;
+}
+
+int User::GetTrackingID() const{
+	return mTrackingID;
 }
 
 void User::SetUserID(int id, std::string nice_name)

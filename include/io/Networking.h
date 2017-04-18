@@ -76,6 +76,7 @@ namespace io
 		void SendImageBatch(const std::vector<cv::Mat> &images) const;
 		int SendRGBImage(const cv::Mat &img) const;
 		int SendRGBImageQuadratic(const cv::Mat &img) const;
+		int SendUCharArray(const std::vector<int> &arr) const;
 
 		// ------ receive
 

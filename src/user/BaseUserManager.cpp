@@ -63,8 +63,9 @@ void BaseUserManager::RefreshUserTracking(
 			// create new user
 			mFrameIDToUser[scene_id] = new User(
 #ifdef _DLIB_PREALIGN
-				mpDlibAligner
+				mpDlibAligner ,
 #endif
+				scene_id
 			);
 		}
 	}

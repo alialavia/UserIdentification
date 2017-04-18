@@ -57,13 +57,22 @@ void RadialFaceGrid::DumpImageGrid(std::string img_basename, std::string log_nam
 	}
 }
 
-std::vector<cv::Mat*> RadialFaceGrid::ExtractGrid()
+std::vector<cv::Mat*> RadialFaceGrid::ExtractGrid() const
 {
 	std::vector <cv::Mat*> ptrs;
 	for (auto const& target : angles) {
 		ptrs.push_back(target.first);
 	}
 	return ptrs;
+}
+
+void RadialFaceGrid::ExtractGrid(std::vector<cv::Mat*> &images, std::vector<int> &weights) const
+{
+	for (auto const& target : angles) {
+		images.push_back(target.first);
+		// calc weight
+		weights.push_back(CalcSampleWeight(target.second[0], target.second[1], target.second[2]));
+	}
 }
 
 void RadialFaceGrid::ResizeImages(int size)

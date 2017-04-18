@@ -28,7 +28,17 @@ std::type_index ResponseFactory::AllocateAndLoad(NetworkResponseType type_id, io
 		ptr = resp;
 		return typeid(OKResponse);
 
-	}else if (type_id == NetworkResponse_Identification)
+	}
+	else if (type_id == NetworkResponse_PredictionFeedback)
+	{
+		PredictionFeedback* resp = nullptr;
+		resp = new PredictionFeedback(conn);
+		resp->GetPayload();
+		ptr = resp;
+		return typeid(PredictionFeedback);
+
+	}
+	else if (type_id == NetworkResponse_Identification)
 	{
 		IdentificationResponse* resp = nullptr;
 		resp = new IdentificationResponse(conn);

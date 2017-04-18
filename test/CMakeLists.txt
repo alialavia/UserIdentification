@@ -21,3 +21,4 @@ ADD_SUBDIRECTORY(detection)
 
 # component unit testing
 ADD_SUBDIRECTORY(components)
+ADD_SUBDIRECTORY(v2)

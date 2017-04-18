@@ -38,6 +38,12 @@ namespace imgproc {
 		{
 			
 		}
+		static void batchResize(std::vector<cv::Mat> &src, int w, int h) {
+			for (size_t i = 0; i < src.size(); i++) {
+				cv::resize(src[i], src[i], cv::Size(w, h));
+			}
+		}
+
 		static cv::Mat createOne(std::vector<cv::Mat> & images, int cols, int min_gap_size)
 		{
 			// let's first find out the maximum dimensions

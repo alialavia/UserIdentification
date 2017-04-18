@@ -121,7 +121,7 @@ namespace user
 		//std::map<User*, io::NetworkRequest*> mUserToRequest;
 		std::map<User*, std::set<io::NetworkRequest*>> mUserToRequests;
 
-		// scene id to user id mapping
+		// scene id to user mapping
 		std::map<int, User*> mFrameIDToUser;
 
 #ifdef _DLIB_PREALIGN

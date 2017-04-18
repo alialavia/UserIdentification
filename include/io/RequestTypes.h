@@ -19,19 +19,25 @@ namespace io {
 	// define network request types (request ids are parsed on the server side)
 	enum NetworkRequestType
 	{
+		// identification
 		NetworkRequest_ImageIdentification = 1,
 		NetworkRequest_ImageIdentificationAligned = 2,
 		NetworkRequest_ImageIdentificationAlignedCS = 3,
+		NetworkRequest_PartialImageIdentificationAligned = 4,
+		// updates
 		NetworkRequest_EmbeddingCollectionByID = 10,
 		NetworkRequest_EmbeddingCollectionByIDRobust = 11,
 		NetworkRequest_EmbeddingCollectionByIDAligned = 12,
 		NetworkRequest_EmbeddingCollectionByIDAlignedRobust = 13,
+		// utils
 		NetworkRequest_EmbeddingCollectionByName = 14,
 		NetworkRequest_EmbeddingCalculation = 20,
 		NetworkRequest_ClassifierTraining = 21,
 		NetworkRequest_ImageAlignment = 22,
 		NetworkRequest_ProfilePictureUpdate = 23,
 		NetworkRequest_GetProfilePictures = 24,
+
+		NetworkRequest_DropTrackIdentification = 221,
 		NetworkRequest_Ping = 222,
 		NetworkRequest_Disconnect = 223
 	};
@@ -184,7 +190,58 @@ namespace io {
 	};
 
 
-	// ---------- online requests
+	class PartialImageIdentificationAligned : public NetworkRequest
+	{
+	public:
+		PartialImageIdentificationAligned(
+			io::TCPClient* server_conn,
+			std::vector<cv::Mat*> images,
+			std::vector<int> img_weights,
+			int tracking_id
+		) :
+			NetworkRequest(server_conn, NetworkRequest_PartialImageIdentificationAligned),
+			mImageWeights(img_weights),
+			mTrackingID(tracking_id)
+		{
+			// make deep copy of images
+			for (size_t i = 0; i < images.size(); i++) {
+				mImages.push_back((*images[i]).clone());
+			}
+		}
+		PartialImageIdentificationAligned(
+			io::TCPClient* server_conn,
+			std::vector<cv::Mat> images,
+			std::vector<int> img_weights,
+			int tracking_id
+		) :
+			NetworkRequest(server_conn, NetworkRequest_PartialImageIdentificationAligned),
+			mImageWeights(img_weights),
+			mTrackingID(tracking_id)
+		{
+			// make deep copy of images
+			for (size_t i = 0; i < images.size(); i++) {
+				mImages.push_back(images[i].clone());
+			}
+		}
+
+	protected:
+
+		// submit specific payload
+		void SubmitPayload() {
+			// tracking id
+			pServerConn->SendUInt(mTrackingID);
+			// images
+			pServerConn->SendImageBatchQuadraticSameSize(mImages);
+			// weights
+			pServerConn->SendUCharArray(mImageWeights);
+		}
+
+		// payload: quadratic(!) images of same size
+		std::vector<cv::Mat> mImages;
+		std::vector<int> mImageWeights;
+		int mTrackingID;
+
+	};
 
 	// closed set image identification
 	class ImageIdentificationAlignedCS : public NetworkRequest

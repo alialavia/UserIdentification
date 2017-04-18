@@ -46,8 +46,51 @@ namespace tracking
 		}
 
 		void DumpImageGrid(std::string filename = "capture", std::string log_name = "face_log.csv", std::string out_folder = "face_grid", bool append_log = false);
-		std::vector<cv::Mat*> ExtractGrid();
+		std::vector<cv::Mat*> ExtractGrid() const;
+		void ExtractGrid(std::vector<cv::Mat*> &images, std::vector<int> &weights) const;
+
 		void GetFaceGridPitchYaw(cv::Mat &dst, size_t canvas_height=500);
+
+		int CalcSampleWeight(int roll, int pitch, int yaw) const{
+			// min: 0, max: 10
+
+			// yaw
+			float v_yaw = 0.;
+			int w_yaw = 0;
+			if (yaw <= -30) {
+				v_yaw = 2.8;
+			}
+			else if (yaw <= 0) {
+				v_yaw = 0.9333 * abs(yaw);
+			}
+			else if (yaw <= 30) {
+				v_yaw = 0.078125 * yaw;
+			}
+			else {
+				v_yaw = 2.5;
+			}
+			w_yaw = static_cast<int>(10 - v_yaw);
+			
+			// pitch
+			float v_pitch = 0.;
+			int w_pitch = 0;
+			if (pitch <= -30) {
+				v_pitch = 2.8;
+			}
+			else if (pitch <= 0) {
+				v_pitch = 0.0875 * abs(yaw);
+			}
+			else if (pitch <= 30) {
+				v_pitch = -0.00056405*pow(pitch, 3) + 0.028120486*pow(pitch, 2) - 0.013393392*pitch;
+			}
+			else {
+				v_pitch = 10.;
+			}
+			w_pitch = static_cast<int>(10 - v_pitch);
+
+			int w_total = static_cast<int>(std::max(v_pitch, v_yaw));
+			return w_total;
+		}
 
 		bool HasEnoughOrGoodPictures(int min_nr_pictures) {
 			// enough images

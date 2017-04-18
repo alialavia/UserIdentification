@@ -19,6 +19,7 @@ namespace io {
 		NetworkResponse_ImageQuadratic = 4,
 		NetworkResponse_UpdateResponse = 5,
 		NetworkResponse_UpdateResponseDetailed = 6,
+		NetworkResponse_PredictionFeedback = 7,
 		NetworkResponse_Reidentification = 10,
 		NetworkResponse_ProfilePictures = 20,
 		NetworkResponse_Error = 999,
@@ -118,6 +119,21 @@ namespace io {
 		cv::Mat mImage;	// profile picture
 		int mConfidence = 0;	// current confidence value in [%]
 	};
+
+
+	class PredictionFeedback : public NetworkResponse
+	{
+	public:
+		PredictionFeedback(io::TCPClient* conn = nullptr) :NetworkResponse(conn, NetworkResponse_PredictionFeedback) {}
+		void GetPayload() {
+			// nr classes
+			mUserID = pConn->Receive32bit<int>();
+			mConfidence = (int)pConn->Receive8bit<uint8_t>();
+		};
+		int mUserID;
+		int mConfidence;
+	};
+
 
 	class EmbeddingResponse : public NetworkResponse
 	{

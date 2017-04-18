@@ -590,3 +590,16 @@ int TCPClient::SendRGBImageQuadratic(const cv::Mat &img) const {
 }
 
 
+int TCPClient::SendUCharArray(const std::vector<int> &arr) const {
+
+	int data_sent = 0;
+	// send array length
+	data_sent += SendUShort(static_cast<unsigned short>(arr.size()));
+
+	for (auto& elem : arr) {
+		data_sent += SendUChar(elem);
+	}
+
+	return data_sent;
+}
+

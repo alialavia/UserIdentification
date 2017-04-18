@@ -41,9 +41,10 @@ namespace user
 	public:
 		User(
 #ifdef _DLIB_PREALIGN
-			features::DlibFaceAligner* aligner
+			features::DlibFaceAligner* aligner, 
 #endif
-		) : mUserID(-1), mUserNiceName(""), 
+			int tracking_id = -1
+		) : mUserID(-1), mTrackingID(tracking_id), mUserNiceName(""), 
 		// init user status
 		mIDStatus(IDStatus_Unknown), mActionStatus(ActionStatus_Idle), 
 		mTrackingStatus(TrackingConsistency_OK), 
@@ -87,9 +88,11 @@ namespace user
 		/// 	Identification
 
 		void ResetUserIdentity(); // reset user completely/delete all user information
+		void SetTrackingID(int id);
 		void SetUserID(int id, std::string nice_name);
 		void GetUserID(int& id, std::string& nice_name) const;
 		int GetUserID() const;
+		int GetTrackingID() const;
 		void UpdateFaceBoundingBox(cv::Rect2f bb); // bounding box/position
 		cv::Rect2f GetFaceBoundingBox();
 		void SetPosition3D(const cv::Point3f &pos);
@@ -128,10 +131,19 @@ namespace user
 		// ids of possible confused users (for closed set identification)
 		std::unordered_set<int> mClosedSetConfusionIDs;
 
+
+		// temporal user prediction
+		int mUserIDPredicted = 0;
+		int mPredictionConfidence = 0;
+
+
 	private:
-		// user id
+		// user id and metadata
 		int mUserID;
 		std::string mUserNiceName;
+		int mTrackingID;
+		int mConfidence;
+
 		// localization/tracking: must be set at all times
 		cv::Rect2f mFaceBoundingBox;
 		cv::Point2d mFaceCenter;
