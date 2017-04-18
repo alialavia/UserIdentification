@@ -276,7 +276,7 @@ class TCPServer:
 
     def receive_uchar_array(self, client_socket):
         # get array_size
-        arr_size = self.receive_uint(client_socket)
+        arr_size = self.receive_ushort(client_socket)
 
         # receive image batch
         arr = []
@@ -289,7 +289,7 @@ class TCPServer:
         arr_size = len(arr)
 
         # send array size
-        target_socket.send_uint(arr_size)
+        target_socket.send_ushort(arr_size)
 
         # send values
         for i in range(0, arr_size):
