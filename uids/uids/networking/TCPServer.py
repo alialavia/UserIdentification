@@ -6,6 +6,7 @@ import socket
 import time
 from abc import abstractmethod
 from uids.utils.Logger import Logger as log
+import numpy as np
 
 
 class TCPServer:
@@ -270,6 +271,29 @@ class TCPServer:
         size = self.receive_short(client_socket)
         img = self.receive_rgb_image(client_socket, size, size)
         return img
+
+    #  ----------- CUSTOM TYPES
+
+    def receive_uchar_array(self, client_socket):
+        # get array_size
+        arr_size = self.receive_uint(client_socket)
+
+        # receive image batch
+        arr = []
+        for x in range(0, arr_size):
+            char = self.receive_char(client_socket)
+            arr.append(char)
+        return np.array(arr)
+
+    def send_uchar_array(self, target_socket, arr):
+        arr_size = len(arr)
+
+        # send array size
+        target_socket.send_uint(arr_size)
+
+        # send values
+        for i in range(0, arr_size):
+            target_socket.send(chr(arr[i]))
 
     #  ----------- RECEIVE PRIMITIVES
     def receive_string(self, client_socket):
