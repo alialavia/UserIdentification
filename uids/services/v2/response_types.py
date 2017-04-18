@@ -44,7 +44,7 @@ class Identification:
             server.send_rgb_image_squared(conn, profile_picture)
 
 
-class IdentificationFeedback:
+class PredictionFeedback:
 
     def __init__(self, server, conn, user_id, user_name, confidence=100):
 
