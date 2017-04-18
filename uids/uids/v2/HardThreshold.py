@@ -2,13 +2,21 @@ from uids.utils.DataAnalysis import *
 from uids.data_models.StandardCluster import StandardCluster
 from uids.data_models.ClusterBase import ClusterBase
 from sklearn.metrics.pairwise import *
-
+import time
 
 class SetSimilarityThresholdBase:
+    """
+    SetSimilarityThreshold calculates a per-sample outlier/similarity score which is thresholded for classification
+    """
 
     __verbose = False
     __external_cluster = True   # has an external data model
     data_cluster = None
+
+    sample_buffer = None
+    decision_fn_buffer = None
+    cluster_timestamp = None
+    decision_fn_timestamp = None
 
     def __init__(self, cluster=None, metric='ABOD'):
 
@@ -20,6 +28,7 @@ class SetSimilarityThresholdBase:
             self.data_cluster = cluster
 
         self.metric = metric
+        self.cluster_timestamp = time.time()
 
     def partial_fit(self, samples):
         if self.__external_cluster:
@@ -28,6 +37,31 @@ class SetSimilarityThresholdBase:
         else:
             # UPDATE INTERNAL CLUSTER (mainly for testing)
             self.data_cluster.update(samples)
+
+        self.cluster_timestamp = time.time()
+
+    def decision_function(self, samples):
+        """
+        Distance of the samples X to the target class distribution
+        :param samples:
+        :return:
+        """
+
+        recalc = True
+
+        if self.decision_fn_buffer and self.decision_fn_timestamp > self.cluster_timestamp:
+            if np.array_equal(samples, self.sample_buffer):
+                recalc = False
+
+        if recalc:
+            similarity_scores = self.data_cluster.sample_set_similarity_scores(samples, self.metric)
+            self.sample_buffer = samples
+            self.decision_fn_buffer = similarity_scores
+            self.decision_fn_timestamp = time.time()
+        else:
+            similarity_scores = self.decision_fn_buffer
+
+        return similarity_scores
 
 
 class SetSimilarityHardThreshold(SetSimilarityThresholdBase):
@@ -43,11 +77,9 @@ class SetSimilarityHardThreshold(SetSimilarityThresholdBase):
 
     def predict(self, samples):
         # get similarity scores
-        similarity_scores = self.data_cluster.sample_set_similarity_scores(samples, self.metric)
+        similarity_scores = self.decision_function(samples)
         below_thresh = similarity_scores < self.__thresh
         return [1 if v else -1 for v in below_thresh], similarity_scores
 
-    def decision_function(self, samples=None):
-        # subtract threshold
-        return self.__thresh
+
 
