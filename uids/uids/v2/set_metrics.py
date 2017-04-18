@@ -26,6 +26,60 @@ class SetMeanDistL2Quared:
 class ABOD:
 
     @staticmethod
+    def get_set_score(test_samples):
+
+        dist_lookup = pairwise_distances(test_samples, test_samples, metric='euclidean')
+
+        # print np.shape(dist_lookup[0])
+        factors = []
+
+        # if only one sample: cannot calculate abof
+        if len(test_samples) < 4:
+            log.severe('Cannot calculate ABOF with {} reference samples (variance calculation needs at least 4 reference points)'.format(len(test_samples)))
+            raise Exception
+
+        for i_sample, A in enumerate(test_samples):
+            varList = []
+            for i in range(len(test_samples)):
+
+                if i_sample == i:  # ensure A != B
+                        continue
+                # select first point in reference set
+                B = test_samples[i]
+                # distance
+                AB = dist_lookup[i_sample][i]
+                j = 0
+                for j in range(i + 1):
+                    if j == i or j==i_sample:  # ensure B != C
+                        continue
+                    # select second point in reference set
+                    C = test_samples[j]
+                    # distance
+                    AC = dist_lookup[i_sample][j]
+
+                    if np.array_equal(B, C):
+                        log.error("Points are equal: B == C! Assuming classification of training point (ABOD 1000)")
+                        varList.append(1000)
+                        print "Bi/Cj: {}/{}".format(i, j)
+                        # sys.exit('ERROR\tangleBAC\tmath domain ERROR, |cos<AB, AC>| <= 1')
+                        continue
+
+                    angle_BAC = ABOD.angleBAC(A, B, C, AB, AC)
+                    # angle_BAC = ABOD.angleFast(A-B, A-C)
+
+                    # compute each element of variance list
+                    try:
+                        # apply weighting
+                        tmp = angle_BAC / float(math.pow(AB * AC, 2))
+                    except ZeroDivisionError:
+                        log.severe("ERROR\tABOF\tfloat division by zero! Trying to predict training point?'")
+                        tmp = 500
+                        # sys.exit('ERROR\tABOF\tfloat division by zero! Trying to predict training point?')
+                    varList.append(tmp)
+            factors.append(np.var(varList))
+        return np.array(factors)
+
+    @staticmethod
     def get_score(test_samples, reference_set):
 
         dist_lookup = pairwise_distances(test_samples, reference_set, metric='euclidean')
