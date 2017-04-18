@@ -23,6 +23,8 @@ class DataController:
             else:
                 log.info('db', "Class {} out of range (0.7 [ref] < {:.3f})".format(id, range))
 
+        return class_ids
+
     def get_class_means(self):
         return [c.mean() for id, c in self.class_clusters.iteritems()]
 

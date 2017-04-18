@@ -81,7 +81,7 @@ class MultiClassClassifierBase:
         with self.trainig_data_lock:
             self.classifier_update_stacks[class_id] = class_samples
         # directly train classifier
-        return self.__train_classifier(class_id)
+        return self.train_classifier(class_id)
 
     def add_training_data(self, classifier_id, samples):
         with self.trainig_data_lock:
@@ -116,7 +116,7 @@ class MultiClassClassifierBase:
                 if training_id not in self.classifiers:
                     log.severe("Cannot train class {} without creating the classifier first".format(training_id))
                 else:
-                    self.__train_classifier(training_id)
+                    self.train_classifier(training_id)
                 self.__tasks.task_done()
 
     def __timeout_checker(self):
@@ -150,7 +150,7 @@ class MultiClassClassifierBase:
 
     #
     # @abstractmethod
-    # def __train_classifier(self, class_id):
+    # def train_classifier(self, class_id):
     #     """
     #     IMPLEMENTED IN FINAL MULTI-CLASS CLASSIFIER MODEL
     #
@@ -162,7 +162,7 @@ class MultiClassClassifierBase:
     #
 
     # TODO: is this thread-safe? training + prediction at the same time?
-    def __train_classifier(self, class_id):
+    def train_classifier(self, class_id):
         """
         Retrain One-Class Classifiers (partial_fit)
         """

@@ -74,7 +74,7 @@ class IdentificationController(BaseMetaController):
         self.sample_queue.pop(tracking_id, None)
         self.sample_weight_queue.pop(tracking_id, None)
 
-    def accumulate_samples(self, tracking_id, new_samples, sample_weights=None, save_threshold=7):
+    def accumulate_samples(self, tracking_id, new_samples, sample_weights=np.array([]), save_threshold=7):
 
         # check for set inconsistency
         samples_ok = BaseMetaController.check_inter_sample_dist(new_samples, metric='euclidean')
@@ -87,7 +87,7 @@ class IdentificationController(BaseMetaController):
             return False
 
         # generate placeholder weights
-        if not sample_weights:
+        if sample_weights.size == 0:
             # 5 of 10
             sample_weights = np.repeat(5, len(new_samples))
 

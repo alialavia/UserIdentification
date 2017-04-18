@@ -13,8 +13,8 @@ class SetSimilarityThresholdBase:
     __external_cluster = True   # has an external data model
     data_cluster = None
 
-    sample_buffer = None
-    decision_fn_buffer = None
+    sample_buffer = []
+    decision_fn_buffer = []
     cluster_timestamp = None
     decision_fn_timestamp = None
 
@@ -49,7 +49,7 @@ class SetSimilarityThresholdBase:
 
         recalc = True
 
-        if self.decision_fn_buffer and self.decision_fn_timestamp > self.cluster_timestamp:
+        if len(self.decision_fn_buffer) > 0 and self.decision_fn_timestamp > self.cluster_timestamp:
             if np.array_equal(samples, self.sample_buffer):
                 recalc = False
 
