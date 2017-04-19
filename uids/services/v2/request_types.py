@@ -41,10 +41,13 @@ class PartialImageIdentificationAligned:
         # predict class similarities
         new_class_guaranteed = server.classifier.is_guaranteed_new_class(current_samples)
 
-        if new_class_guaranteed:
+        if new_class_guaranteed and len(current_samples) > 2:
+
+            print "============ New class guaranteed: ", len(current_samples)
             id_pred = -1
             confidence = 100
-            is_consistent = True
+            is_consistent = True    # ??
+            is_save_set = True
         else:
             # do meta recognition and predict the user id from the cls scores
             is_consistent, id_pred, confidence = server.classifier.predict_class(current_samples, current_weights)
@@ -59,6 +62,8 @@ class PartialImageIdentificationAligned:
             user_name = "unnamed"
 
         if is_save_set:
+            print "============ Is save set: ", len(current_samples)
+
             # SAVE SET - TAKE ACTION
             profile_picture = None
 
@@ -71,7 +76,8 @@ class PartialImageIdentificationAligned:
                     user_id = server.user_db.create_new_user("a_user")
                     server.user_db.print_users()
                     # add classifier
-                    server.classifier.init_new_class(user_id, embeddings)
+                    server.classifier.init_new_class(user_id, current_samples)
+                    id_pred = user_id
                 else:
                     # add data for training and return identification
                     server.update_controller.add_samples_for_inclusion(id_pred, current_samples)
@@ -102,9 +108,7 @@ class PartialImageIdentificationAligned:
 
 # --------------- UPDATE
 
-
-
-class UpdatePrealignedRobust:
+class PartialUpdateAligned:
 
     def __init__(self, server, conn, handle):
         # receive user id
@@ -115,44 +119,35 @@ class UpdatePrealignedRobust:
         # receive images
         images = server.receive_image_batch_squared_same_size(conn)
 
+        # receive weights
+        weights = server.receive_uchar_array(conn)
+
         # generate embedding
-        embeddings = server.embedding_gen.get_embeddings(images, False)
+        embeddings = server.embedding_gen.get_embeddings(images, align=False)
 
         if not embeddings.any():
             r.Error(server, conn, "Could not generate face embeddings.")
             return
 
-        log.info('cl', "Starting to process stream data...")
-
-        # predict target user
-        predicted_id = 10
-
         # accumulate samples - check for inconsistencies
-        is_safe, samples = server.classifier.update_controller.accumulate_save_samples(embeddings)
+        verified_data, reset_user, id_pred, confidence = server.classifier.update_controller.accumulate_samples(user_id, embeddings, weights)
 
-        if is_safe:
+        # forward save part of data
+        if verified_data.size:
             # add to data model
-            server.classifier.data_controller.add_samples(user_id=user_id, new_samples=samples)
+            server.classifier.data_controller.add_samples(user_id=user_id, new_samples=verified_data)
             # add to classifier training queue
-            server.classifier.add_training_data(user_id, samples)
-        else:
-            # do prediction
-            pass
+            server.classifier.add_training_data(user_id, verified_data)
 
-        # return
-
-        # submit data
-        succ, conf = server.classifier.process_labeled_stream_data(user_id, embeddings, check_update=True)
-
-        if succ == None:
-            log.info('cls', "Update samples are unambiguously.")
-            r.Error(server, conn, "Update samples are unambiguously.")
-        elif succ == False:
-            # update was not classified as the labeled class
-            # force reidentification
+        # reset user if queue has become inconsistent or wrong user is predicted
+        if reset_user:
+            log.severe("USER VERIFICATION FAILED - FORCE REIDENTIFICATION")
             r.Reidentification(server, conn)
-        else:
-            r.UpdateFeedback(server, conn, int(conf*100))
+            return
+
+        # return prediction feedback
+        user_name = server.user_db.get_name_from_id(id_pred)
+        r.PredictionFeedback(server, conn, id_pred, user_name, confidence=int(confidence*100.0))
 
 
 # --------------- MISC
@@ -218,16 +213,16 @@ class ProfilePictureUpdate:
             return
 
         # predict user id
-        user_id_predicted = server.classifier.predict(embedding)
+        # user_id_predicted = server.classifier.predict(embedding)
 
-        # check if correct user
-        if user_id_predicted is None:
-            r.Error(server, conn, "Label could not be predicted - Face is unambiguous.")
-            return
-        elif user_id_predicted != user_id:
-            # unknown user
-            r.Error(server, conn, "The profile image does not come from the same person!")
-            return
+        # # check if correct user
+        # if user_id_predicted is None:
+        #     r.Error(server, conn, "Label could not be predicted - Face is unambiguous.")
+        #     return
+        # elif user_id_predicted != user_id:
+        #     # unknown user
+        #     r.Error(server, conn, "The profile image does not come from the same person!")
+        #     return
 
         server.user_db.set_profile_picture(user_id, image)
 

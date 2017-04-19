@@ -54,27 +54,27 @@ class BaseMetaController:
             return False
         return True
 
+class BaseDataQueue(BaseMetaController):
 
-class IdentificationController(BaseMetaController):
     # raw CNN embeddings
     sample_queue = {}
     sample_weight_queue = {}
 
-    # link to classifier dict
-    p_classifiers = None
-
-    __min_sample_length = 2    # at least 2 samples to build classifier
+    __min_sample_length = 3    # at least 3 samples to build classifier
     __save_sample_length = 5   # at least 5 samples to be safe
+    __save_weight_thresh = 7
 
-    def __init__(self, classifier_dict):
+    def __init__(self, min_sample_length=2, save_sample_length=5, save_weight_thresh=6):
         BaseMetaController.__init__(self)
-        self.p_classifiers = classifier_dict
+        self.__min_sample_length = min_sample_length
+        self.__save_sample_length = save_sample_length
+        self.__save_weight_thresh = save_weight_thresh
 
     def drop_samples(self, tracking_id):
         self.sample_queue.pop(tracking_id, None)
         self.sample_weight_queue.pop(tracking_id, None)
 
-    def accumulate_samples(self, tracking_id, new_samples, sample_weights=np.array([]), save_threshold=7):
+    def accumulate_samples(self, tracking_id, new_samples, sample_weights=np.array([])):
 
         # check for set inconsistency
         samples_ok = BaseMetaController.check_inter_sample_dist(new_samples, metric='euclidean')
@@ -84,7 +84,7 @@ class IdentificationController(BaseMetaController):
             # reset queue
             self.sample_queue.pop(tracking_id, None)
             self.sample_weight_queue.pop(tracking_id, None)
-            return False
+            return False, np.array([]), np.array([])
 
         # generate placeholder weights
         if sample_weights.size == 0:
@@ -112,7 +112,7 @@ class IdentificationController(BaseMetaController):
         # if set has save sample or is long enough
         if len(self.sample_queue[tracking_id]) >= self.__min_sample_length:
             if len(self.sample_queue[tracking_id]) >= self.__save_sample_length\
-                    or np.count_nonzero(self.sample_weight_queue[tracking_id] >= save_threshold):
+                    or np.count_nonzero(self.sample_weight_queue[tracking_id] >= self.__save_weight_thresh):
 
                 # check set consistency
                 samples_ok = BaseMetaController.check_inter_sample_dist(self.sample_queue[tracking_id], metric='euclidean')
@@ -124,7 +124,7 @@ class IdentificationController(BaseMetaController):
                     # dispose all samples
                     self.sample_queue.pop(tracking_id, None)
                     self.sample_weight_queue.pop(tracking_id, None)
-                    log.severe("Identification set is inconsistent - disposing...")
+                    log.severe("Set is inconsistent - disposing...")
 
         # TODO: return whole set or only last?
         current_samples = self.sample_queue.get(tracking_id, np.array([]))
@@ -134,54 +134,112 @@ class IdentificationController(BaseMetaController):
         return is_save_set, current_samples, current_weights
 
 
+class IdentificationController(BaseDataQueue):
+
+    def __init__(self):
+        BaseDataQueue.__init__(self, min_sample_length=3, save_sample_length=5, save_weight_thresh=6)
+
+
 class UpdateController(BaseMetaController):
 
     # raw CNN embeddings
     sample_queue = {}
-    # link to classifier dict
-    p_classifiers = None
+    sample_weight_queue = {}
+
+    # link to classifier
+    __p_multicl = None
 
     __queue_max_length = 10
     __inclusion_range = 5           # < __queue_max_length
 
-    def __init__(self, classifier_dict):
+    def __init__(self, p_multicl):
         BaseMetaController.__init__(self)
-        self.p_classifiers = classifier_dict
+        self.__p_multicl = p_multicl
 
-    def accumulate_save_samples(self, user_id, new_samples):
+    def drop_samples(self, tracking_id):
+        self.sample_queue.pop(tracking_id, None)
+        self.sample_weight_queue.pop(tracking_id, None)
+
+    def accumulate_samples(self, user_id, new_samples, sample_weights=np.array([])):
+        """
+
+        :param user_id:
+        :param new_samples:
+        :param sample_weights:
+        :return:
+        array : save samples (save to integrate in any way)
+        bool : reset user
+        int : prediction of last section
+        float : confidence of last section prediction
+        """
+
+        # check for set inconsistency
+        samples_ok = BaseMetaController.check_inter_sample_dist(new_samples, metric='euclidean')
+
+        if not samples_ok:
+            # no return (queue is not filled up and thus we dont have a save section)
+            log.severe("Update set is inconsistent - disposing...")
+            # reset queue
+            self.sample_queue.pop(user_id, None)
+            self.sample_weight_queue.pop(user_id, None)
+            return np.array([]), True, -1, 1.
+
+        # generate placeholder weights
+        if sample_weights.size == 0:
+            # 5 of 10
+            sample_weights = np.repeat(5, len(new_samples))
+
+        assert len(sample_weights) == len(new_samples)
+
         # add samples
         if user_id not in self.sample_queue:
             # initialize
             self.sample_queue[user_id] = new_samples
+            self.sample_weight_queue[user_id] = sample_weights
         else:
             # append
             self.sample_queue[user_id] = np.concatenate((self.sample_queue[user_id], new_samples))\
                                          if self.sample_queue[user_id].size \
                                          else new_samples
+            self.sample_weight_queue[user_id] = np.concatenate((self.sample_weight_queue[user_id], sample_weights))\
+                                         if self.sample_weight_queue[user_id].size \
+                                         else sample_weights
 
-        current_samples = self.sample_queue[user_id]
+        target_class = -1
+        confidence = 1.
+        forward = np.array([])
+        reset_user = False
 
         # do meta recognition
         # check set for inconsistencies - return only save section
-        forward = np.array([])
-        while self.sample_queue[user_id] >= self.__queue_max_length:
-            if self.is_consistent_set(self.sample_queue[user_id][0:self.__queue_max_length]):
+        while len(self.sample_queue[user_id]) >= self.__queue_max_length:
+
+            sample_batch = self.sample_queue[user_id][0:self.__queue_max_length]
+            weight_batch = self.sample_weight_queue[user_id][0:self.__queue_max_length]
+
+            # check set consistency
+            samples_ok = BaseMetaController.check_inter_sample_dist(sample_batch, metric='euclidean')
+
+            # predict class
+            is_consistent, target_class, confidence = self.__p_multicl.predict_class(sample_batch, sample_weights)
+
+            if samples_ok and is_consistent:
                 forward = np.concatenate((forward, self.sample_queue[user_id][0:self.__inclusion_range])) \
                     if forward.size \
                     else self.sample_queue[user_id][0:self.__inclusion_range]
                 # remove first x samples
                 self.sample_queue[user_id] = self.sample_queue[user_id][self.__inclusion_range:]
+                self.sample_weight_queue[user_id] = self.sample_weight_queue[user_id][self.__inclusion_range:]
             else:
                 # dispose all samples! Whole queue!
-                self.sample_queue[user_id] = np.array([])
-                forward = np.array([])
+                self.sample_queue.pop(user_id, None)
+                self.sample_weight_queue.pop(user_id, None)
+                log.severe("Set is inconsistent - disposing...")
+                reset_user = True
+                break
 
-        # save section is included - possibly compromised data is dropped
-        if forward.size:
-            # forward to data controller
-            print "forwarding {} samples to data controller".format(len(forward))
-            return True, forward
-        else:
-            print "no safe data to forward"
-            return False, current_samples
+        # predict user if not enough samples
+        if not forward.size and reset_user is False:
+            is_consistent, target_class, confidence = self.__p_multicl.predict_class(self.sample_queue[user_id], self.sample_weight_queue[user_id])
 
+        return forward, reset_user, target_class, confidence

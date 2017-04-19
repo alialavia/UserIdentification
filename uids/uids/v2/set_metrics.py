@@ -28,6 +28,8 @@ class ABOD:
     @staticmethod
     def get_set_score(test_samples):
 
+        assert test_samples.ndim == 2
+
         dist_lookup = pairwise_distances(test_samples, test_samples, metric='euclidean')
 
         # print np.shape(dist_lookup[0])
@@ -81,6 +83,9 @@ class ABOD:
 
     @staticmethod
     def get_score(test_samples, reference_set):
+
+        assert test_samples.ndim == 2
+        assert reference_set.ndim == 2
 
         dist_lookup = pairwise_distances(test_samples, reference_set, metric='euclidean')
 
@@ -153,7 +158,12 @@ class ABOD:
             sys.exit('ERROR\tangleBAC\tdistance can not be zero!')
 
         # alternative: clip(cos_AB_AC_, -1, 1)
+
+        cos_AB_AC_ = clip(cos_AB_AC_, -1, 1)
+
         if math.fabs(cos_AB_AC_) > 1:
+
+            print "cos<AB, AC> = ", cos_AB_AC_
             if np.array_equal(B, C):
                 log.error("Points are equal: B == C")
             elif np.array_equal(A, B):
@@ -164,8 +174,8 @@ class ABOD:
             print 'AB = %f, AC = %f' % (AB, AC)
             print 'AB * AC = ', dotProduct
             print '|AB| * |AC| = ', AB * AC
-            sys.exit('ERROR\tangleBAC\tmath domain ERROR, |cos<AB, AC>| <= 1')
+            sys.exit('ERROR\tmath domain ERROR, |cos<AB, AC>| <= 1')
 
         # faster than np.arccos
-        angle = float(math.acos(cos_AB_AC_))	# <AB, AC> = arccos(cos<AB, AC>)
+        angle = float(math.acos(cos_AB_AC_))    # <AB, AC> = arccos(cos<AB, AC>)
         return angle

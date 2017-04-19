@@ -28,8 +28,8 @@ class MultiCl(MultiClassClassifierBase):
         MultiClassClassifierBase.__init__(self, classifier_type=classifier)
 
         self.data_controller = DataController()
-        self.cls_controller = UpdateController(classifier_dict=self.classifiers)
-        self.id_controller = IdentificationController(classifier_dict=self.classifiers)
+        self.update_controller = UpdateController(p_multicl=self)
+        self.id_controller = IdentificationController()
 
     # -------- standard methods
 
@@ -101,6 +101,8 @@ class MultiCl(MultiClassClassifierBase):
                 if false_positive_samples > false_pos_thresh:
                     false_positives.append(class_id)
 
+        print "Prediction: ", predictions
+
         is_consistent = True
         target_class = None
         safe_weight = 7
@@ -144,6 +146,9 @@ class MultiCl(MultiClassClassifierBase):
                             break
                     else:
                         # false positive
+
+                        print pred
+                        print mask
                         if np.count_nonzero(pred[mask] > 0):
                             is_consistent = False
                             break
@@ -301,7 +306,7 @@ class MultiCl(MultiClassClassifierBase):
             # link to data controller: similarity matching - model = data
             self.classifiers[class_id] = SetSimilarityHardThreshold(
                 metric='ABOD',
-                threshold=0.5,
+                threshold=0.3,
                 cluster=cluster_ref     # TODO: data model is connected - might also be separate?
             )
         elif self.CLASSIFIER == 'non-incremental':

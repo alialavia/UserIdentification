@@ -13,10 +13,8 @@ class SetSimilarityThresholdBase:
     __external_cluster = True   # has an external data model
     data_cluster = None
 
-    sample_buffer = []
-    decision_fn_buffer = []
-    cluster_timestamp = None
-    decision_fn_timestamp = None
+    # hashed result buffer
+    decision_fn_buffer = {}
 
     def __init__(self, cluster=None, metric='ABOD'):
 
@@ -37,8 +35,14 @@ class SetSimilarityThresholdBase:
         else:
             # UPDATE INTERNAL CLUSTER (mainly for testing)
             self.data_cluster.update(samples)
+        # invalid buffered decision function
+        self.decision_fn_buffer = {}
 
-        self.cluster_timestamp = time.time()
+    def get_hash(self, arr):
+        arr.flags.writeable = False
+        h = hash(arr.data)
+        arr.flags.writeable = True
+        return h
 
     def decision_function(self, samples):
         """
@@ -47,19 +51,30 @@ class SetSimilarityThresholdBase:
         :return:
         """
 
-        recalc = True
+        # calc hashes
+        hashed = [self.get_hash(s) for s in samples]
 
-        if len(self.decision_fn_buffer) > 0 and self.decision_fn_timestamp > self.cluster_timestamp:
-            if np.array_equal(samples, self.sample_buffer):
-                recalc = False
+        # check intersections and use buffered results
+        if self.decision_fn_buffer:
+            # ind_samples = dict((k, i) for i, k in enumerate(hashed))
+            intersec_hashes = list(set(self.decision_fn_buffer.keys()) & set(hashed))
 
-        if recalc:
-            similarity_scores = self.data_cluster.sample_set_similarity_scores(samples, self.metric)
-            self.sample_buffer = samples
-            self.decision_fn_buffer = similarity_scores
-            self.decision_fn_timestamp = time.time()
+            similarity_scores = []
+            for i, h in enumerate(hashed):
+
+                if h in intersec_hashes:
+                    similarity_scores.append(self.decision_fn_buffer[h])
+                else:
+                    score = self.data_cluster.sample_set_similarity_scores(np.array([samples[i]]), self.metric)
+                    similarity_scores.append(score)
+                    # add to buffer
+                    self.decision_fn_buffer[h] = score
+
         else:
-            similarity_scores = self.decision_fn_buffer
+            similarity_scores = self.data_cluster.sample_set_similarity_scores(samples, self.metric)
+            # add to buffer
+            for i, h in enumerate(hashed):
+                self.decision_fn_buffer[h] = similarity_scores[i]
 
         return similarity_scores
 
@@ -76,10 +91,16 @@ class SetSimilarityHardThreshold(SetSimilarityThresholdBase):
         self.metric = metric
 
     def predict(self, samples):
+
         # get similarity scores
         similarity_scores = self.decision_function(samples)
-        below_thresh = similarity_scores < self.__thresh
-        return [1 if v else -1 for v in below_thresh], similarity_scores
+        print "Similarity scores: ", similarity_scores
+
+        if self.metric == 'ABOD':
+            below_thresh = similarity_scores > self.__thresh
+        else:
+            below_thresh = similarity_scores < self.__thresh
+        return [1 if v else -1 for v in below_thresh]
 
 
 
