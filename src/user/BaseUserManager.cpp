@@ -95,6 +95,15 @@ void BaseUserManager::RefreshUserTracking(
 			// already processed requests are ignored when response is popped from request handler
 			CancelAndDropAllUserRequests(target_user);
 
+			// drop all collected identification samples
+			IdentificationStatus id_status;
+			target_user->GetStatus(id_status);
+			if(id_status == IDStatus_Unknown)
+			{
+				io::DropIdentificationSamples* new_request = new io::DropIdentificationSamples(pServerConn, user_frame_id);
+				pRequestHandler->addRequest(new_request, true);
+			}
+
 			// user has left scene - delete tracking instance
 			delete(target_user);
 
@@ -448,6 +457,9 @@ void BaseUserManager::RenderGUI(cv::Mat &img)
 		ActionStatus action;
 		target_user->GetStatus(id_status, action);
 
+		// show current prediction
+		cv::putText(img, "Prediction: "+std::to_string(target_user->mUserIDPredicted)+" || " + std::to_string(target_user->mPredictionConfidence) + "/100", cv::Point(bb.x + 10, bb.y + 70), cv::FONT_HERSHEY_SIMPLEX, font_size, color, 1, 8);
+
 		if (id_status == IDStatus_Identified || id_status == IDStatus_Uncertain)
 		{
 			int user_id = 0;
@@ -509,6 +521,8 @@ void BaseUserManager::RenderGUI(cv::Mat &img)
 			text1 = "OBJECT TRACKING";
 			color = cv::Scalar(0, 0, 0);
 			bg_color = cv::Scalar(0, 0, 255);
+			// dont draw objects
+			continue;
 		}
 		else
 		{

@@ -105,6 +105,39 @@ void StreamUserManager::ProcessResponses()
 		}
 	}
 
+	// ============================================= //
+	// 2. Reidentification
+	// ============================================= //
+	io::ReidentificationResponse reid_response;
+	while (pRequestHandler->PopResponse(&reid_response, request_lookup, &req_type))
+	{
+		// display response
+		std::cout << "--- Forced reidentification (e.g. update does not explain model)" << std::endl;
+
+		// locate user for which request was sent
+		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request_lookup);
+
+		if (it != mRequestToUser.end()) {
+			// extract user
+			User* target_user = it->second;
+			io::NetworkRequest* target_request = it->first;
+
+			// remove request mapping
+			RemoveRequestUserLinking(target_request);
+
+			// calcel all requests
+			CancelAndDropAllUserRequests(target_user);
+
+			// reset target user
+			target_user->ResetUserIdentity();
+		}
+		else {
+			// user corresponding to request not found - nothing to unlink - drop response
+			// e.g. User has left scene and all requests and linking where deleted
+			//throw std::invalid_argument("User unspecific requests are not implemented yet!");
+			std::cout << "------ USER HAS LEFT SCENE. IGNORE THIS RESPONSE." << std::endl;
+		}
+	}
 
 	// ============================================= //
 	// Prediction Feedback	
@@ -139,9 +172,45 @@ void StreamUserManager::ProcessResponses()
 
 		}
 		else {
+			std::cout << "------ USER HAS LEFT SCENE. IGNORE THIS RESPONSE." << std::endl;
+		}
+	}
+
+
+	// --------------------- MISC ------------------------------//
+
+
+	// ============================================= //
+	// Profile Picture Update
+	// ============================================= //
+	io::QuadraticImageResponse img_response;
+	while (pRequestHandler->PopResponse(&img_response, request_lookup, &req_type))
+	{
+		// display response
+		std::cout << "--- Image response" << std::endl;
+
+		// locate user for which request was sent
+		std::map<io::NetworkRequest*, User*>::iterator it = mRequestToUser.find(request_lookup);
+
+		if (it != mRequestToUser.end()) {
+			// extract user
+			User* target_user = it->second;
+			io::NetworkRequest* target_request = it->first;
+
+			// remove request mapping
+			RemoveRequestUserLinking(target_request);
+
+			// check request type
+			if (req_type == io::NetworkRequest_ProfilePictureUpdate)
+			{
+				// update profile picture
+				target_user->SetProfilePicture(img_response.mImage);
+				target_user->SetPendingProfilePicture(false);
+			}
+		}
+		else {
 			// user corresponding to request not found - nothing to unlink - drop response
 			// e.g. User has left scene and all requests and linking where deleted
-			//throw std::invalid_argument("User unspecific requests are not implemented yet!");
 			std::cout << "------ USER HAS LEFT SCENE. IGNORE THIS RESPONSE." << std::endl;
 		}
 	}
@@ -176,9 +245,6 @@ void StreamUserManager::ProcessResponses()
 			//}
 		}
 		else {
-			// user corresponding to request not found - nothing to unlink - drop response
-			// e.g. User has left scene and all requests and linking where deleted
-			//throw std::invalid_argument("User unspecific requests are not implemented yet!");
 			std::cout << "------ USER HAS LEFT SCENE. IGNORE THIS RESPONSE." << std::endl;
 		}
 	}
@@ -200,32 +266,19 @@ void StreamUserManager::ProcessResponses()
 			User* target_user = it->second;
 			io::NetworkRequest* target_request = it->first;
 
-			// error during identification (e.g. no faces detected) - try again
-			if (
-				req_type == io::NetworkRequest_ImageIdentification ||
-				req_type == io::NetworkRequest_ImageIdentificationAligned
-				) {
-				target_user->SetStatus(user::IDStatus_Unknown);
-				target_user->SetStatus(ActionStatus_Idle);
-			}
-			// error during update - not enough "good"/destinctive feature vectors (most vectors are around threshold)
-			// trash update and start again
-			else if (
-				req_type == io::NetworkRequest_EmbeddingCollectionByID ||
-				req_type == io::NetworkRequest_EmbeddingCollectionByIDRobust ||
-				req_type == io::NetworkRequest_EmbeddingCollectionByIDAligned ||
-				req_type == io::NetworkRequest_EmbeddingCollectionByIDAlignedRobust ||
-				req_type == io::NetworkRequest_EmbeddingCollectionByName
-				)
-			{
-				target_user->SetStatus(ActionStatus_Idle);
-			}
 			// error during profile picture update - user does not match
-			else if (req_type == io::NetworkRequest_ProfilePictureUpdate) {
+			if (req_type == io::NetworkRequest_ProfilePictureUpdate) {
+				// performed during other actions (updates)
 				target_user->SetPendingProfilePicture(false);
+			}else
+			{
+				// reset action status
+				target_user->SetStatus(ActionStatus_Idle);
 			}
+
 			// remove request mapping
 			RemoveRequestUserLinking(target_request);
+
 
 		}
 		else {
@@ -258,7 +311,7 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 		}
 
 		// ============================================= //
-		// 1. Unknown
+		// 1. IDENTIFICATION
 		// ============================================= //
 		if (id_status == IDStatus_Unknown)
 		{
@@ -305,102 +358,7 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 			}
 		}
 		// ============================================= //
-		// 2. Uncertain (if _CHECK_TRACKING_CONF is enabled)
-		// ============================================= //
-		else if (id_status == IDStatus_Uncertain)
-		{
-			// if nothing to do: collect updates
-			if (action == ActionStatus_Idle) {
-				target_user->SetStatus(ActionStatus_DataCollection);
-				action = ActionStatus_DataCollection;
-				// reset unsafe samples
-				target_user->pGrid->Clear();
-			}
-
-
-
-			// collect images for identification
-			if (action == ActionStatus_DataCollection) {
-
-				// ------ closed set
-#ifdef _CLOSED_SET_REVALIDATION
-				// TODO: custom request
-				// Todo: check if -1 in closed set: apply open set classification
-				if (target_user->TryToRecordFaceSample(scene_rgb))
-				{
-					// if enough images, request identification
-					if (target_user->pGrid->HasEnoughOrGoodPictures(3)) {
-
-						std::vector<cv::Mat*> face_patches = target_user->pGrid->ExtractGrid();
-						std::unordered_set<int> closed_set = target_user->mClosedSetConfusionIDs;
-						closed_set.insert(target_user->GetUserID());
-#ifdef _DLIB_PREALIGN
-						io::ImageIdentificationAlignedCS* new_request = new io::ImageIdentificationAlignedCS(
-							pServerConn, face_patches, closed_set
-						);
-
-						pRequestHandler->addRequest(new_request, true);
-
-						// update linking
-						mRequestToUser[new_request] = target_user;
-						mUserToRequests[target_user].insert(new_request);
-
-						// set user action status
-						target_user->SetStatus(ActionStatus_Waiting);
-						target_user->pGrid->Clear();
-#endif
-					}
-				}
-
-
-				// ------ open set
-#else
-
-
-				if (target_user->TryToRecordFaceSample(scene_rgb))
-				{
-					// if enough images, request identification
-					if (target_user->pGrid->nr_images() > 9) {
-
-						// extract images
-						std::vector<cv::Mat*> face_patches = target_user->pGrid->ExtractGrid();
-
-						// make new identification request
-#ifdef _DLIB_PREALIGN
-						io::EmbeddingCollectionByID* new_request = new io::EmbeddingCollectionByID(
-							pServerConn, face_patches, target_user->GetUserID(),
-							io::NetworkRequest_EmbeddingCollectionByIDAlignedRobust	// specified request type
-						);
-#else
-						io::EmbeddingCollectionByID* new_request = new io::EmbeddingCollectionByID(
-							pServerConn, face_patches, target_user->GetUserID(),
-							io::NetworkRequest_EmbeddingCollectionByIDRobust	// specified request type
-						);
-#endif
-						pRequestHandler->addRequest(new_request, true);
-
-						// update linking
-						mRequestToUser[new_request] = target_user;
-						mUserToRequests[target_user].insert(new_request);
-
-						// set user action status
-						target_user->SetStatus(ActionStatus_Waiting);
-						target_user->pGrid->Clear();
-					}
-				}
-
-
-
-#endif
-
-
-
-
-
-			}
-		}
-		// ============================================= //
-		// 3. Identified
+		// 2. UPDATES
 		// ============================================= //
 		else if (id_status == IDStatus_Identified) {
 
@@ -436,47 +394,19 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 				{
 
 #ifdef FACEGRID_RECORDING
-
-					// if enough images, request identification
-					if (target_user->pGrid->nr_images() > 6) {
-
+					if (target_user->pGrid->HasEnoughOrGoodPictures(2)) {
 						// extract images
-						std::vector<cv::Mat*> face_patches = target_user->pGrid->ExtractGrid();
-
-						if (face_patches[0]->cols == 0)
-						{
-							std::cout << "----------- WHY? -----------" << std::endl;
-						}
-						int user_id; std::string user_name;
-
-						// TODO: DEBUG HERE - fixed atm
-						// ID -1
-						target_user->GetUserID(user_id, user_name);
-
-						io::EmbeddingCollectionByID* new_request;
+						std::vector<cv::Mat*> face_patches;
+						std::vector<int> sample_weights;
+						target_user->pGrid->ExtractGrid(face_patches, sample_weights);
+						int user_id = target_user->GetUserID();
+						
 #ifdef _DLIB_PREALIGN
-#ifdef _ALWAYS_DO_SAFE_UPDATE
-						new_request = new io::EmbeddingCollectionByID(
-							pServerConn, face_patches, user_id,
-							io::NetworkRequest_EmbeddingCollectionByIDAlignedRobust	// specified request type
-						);
+						io::PartialUpdateAligned* new_request = new io::PartialUpdateAligned(pServerConn, face_patches, sample_weights, user_id);
 #else
-						new_request = new io::EmbeddingCollectionByID(
-							pServerConn, face_patches, user_id,
-							io::NetworkRequest_EmbeddingCollectionByIDAligned	// specified request type
-						);
+						throw;
 #endif
-
-#else
-#ifdef _ALWAYS_DO_SAFE_UPDATE
-						new_request = new io::EmbeddingCollectionByID(
-							pServerConn, face_patches, user_id,
-							io::NetworkRequest_EmbeddingCollectionByIDRobust	// specified request type
-						);
-#else
-						new_request = new io::EmbeddingCollectionByID(pServerConn, face_patches, user_id);
-#endif
-#endif
+						// make update request
 						pRequestHandler->addRequest(new_request);
 
 						// update linking
@@ -486,14 +416,65 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 						// set user action status
 						target_user->SetStatus(ActionStatus_Waiting);
 						target_user->pGrid->Clear();
+
 					}
-#endif	// /FACEGRID_RECORDING 
+#endif
 				}
 			}
+		}
+		// ============================================= //
+		// 3. CLOSED SET TRACK VERIFICATION
+		// ============================================= //
+		else if (id_status == IDStatus_Uncertain)
+		{
+			// if nothing to do: collect updates
+			if (action == ActionStatus_Idle) {
+				target_user->SetStatus(ActionStatus_DataCollection);
+				action = ActionStatus_DataCollection;
+				// reset unsafe samples
+				target_user->pGrid->Clear();
+			}
+
+			// collect images for identification
+			if (action == ActionStatus_DataCollection) {
+
+				if (target_user->TryToRecordFaceSample(scene_rgb))
+				{
+					// if enough images, request identification
+					if (target_user->pGrid->HasEnoughOrGoodPictures(3)) {
+						// extract images
+						std::vector<cv::Mat*> face_patches;
+						std::vector<int> sample_weights;
+						target_user->pGrid->ExtractGrid(face_patches, sample_weights);
+						
+
+#ifdef _CLOSED_SET_REVALIDATION
+						// closed set re-validation
+						std::unordered_set<int> target_set = target_user->mClosedSetConfusionIDs;
+#else
+						// forces open set re-validation (validation against unknown -1)
+						std::unordered_set<int> target_set = {-1};
+#endif
 
 
+#ifdef _DLIB_PREALIGN
+						io::ImageIdentificationAlignedCS* new_request = new io::ImageIdentificationAlignedCS(
+							pServerConn, face_patches, target_set
+						);
+#else
+						throw;
+#endif
+						// update linking
+						mRequestToUser[new_request] = target_user;
+						mUserToRequests[target_user].insert(new_request);
 
+						// set user action status
+						target_user->SetStatus(ActionStatus_Waiting);
+						target_user->pGrid->Clear();
+					}
+				}
+			}
 		}
 
-	}
+	}	// end user iteration
 }

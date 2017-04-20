@@ -29,15 +29,16 @@ namespace io {
 		NetworkRequest_EmbeddingCollectionByIDRobust = 11,
 		NetworkRequest_EmbeddingCollectionByIDAligned = 12,
 		NetworkRequest_EmbeddingCollectionByIDAlignedRobust = 13,
-		// utils
 		NetworkRequest_EmbeddingCollectionByName = 14,
+		NetworkRequest_PartialUpdateAlignedRobust = 15,
+		// utils
 		NetworkRequest_EmbeddingCalculation = 20,
 		NetworkRequest_ClassifierTraining = 21,
 		NetworkRequest_ImageAlignment = 22,
 		NetworkRequest_ProfilePictureUpdate = 23,
 		NetworkRequest_GetProfilePictures = 24,
-
-		NetworkRequest_DropTrackIdentification = 221,
+		// actions
+		NetworkRequest_DropIdentificationSamples = 221,
 		NetworkRequest_Ping = 222,
 		NetworkRequest_Disconnect = 223
 	};
@@ -374,6 +375,58 @@ namespace io {
 		int mUserID;
 	};
 
+	class PartialUpdateAligned : public NetworkRequest
+	{
+	public:
+		PartialUpdateAligned(
+			io::TCPClient* server_conn,
+			std::vector<cv::Mat*> images,
+			std::vector<int> weights,
+			int user_id,
+			// specify sub type (prealigned, robust)
+			NetworkRequestType sub_type = NetworkRequest_PartialUpdateAlignedRobust
+		) :
+			NetworkRequest(server_conn, sub_type),
+			mImageWeights(weights),
+			mUserID(user_id)
+		{
+			// make deep copy of images
+			for (size_t i = 0; i < images.size(); i++) {
+				mImages.push_back((*images[i]).clone());
+			}
+		}
+		PartialUpdateAligned(
+			io::TCPClient* server_conn,
+			std::vector<cv::Mat> images,
+			std::vector<int> weights,
+			int user_id,
+			NetworkRequestType sub_type = NetworkRequest_PartialUpdateAlignedRobust
+		) :
+			NetworkRequest(server_conn, sub_type),
+			mImageWeights(weights),
+			mUserID(user_id)
+		{
+			mImages = images;
+		}
+	protected:
+
+		// submit specific payload
+		void SubmitPayload() {
+			pServerConn->SendUInt(mUserID);	// user id
+			// images
+			pServerConn->SendImageBatchQuadraticSameSize(mImages);
+			// weights
+			pServerConn->SendUCharArray(mImageWeights);
+		}
+
+		// payload: quadratic(!) images of same size
+		std::vector<cv::Mat> mImages;
+		std::vector<int> mImageWeights;
+		// Todo: careful! Int sent as Uint
+		int mUserID;
+	};
+
+
 
 	class ImageAlignment : public NetworkRequest
 	{
@@ -426,6 +479,19 @@ namespace io {
 	public: GetProfilePictures(io::TCPClient* server_conn) :NetworkRequest(server_conn, NetworkRequest_GetProfilePictures){}
 	protected: void SubmitPayload() {}
 	};
+
+	class DropIdentificationSamples : public NetworkRequest
+	{
+	public: DropIdentificationSamples(io::TCPClient* server_conn, int tracking_id) :NetworkRequest(server_conn, NetworkRequest_DropIdentificationSamples), mTrackingID(tracking_id){}
+	protected: 
+		void SubmitPayload()
+		{
+			pServerConn->SendUInt(mTrackingID);
+		}
+		int mTrackingID;
+	};
+
+	
 
 
 }

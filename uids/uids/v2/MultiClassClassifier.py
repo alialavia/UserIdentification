@@ -149,6 +149,9 @@ class MultiCl(MultiClassClassifierBase):
 
                         print pred
                         print mask
+
+                        pred = np.array(pred)
+                        print pred[mask]
                         if np.count_nonzero(pred[mask] > 0):
                             is_consistent = False
                             break

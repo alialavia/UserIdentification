@@ -128,9 +128,11 @@ namespace io {
 		void GetPayload() {
 			// nr classes
 			mUserID = pConn->Receive32bit<int>();
+			mUserNiceName = pConn->ReceiveStringWithVarLength();
 			mConfidence = (int)pConn->Receive8bit<uint8_t>();
 		};
 		int mUserID;
+		std::string mUserNiceName = "";
 		int mConfidence;
 	};
 
