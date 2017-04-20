@@ -49,6 +49,13 @@ void ImageHandler::MakeIndexedName(std::string &path, std::string &filename_orig
 		}
 	}
 
+	// check if ends on index
+	if (FileExists(path + filename_tmp)) {
+		// check ends with "_X"
+		// then increment X
+	}
+
+
 	// generate unique name
 	while (FileExists(path + filename_tmp))
 	{
@@ -82,6 +89,24 @@ bool ImageHandler::SaveImageIndexed(cv::Mat img, std::string path, std::string f
 	// unique filename
 	MakeIndexedName(path, filename);
 	cv::imwrite(path + filename, img);
+	return true;
+}
+
+bool ImageHandler::SaveImageBatch(std::vector<cv::Mat> images, std::string path, std::string file_basename) {
+
+	if (CreateDirectory(path.c_str(), NULL))
+	{
+		// Directory created
+	}
+
+	for (size_t i = 0; i < images.size();i++) {
+		// unique filename
+		MakeIndexedName(path, file_basename, false);
+
+		std::cout << file_basename << std::endl;
+		cv::imwrite(path + file_basename, images[i]);
+	}
+
 	return true;
 }
 

@@ -15,6 +15,9 @@ DEFINE_string(lock_axis, "", "Axis to lock: {roll, pitch, yaw}. Only takes pictu
 DEFINE_bool(subtract_bg, false, "Save a copy of the images with subtracted background (only for single picture capturing with skeleton tracking)");
 DEFINE_bool(skeleton_tracking, false, "Use skeleton tracking");
 DEFINE_int32(auto_save_interval, 10, "Safe images/log after X images have been taken");
+DEFINE_bool(frontal, false, "Take only frontal view pictures");
+DEFINE_bool(high_res, true, "High resolution on all axis");
+
 
 tracking::RadialFaceGridLabeled* g_ptr;
 
@@ -39,9 +42,9 @@ int main(int argc, char** argv)
 
 	HRESULT hr;
 	const char* cWindowLabel = "Label Selection";
+
 	cvNamedWindow(cWindowLabel, CV_WINDOW_AUTOSIZE);
 	cv::setMouseCallback(cWindowLabel, CallBackFunc, NULL);
-
 
 	cv::Mat color_image;
 	cv::Mat bg_subtracted;
@@ -82,6 +85,13 @@ int main(int argc, char** argv)
 	{
 		res_yaw = 21;
 	}
+	
+
+	if (FLAGS_high_res) {
+		res_pitch = 61;
+		res_yaw = 61;
+		res_roll = 61;
+	}
 
 	tracking::RadialFaceGridLabeled grid(res_roll,res_pitch,res_yaw);
 	io::ImageHandler ih;
@@ -106,6 +116,7 @@ int main(int argc, char** argv)
 	cv::destroyAllWindows();
 	int key = (int)('-1');
 	int key_save = (int)('-1');
+	std::vector<cv::Mat> frontal_views;
 
 	while (true) {
 
@@ -280,32 +291,42 @@ int main(int argc, char** argv)
 						}
 					}
 
-					try
-					{
-						// add face if not yet capture from this angle
-						if (grid.IsFree(roll, pitch, yaw)) {
-
-							// convert to grayscale
-							cv::Mat greyMat;
-							cv::cvtColor(face_snap, greyMat, CV_BGR2GRAY);
-
-							grid.StoreSnapshot(roll, pitch, yaw, face_snap);
-
-							if (imgproc::FocusMeasure::LAPD(greyMat) > 4) {
-
-							}
-
-							//int iroll = grid.iRoll(roll);
-							//int	ipitch = grid.iPitch(pitch);
-							//int iyaw = grid.iYaw(yaw);
-							//std::cout << "r: " << roll << " | p: " << pitch << " | y: " << yaw << "\n";
-							//std::cout << "ir: " << iroll << " | ip: " << ipitch << " | iy: " << iyaw << "\n";
+					if (FLAGS_frontal) {
+						if (faces[i].IsFrontal(true)) {
+							frontal_views.push_back(face_snap);
+							std::cout << "Snap!\n";
 						}
 					}
-					catch (...)
-					{
+					else {
+						try
+						{
+							// add face if not yet capture from this angle
+							if (grid.IsFree(roll, pitch, yaw)) {
 
+								// convert to grayscale
+								cv::Mat greyMat;
+								cv::cvtColor(face_snap, greyMat, CV_BGR2GRAY);
+
+								grid.StoreSnapshot(roll, pitch, yaw, face_snap);
+
+								if (imgproc::FocusMeasure::LAPD(greyMat) > 4) {
+
+								}
+
+								//int iroll = grid.iRoll(roll);
+								//int	ipitch = grid.iPitch(pitch);
+								//int iyaw = grid.iYaw(yaw);
+								//std::cout << "r: " << roll << " | p: " << pitch << " | y: " << yaw << "\n";
+								//std::cout << "ir: " << iroll << " | ip: " << ipitch << " | iy: " << iyaw << "\n";
+							}
+						}
+						catch (...)
+						{
+
+						}
 					}
+
+
 				}
 
 				// get face capture grid
@@ -316,9 +337,19 @@ int main(int argc, char** argv)
 				//ft.RenderFaceBoundingBoxes(color_image, base::ImageSpace_Color);
 				//ft.RenderFaceFeatures(color_image, base::ImageSpace_Color);
 
-				// show image
-				cv::imshow(cWindowLabel, face_captures);
-				key_save = cv::waitKey(5);
+				// show images
+
+				if (FLAGS_frontal) {
+					if (face_snap.data) {
+						cv::imshow(cWindowLabel, face_snap);
+						key_save = cv::waitKey(5);
+					}
+				}
+				else {
+					cv::imshow(cWindowLabel, face_captures);
+					key_save = cv::waitKey(5);
+				}
+
 
 				if((int)('1') == key){
 					if ((int)('s') == key_save)	// space = save
@@ -340,12 +371,24 @@ int main(int argc, char** argv)
 				}
 				else if ((int)('2') == key) {
 					// autosave
-					if (grid.nr_images() == FLAGS_auto_save_interval) {
-						std::cout << "Autosaving..." << std::endl;
-						grid.DumpImageGrid(FLAGS_img_basename, "picture_log.csv", FLAGS_output_folder, true);
-						grid.Clear();
-						cv::destroyAllWindows();
+					if (FLAGS_frontal) {
+						if (frontal_views.size() == FLAGS_auto_save_interval) {
+							std::cout << "Autosaving..." << std::endl;
+							io::ImageHandler::SaveImageBatch(frontal_views, FLAGS_output_folder, FLAGS_img_basename + ".png");
+							frontal_views.clear();
+							cv::destroyAllWindows();
+						}
 					}
+					else {
+						if (grid.nr_images() == FLAGS_auto_save_interval) {
+							std::cout << "Autosaving..." << std::endl;
+							grid.DumpImageGrid(FLAGS_img_basename, "picture_log.csv", FLAGS_output_folder, true);
+							grid.Clear();
+							cv::destroyAllWindows();
+						}
+					}
+
+
 					if ((int)('q') == key_save)
 					{
 						std::cout << "--- Terminating...\n";

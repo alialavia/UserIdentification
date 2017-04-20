@@ -14,6 +14,7 @@ namespace io
 		
 		// file handling
 		static bool SaveImage(cv::Mat img, std::string path, std::string filename);
+		static bool SaveImageBatch(std::vector<cv::Mat> images, std::string path, std::string file_basename);
 		static bool SaveImageIndexed(cv::Mat img, std::string path, std::string filename);
 		static bool FileExists(const std::string& name);
 		static void MakeIndexedName(std::string &path, std::string &filename_orig, bool start_with_index = true);

@@ -51,7 +51,7 @@ namespace tracking
 
 		void GetFaceGridPitchYaw(cv::Mat &dst, size_t canvas_height=500);
 
-		int CalcSampleWeight(int roll, int pitch, int yaw) const{
+		static int CalcSampleWeight(int roll, int pitch, int yaw){
 			// min: 0, max: 10
 
 			// yaw
@@ -78,7 +78,7 @@ namespace tracking
 				v_pitch = 2.8;
 			}
 			else if (pitch <= 0) {
-				v_pitch = 0.0875 * abs(yaw);
+				v_pitch = 0.0875 * abs(pitch);
 			}
 			else if (pitch <= 30) {
 				v_pitch = -0.00056405*pow(pitch, 3) + 0.028120486*pow(pitch, 2) - 0.013393392*pitch;
@@ -86,10 +86,15 @@ namespace tracking
 			else {
 				v_pitch = 10.;
 			}
-			w_pitch = static_cast<int>(10 - v_pitch);
+
+
+			w_pitch = static_cast<int>(10. - v_pitch);
+			//std::cout << w_pitch << std::endl;
 
 			int w_total = static_cast<int>(std::max(v_pitch, v_yaw));
-			return w_total;
+
+
+			return w_pitch;
 		}
 
 		bool HasEnoughOrGoodPictures(int min_nr_pictures) {
@@ -462,6 +467,19 @@ namespace tracking
 			return points_in_frame;
 		}
 
+		bool IsFrontal(bool exact = false) {
+			float thresh = 0.999;
+			if (exact) {
+				thresh = 0.9996;
+			}
+				
+			if (Rotation[3] > thresh) {
+				std::cout << Rotation[3] << std::endl;
+				return true;
+			}
+			return false;
+		}
+
 		void GetEulerAngles(int& roll, int& pitch, int& yaw) {
 			double x = Rotation[0];
 			double y = Rotation[1];
@@ -472,7 +490,7 @@ namespace tracking
 			dPitch = atan2(2 * (y * z + w * x), w * w - x * x - y * y + z * z) / M_PI * 180.0;
 			dYaw = asin(2 * (w * y - x * z)) / M_PI * 180.0;
 			dRoll = atan2(2 * (x * y + w * z), w * w + x * x - y * y - z * z) / M_PI * 180.0;
-			const double c_FaceRotationIncrementInDegrees = 2.0f;
+			const double c_FaceRotationIncrementInDegrees = 1.0f;
 			// clamp rotation values in degrees to a specified range of values to control the refresh rate
 			double increment = c_FaceRotationIncrementInDegrees;
 			pitch = static_cast<int>(floor((dPitch + increment / 2.0 * (dPitch > 0 ? 1.0 : -1.0)) / increment) * increment);
