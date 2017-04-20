@@ -76,6 +76,8 @@ class SetSimilarityThresholdBase:
             for i, h in enumerate(hashed):
                 self.decision_fn_buffer[h] = similarity_scores[i]
 
+        similarity_scores = np.array(similarity_scores).flatten()
+
         return similarity_scores
 
 
@@ -94,13 +96,13 @@ class SetSimilarityHardThreshold(SetSimilarityThresholdBase):
 
         # get similarity scores
         similarity_scores = self.decision_function(samples)
-        print "Similarity scores: ", similarity_scores
 
         if self.metric == 'ABOD':
             below_thresh = similarity_scores > self.__thresh
         else:
             below_thresh = similarity_scores < self.__thresh
-        return [1 if v else -1 for v in below_thresh]
+
+        return np.array([1 if v else -1 for v in below_thresh])
 
 
 

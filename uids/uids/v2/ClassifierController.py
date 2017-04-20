@@ -42,7 +42,7 @@ class BaseMetaController:
         elif metric == 'euclidean':
             dist = pairwise_distances(samples, samples, metric='euclidean')
             dist = np.square(dist)
-            thresh = 0.99
+            thresh = 1.4
         else:
             raise ValueError
 
@@ -51,6 +51,7 @@ class BaseMetaController:
 
         # allowed errors
         if nr_errors > 0:
+            log.severe("Inconsistent set! Inter-sample distances: {}".format(dist))
             return False
         return True
 
@@ -221,7 +222,7 @@ class UpdateController(BaseMetaController):
             samples_ok = BaseMetaController.check_inter_sample_dist(sample_batch, metric='euclidean')
 
             # predict class
-            is_consistent, target_class, confidence = self.__p_multicl.predict_class(sample_batch, sample_weights)
+            is_consistent, target_class, confidence = self.__p_multicl.predict_class(sample_batch, weight_batch)
 
             if samples_ok and is_consistent:
                 forward = np.concatenate((forward, self.sample_queue[user_id][0:self.__inclusion_range])) \
@@ -241,5 +242,6 @@ class UpdateController(BaseMetaController):
         # predict user if not enough samples
         if not forward.size and reset_user is False:
             is_consistent, target_class, confidence = self.__p_multicl.predict_class(self.sample_queue[user_id], self.sample_weight_queue[user_id])
+            print "Not enough to forward but predict...", is_consistent, target_class, confidence
 
         return forward, reset_user, target_class, confidence

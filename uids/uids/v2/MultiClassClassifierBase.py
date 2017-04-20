@@ -175,7 +175,7 @@ class MultiClassClassifierBase:
             if class_id in self.classifier_update_stacks:
                 update_samples = self.classifier_update_stacks[class_id]
                 # clear
-                self.classifier_update_stacks[class_id] = []
+                self.classifier_update_stacks[class_id] = np.array([])
             else:
                 update_samples = []
 

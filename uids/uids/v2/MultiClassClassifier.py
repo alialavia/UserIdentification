@@ -53,7 +53,7 @@ class MultiCl(MultiClassClassifierBase):
             return False, 1.0
 
         # calculate confidence for target class
-        conf = self.calc_normalized_confidence(predictions[target_class_id], sample_weight)
+        conf = self.calc_normalized_positive_confidence(predictions[target_class_id], sample_weight)
         return True, conf
 
     def predict_class(self, samples, sample_weight):
@@ -83,6 +83,9 @@ class MultiCl(MultiClassClassifierBase):
         # select classes in range
         classes_in_range = self.data_controller.classes_in_range(samples=samples, metric='cosine', thresh=0.7)
 
+        if not classes_in_range:
+            log.info('cl', "No classes in range...")
+
         for class_id, cls in self.classifiers.iteritems():
             # only consider near classes
             if class_id in classes_in_range:
@@ -100,8 +103,6 @@ class MultiCl(MultiClassClassifierBase):
                 # count uncertain detections
                 if false_positive_samples > false_pos_thresh:
                     false_positives.append(class_id)
-
-        print "Prediction: ", predictions
 
         is_consistent = True
         target_class = None
@@ -133,7 +134,6 @@ class MultiCl(MultiClassClassifierBase):
                 target_class = true_positives[best_index]
 
         if is_consistent:
-
             # check for strong samples with inconsistent predictions
             mask = sample_weight > safe_weight
             if np.count_nonzero(mask):
@@ -146,12 +146,6 @@ class MultiCl(MultiClassClassifierBase):
                             break
                     else:
                         # false positive
-
-                        print pred
-                        print mask
-
-                        pred = np.array(pred)
-                        print pred[mask]
                         if np.count_nonzero(pred[mask] > 0):
                             is_consistent = False
                             break
@@ -163,9 +157,12 @@ class MultiCl(MultiClassClassifierBase):
             # TODO: not implemented yet! Build additive score
             confidence = 1.0
         elif target_class > 0:
-            confidence = self.calc_normalized_confidence(predictions[target_class], weights=sample_weight)
+            confidence = self.calc_normalized_positive_confidence(predictions[target_class], weights=sample_weight)
         else:
             confidence = 1.0
+
+        print "---- Prediction: ", predictions
+        print "---- Target class decision: {} / conf: {} / TP: {}, FP: {} / min. TP: {} max. FP: {}".format(target_class, confidence, len(true_positives), len(false_positives), true_pos_thresh, false_pos_thresh)
 
         return is_consistent, target_class, confidence
 
@@ -212,18 +209,21 @@ class MultiCl(MultiClassClassifierBase):
 
         return validity, fn, fp
 
-
     def calc_abs_confidence(self, predictions, weights, max_weight):
+        assert len(predictions) == len(weights)
+        predictions = np.clip(predictions, 0, 1)
         norm_f = 1.0/max_weight
         confidence = np.dot(predictions, np.transpose(norm_f * weights))
         return confidence
 
-    def calc_normalized_confidence(self, predictions, weights):
+    def calc_normalized_positive_confidence(self, predictions, weights):
         """
         :param predictions: E [0,1]
         :param weights:
         :return:
         """
+        assert len(predictions) == len(weights)
+        predictions = np.clip(predictions, 0, 1)
         norm_f = 1.0/np.sum(weights)
         confidence = np.dot(predictions, np.transpose(norm_f * weights))
         return confidence
