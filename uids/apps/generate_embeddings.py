@@ -92,6 +92,7 @@ def calc_embeddings(in_folder, gen, cleanup=False, align=True, log='', save_pose
     pose = []
     start = time.time()
     nr_processed = 0
+    picture_names = []
 
     if log != '':
         with open(os.path.join(path_in, log), 'rb') as csvfile:
@@ -123,6 +124,7 @@ def calc_embeddings(in_folder, gen, cleanup=False, align=True, log='', save_pose
                     nr_processed = nr_processed + 1
                     print "--- Processed {} images".format(nr_processed)
                     embeddings.append(embedding)
+                    picture_names.append(row[0])
                     # save pose
                     if save_pose:
                         pose.append([row[1], row[2], row[3]])
@@ -142,13 +144,15 @@ def calc_embeddings(in_folder, gen, cleanup=False, align=True, log='', save_pose
                     removed = removed + 1
                     continue
                 else:
+                    nr_processed = nr_processed + 1
                     embeddings.append(embedding)
+                    picture_names.append(file)
             else:
                 continue
 
     print "--- embedding calculation took {} seconds".format(time.time()-start)
     print "--- useable: {}/{} images".format(nr_processed, tot_files)
-    return embeddings, pose
+    return embeddings, pose, picture_names
 
 # ================================= #
 #              Main
@@ -191,12 +195,15 @@ if __name__ == '__main__':
     if args.recursive:
         embeddings = calc_embeddings_recursive(args.img_folder, emb_gen, args.output, args.batch_size, args.clean, align=args.align)
     else:
-        embeddings, pose = calc_embeddings(args.img_folder, emb_gen, args.clean, align=args.align, log=args.log, save_pose=args.save_pose)
+        embeddings, pose, picture_names = calc_embeddings(args.img_folder, emb_gen, args.clean, align=args.align, log=args.log, save_pose=args.save_pose)
         if args.save_embeddings is True:
             filename = "{}.pkl".format(args.output)
             print("--- Saving face embeddings to '{}'".format(filename))
             with open(filename, 'wb') as f:
                 pickle.dump(embeddings, f)
+                f.close()
+            with open("{}_image_names.pkl".format(args.output), 'wb') as f:
+                pickle.dump(picture_names, f)
                 f.close()
 
             if len(pose) > 0:
