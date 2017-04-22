@@ -348,7 +348,7 @@ void BatchUserManager::GenerateRequests(cv::Mat scene_rgb)
 
 					// if enough images, request identification
 					//if (target_user->pGrid->nr_images() > 9) {
-					if (target_user->pGrid->HasEnoughOrGoodPictures(5)) {
+					if (target_user->pGrid->HasEnoughOrFrontalPictures(5)) {
 						// extract images
 						std::vector<cv::Mat*> face_patches = target_user->pGrid->ExtractGrid();
 
@@ -397,7 +397,7 @@ void BatchUserManager::GenerateRequests(cv::Mat scene_rgb)
 				if (target_user->TryToRecordFaceSample(scene_rgb))
 				{
 					// if enough images, request identification
-					if (target_user->pGrid->HasEnoughOrGoodPictures(3)) {
+					if (target_user->pGrid->HasEnoughOrFrontalPictures(3)) {
 
 						std::vector<cv::Mat*> face_patches = target_user->pGrid->ExtractGrid();
 						std::unordered_set<int> closed_set = target_user->mClosedSetConfusionIDs;

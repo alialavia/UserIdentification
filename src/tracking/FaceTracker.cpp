@@ -44,7 +44,7 @@ void RadialFaceGrid::DumpImageGrid(std::string img_basename, std::string log_nam
 					// save file name and metadata
 					o_h.addEntry(filename);
 
-					cv::Vec3d precies_angles = angles[&(image_grid(r, p, y))];
+					cv::Vec3d precies_angles = mAngles[&(image_grid(r, p, y))];
 
 					// roll, pitch, yaw
 					o_h.addEntry(precies_angles[0]);
@@ -60,7 +60,7 @@ void RadialFaceGrid::DumpImageGrid(std::string img_basename, std::string log_nam
 std::vector<cv::Mat*> RadialFaceGrid::ExtractGrid() const
 {
 	std::vector <cv::Mat*> ptrs;
-	for (auto const& target : angles) {
+	for (auto const& target : mAngles) {
 		ptrs.push_back(target.first);
 	}
 	return ptrs;
@@ -68,7 +68,7 @@ std::vector<cv::Mat*> RadialFaceGrid::ExtractGrid() const
 
 void RadialFaceGrid::ExtractGrid(std::vector<cv::Mat*> &images, std::vector<int> &weights) const
 {
-	for (auto const& target : angles) {
+	for (auto const& target : mAngles) {
 		images.push_back(target.first);
 		// calc weight
 		weights.push_back(CalcSampleWeight(target.second[0], target.second[1], target.second[2]));
@@ -77,7 +77,7 @@ void RadialFaceGrid::ExtractGrid(std::vector<cv::Mat*> &images, std::vector<int>
 
 void RadialFaceGrid::ResizeImages(int size)
 {
-	for (auto const& target : angles) {
+	for (auto const& target : mAngles) {
 		cv::resize(*target.first, *target.first, cv::Size(size, size));
 	}
 }

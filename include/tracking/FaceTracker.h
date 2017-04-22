@@ -12,6 +12,7 @@
 #include <io/CSVHandling.h>
 
 #include <imgproc\ImgProcessing.h>
+#include <chrono>
 
 
 #define _DEBUG_FACETRACKER
@@ -93,11 +94,10 @@ namespace tracking
 
 			int w_total = static_cast<int>(std::max(v_pitch, v_yaw));
 
-
 			return w_pitch;
 		}
 
-		bool HasEnoughOrGoodPictures(int min_nr_pictures) {
+		bool HasEnoughOrFrontalPictures(int min_nr_pictures) {
 			// enough images
 			if (nr_images() >= min_nr_pictures) {
 				return true;
@@ -138,7 +138,7 @@ namespace tracking
 			cv::Vec3d ang = cv::Vec3d(roll, pitch, yaw);
 
 			// store rotation
-			angles[ptr] = ang;
+			mAngles[ptr] = ang;
 
 			// register frontal pictures
 			if (abs(pitch) < cPFrontal && abs(yaw) < cYFrontal) {
@@ -153,12 +153,12 @@ namespace tracking
 		void Clear()
 		{
 			image_grid.Reset();
-			angles.clear();
+			mAngles.clear();
 			frontal_images = 0;
 		}
 
 		size_t nr_images() {
-			return angles.size();
+			return mAngles.size();
 		}
 
 		// ---------- index mapper
@@ -176,7 +176,7 @@ namespace tracking
 		math::Array3D<cv::Mat> image_grid;
 
 		// array3d index to precies angles
-		std::map<cv::Mat*, cv::Vec3d> angles;
+		std::map<cv::Mat*, cv::Vec3d> mAngles;
 
 		size_t frontal_images = 0;
 
@@ -187,10 +187,10 @@ namespace tracking
 		// image grid resolution
 		const int cRMin = -70;
 		const int cRMax = 70;
-		const int cPMin = -50;
-		const int cPMax = 50;
-		const int cYMin = -50;
-		const int cYMax = 50;
+		const int cPMin = -30;
+		const int cPMax = 30;
+		const int cYMin = -40;
+		const int cYMax = 40;
 
 		// frontal view boundaries
 		const int cPFrontal = 10;
@@ -240,7 +240,7 @@ namespace tracking
 			cv::Vec3d ang = cv::Vec3d(roll, pitch, yaw);
 
 			// store rotation
-			angles[ptr] = ang;
+			mAngles[ptr] = ang;
 
 			// convert to grayscale
 			cv::Mat greyMat;
@@ -265,7 +265,7 @@ namespace tracking
 			// allocate image
 			cv::Mat canvas = cv::Mat(static_cast<int>(canvas_height), static_cast<int>(canvas_width), CV_8UC3, cv::Scalar(0, 0, 0));
 
-			for (auto const& target : angles) {
+			for (auto const& target : mAngles) {
 
 				cv::Vec3d a = target.second;
 
@@ -382,7 +382,7 @@ namespace tracking
 
 			fh.addEntry("Label (1=Blurred | 0=Not),LAPV,LAPD,GLVN,MLAP,CEC");
 			fh.EndRow();
-			for (auto const& target : angles) {
+			for (auto const& target : mAngles) {
 				cv::Vec3d a = target.second;
 				// get image
 				cv::Mat* im_ptr;

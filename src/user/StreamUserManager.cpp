@@ -331,7 +331,7 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 
 					// if enough images, request identification
 					//if (target_user->pGrid->nr_images() > 9) {
-					if (target_user->pGrid->HasEnoughOrGoodPictures(2)) {
+					if (target_user->pGrid->HasEnoughOrFrontalPictures(2)) {
 						// extract images
 						std::vector<cv::Mat*> face_patches;
 						std::vector<int> sample_weights;
@@ -394,7 +394,7 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 				{
 
 #ifdef FACEGRID_RECORDING
-					if (target_user->pGrid->HasEnoughOrGoodPictures(2)) {
+					if (target_user->pGrid->HasEnoughOrFrontalPictures(2)) {
 						// extract images
 						std::vector<cv::Mat*> face_patches;
 						std::vector<int> sample_weights;
@@ -441,7 +441,7 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 				if (target_user->TryToRecordFaceSample(scene_rgb))
 				{
 					// if enough images, request identification
-					if (target_user->pGrid->HasEnoughOrGoodPictures(3)) {
+					if (target_user->pGrid->HasEnoughOrFrontalPictures(3)) {
 						// extract images
 						std::vector<cv::Mat*> face_patches;
 						std::vector<int> sample_weights;
