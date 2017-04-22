@@ -42,8 +42,6 @@ class PartialImageIdentificationAligned:
         new_class_guaranteed = server.classifier.is_guaranteed_new_class(current_samples)
 
         if new_class_guaranteed and len(current_samples) > 2:
-
-            print "============ New class guaranteed: ", len(current_samples)
             id_pred = -1
             confidence = 100
             is_consistent = True    # ??
@@ -62,8 +60,6 @@ class PartialImageIdentificationAligned:
             user_name = "unnamed"
 
         if is_save_set:
-            print "============ Is save set: ", len(current_samples)
-
             # SAVE SET - TAKE ACTION
             profile_picture = None
 
@@ -80,7 +76,11 @@ class PartialImageIdentificationAligned:
                     id_pred = user_id
                 else:
                     # add data for training and return identification
-                    server.update_controller.add_samples_for_inclusion(id_pred, current_samples)
+                    # add to data model
+                    server.classifier.data_controller.add_samples(user_id=id_pred, new_samples=current_samples)
+                    # add to classifier training queue
+                    server.classifier.add_training_data(id_pred, current_samples)
+
                     # get profile picture
                     profile_picture = server.user_db.get_profile_picture(id_pred)
 
@@ -132,6 +132,8 @@ class PartialUpdateAligned:
         # accumulate samples - check for inconsistencies
         verified_data, reset_user, id_pred, confidence = server.classifier.update_controller.accumulate_samples(user_id, embeddings, weights)
 
+        print "verified_data (len), reset_user, id_pred, confidence: ", len(verified_data), reset_user, id_pred, confidence
+
         # forward save part of data
         if verified_data.size:
             # add to data model
@@ -147,6 +149,8 @@ class PartialUpdateAligned:
 
         # return prediction feedback
         user_name = server.user_db.get_name_from_id(id_pred)
+        if user_name is None:
+            user_name = "unnamed"
         r.PredictionFeedback(server, conn, id_pred, user_name, confidence=int(confidence*100.0))
 
 
