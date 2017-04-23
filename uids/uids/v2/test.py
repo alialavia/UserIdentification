@@ -8,7 +8,25 @@ from uids.v2.HardThreshold import SetSimilarityHardThreshold
 from uids.data_models.StandardCluster import StandardCluster
 from uids.v2.MultiClassClassifierBase import MultiClassClassifierBase
 from uids.v2.DataController import DataController
-from uids.v2.ClassifierController import IdentificationController, UpdateController
+from uids.v2.ClassifierController import IdentificationController, UpdateController, BaseMetaController
+from uids.v2.set_metrics import *
+import os
+import random
+import pickle
+
+# path managing
+fileDir = os.path.dirname(os.path.realpath(__file__))
+modelDir = os.path.join(fileDir, '../..', 'models', 'embedding_samples')  # path to the model directory
+
+
+def load_embeddings(filename):
+    filename = "{}/{}".format(modelDir, filename)
+    if os.path.isfile(filename):
+        with open(filename, 'r') as f:
+            embeddings = pickle.load(f)
+            f.close()
+        return np.array(embeddings)
+    return None
 
 
 def test_metrics():
@@ -51,15 +69,15 @@ def test_identification_controller():
 
     idc = IdentificationController({})
 
-    is_save, samples = idc.try_to_identify(2, np.array([1,2,3,4,5,6]))
+    is_save, samples = idc.accumulate_samples(2, np.array([1, 2, 3, 4, 5, 6]))
     print is_save, samples
-    is_save, samples = idc.try_to_identify(2, np.array([7,8]))
+    is_save, samples = idc.accumulate_samples(2, np.array([7, 8]))
     print is_save, samples
     # accumulation save now
-    is_save, samples = idc.try_to_identify(2, np.array([9,10]))
+    is_save, samples = idc.accumulate_samples(2, np.array([9, 10]))
     print is_save, samples
     # stack is deleted again
-    is_save, samples = idc.try_to_identify(2, np.array([11, 12]))
+    is_save, samples = idc.accumulate_samples(2, np.array([11, 12]))
     print is_save, samples
 
 
@@ -71,13 +89,58 @@ def test_data_controller():
     print cluster.data
 
 
+def test_abod():
+
+    emb2 = load_embeddings("matthias_test2.pkl")
+    emb3 = load_embeddings("embeddings_christian_clean.pkl")
+    emb_lfw = load_embeddings("embeddings_lfw.pkl")
+
+
+    test_with_ul = np.concatenate((emb2[1:3], emb3[0:10]))
+    random.shuffle(test_with_ul)
+
+
+    # print BaseMetaController.check_inter_sample_dist(test_with_ul)
+    print BaseMetaController.check_inter_sample_dist(emb3)
+    print BaseMetaController.check_inter_sample_dist(emb_lfw[0:1000])
+    # print ABOD.get_set_score(emb3[0:4])
+    # print ABOD.get_set_score(emb_lfw[0:4])
+
+def test_normed_confidence():
+
+    weights = np.array([2,6,9])
+    predictions = [0,0,1]
+    norm_f = 1.0/np.sum(weights)
+
+    confidence = np.dot(predictions, np.transpose(norm_f * weights))
+    print confidence
+
+
+def test_arr_append():
+
+    l = []
+
+
+    l.append(2)
+    l.append(4.2)
+
+    l.append(np.array([3.4]))
+    l.append(np.array([8.745]))
+
+
+    print np.array(l).flatten()
+
+
+    t = np.array([8.745, 9.234])
+    print t
+    print np.array(t).flatten()
+
+
 if __name__ == '__main__':
     # test_metrics()
     # test_identification_controller()
 
-    test_data_controller()
-
-
-
+    # test_normed_confidence()
+    test_arr_append()
 
 
