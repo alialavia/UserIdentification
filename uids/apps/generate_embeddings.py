@@ -78,7 +78,7 @@ def calc_embeddings_recursive(in_folder, gen, output, batch_size = 100, cleanup 
     return embeddings
 
 
-def calc_embeddings(in_folder, gen, cleanup=False, align=True, log='', save_pose=False):
+def calc_embeddings(in_folder, gen, cleanup=False, align=True, log='', save_pose=True):
 
     path_in = os.path.join(fileDir, in_folder)
     print "--- starting to generate embeddings..."
@@ -127,7 +127,7 @@ def calc_embeddings(in_folder, gen, cleanup=False, align=True, log='', save_pose
                     picture_names.append(row[0])
                     # save pose
                     if save_pose:
-                        pose.append([row[1], row[2], row[3]])
+                        pose.append([int(row[1]), int(row[2]), int(row[3])])
     else:
         print "Scanning directory for images..."
         tot_files = len(os.listdir(path_in))
