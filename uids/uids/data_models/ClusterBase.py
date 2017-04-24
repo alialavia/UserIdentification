@@ -84,7 +84,10 @@ class ClusterBase:
         :param metric: distance metric
         :return: Average distance between class and sample data
         """
-        return np.mean(pairwise_distances(samples, self.data, metric=metric), axis=1)
+        dist = np.mean(pairwise_distances(samples, self.data, metric=metric), axis=1)
+        if metric == 'euclidean':
+            dist = np.square(dist)
+        return dist
 
     def class_mean_dist(self, samples, metric='cosine'):
         """
@@ -93,7 +96,10 @@ class ClusterBase:
         :return: Distance to class mean for every sample
         """
         class_mean = np.mean(self.data, axis=0)
-        return pairwise_distances(class_mean.reshape(1, -1), samples, metric=metric)[0]
+        dist = pairwise_distances(class_mean.reshape(1, -1), samples, metric=metric)[0]
+        if metric == 'euclidean':
+            dist = np.square(dist)
+        return dist
 
     def mean(self):
         if len(self.data) > 0:
