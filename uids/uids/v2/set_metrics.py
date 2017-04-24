@@ -104,7 +104,7 @@ class ABOD:
                 B = reference_set[i]
                 # distance
                 AB = dist_lookup[i_sample][i]
-                j = 0
+
                 for j in range(i + 1):
                     if j == i:  # ensure B != C
                         continue

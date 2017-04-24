@@ -96,6 +96,8 @@ class SetSimilarityHardThreshold(SetSimilarityThresholdBase):
 
         # get similarity scores
         similarity_scores = self.decision_function(samples)
+        print "==== ABOD: ", ["%0.3f" % i for i in similarity_scores]
+        print "==== L2: ", ["%0.3f" % i for i in self.data_cluster.class_mean_dist(samples, metric='euclidean')]
 
         if self.metric == 'ABOD':
             below_thresh = similarity_scores > self.__thresh

@@ -57,7 +57,7 @@ class MultiClassClassifierBase:
         self.CLASSIFIER = classifier_type
 
         # perform classifier training in tasks
-        self.__start_classifier_trainers()
+        # self.__start_classifier_trainers()
 
         log.info('cl', "{} Classifier Tree initialized".format(self.CLASSIFIER))
 
@@ -84,6 +84,10 @@ class MultiClassClassifierBase:
         return self.train_classifier(class_id)
 
     def add_training_data(self, classifier_id, samples):
+        # do not collect data if training is not active
+        if self.STATUS == 0:
+            return
+
         with self.trainig_data_lock:
             if classifier_id in self.classifier_update_stacks:
                 self.classifier_update_stacks[classifier_id] = np.concatenate((self.classifier_update_stacks[classifier_id], samples)) \
