@@ -137,6 +137,7 @@ namespace io {
 		}
 
 		void processRequests();
+		void processAllPendingRequests();
 
 		// ------------------------- deprecated
 

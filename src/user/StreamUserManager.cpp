@@ -81,6 +81,14 @@ void StreamUserManager::ProcessResponses()
 			{
 				// apply user identification
 				target_user->SetUserID(response.mUserID, response.mUserNiceName);
+				// prediction confidence
+				target_user->mPredictionConfidence = response.mConfidence;
+				target_user->mUserIDPredicted = response.mUserID;
+
+				// remove all images form grid
+				target_user->pGrid->Clear();
+
+
 				// profile picture
 				if (!response.mImage.empty())
 				{
@@ -331,36 +339,46 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 
 					// if enough images, request identification
 					//if (target_user->pGrid->nr_images() > 9) {
-					if (target_user->pGrid->HasEnoughOrFrontalPictures(2)) {
-						// extract images
-						std::vector<cv::Mat*> face_patches;
-						std::vector<int> sample_weights;
-						target_user->pGrid->ExtractGrid(face_patches, sample_weights);
-					
-						// make new identification request
-#ifdef _DLIB_PREALIGN
-						io::PartialImageIdentificationAligned* new_request = new io::PartialImageIdentificationAligned(pServerConn, face_patches, sample_weights, target_user->GetTrackingID());
-#else
-						IDReq* new_request = new IDReq(pServerConn, face_patches);
-#endif
-						pRequestHandler->addRequest(new_request, true);
-
-						// update linking
-						mRequestToUser[new_request] = target_user;
-						mUserToRequests[target_user].insert(new_request);
-
-						// set user action status
-						target_user->SetPendingProfilePicture(true);	// might get it from server
-						target_user->SetStatus(ActionStatus_Waiting);
-						target_user->pGrid->Clear();
-					}
 				}
+
+				// extract images
+				std::vector<cv::Mat*> face_patches;
+				std::vector<int> sample_weights;
+				bool has_samples = target_user->pGrid->ExtractUnprocessedImageBatchWithTimeout(5, 6, face_patches, sample_weights);
+
+				if (has_samples) {
+
+					//cv::imshow("identification", imgproc::ImageProc::createOne(face_patches, 1, 10));
+					//cv::waitKey(0);
+					//cv::destroyAllWindows();
+
+					// make new identification request
+#ifdef _DLIB_PREALIGN
+					io::PartialImageIdentificationAligned* new_request = new io::PartialImageIdentificationAligned(pServerConn, face_patches, sample_weights, target_user->GetTrackingID());
+#else
+					IDReq* new_request = new IDReq(pServerConn, face_patches);
+#endif
+					pRequestHandler->addRequest(new_request, true);
+
+					// update linking
+					mRequestToUser[new_request] = target_user;
+					mUserToRequests[target_user].insert(new_request);
+
+					// set user action status
+					target_user->SetPendingProfilePicture(true);	// might get it from server
+					target_user->SetStatus(ActionStatus_Waiting);
+				}
+
+				// reset grid
+				target_user->pGrid->ResetIfFullOrStagnating(6, 5);
+
 			}
 		}
 		// ============================================= //
 		// 2. UPDATES
 		// ============================================= //
 		else if (id_status == IDStatus_Identified) {
+			
 
 			// if nothing to do: collect updates
 			if (action == ActionStatus_Idle) {
@@ -390,35 +408,48 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 			// send model updates - reinforced learning
 			if (action == ActionStatus_DataCollection) {
 
+
+
 				if (target_user->TryToRecordFaceSample(scene_rgb))
 				{
 
-#ifdef FACEGRID_RECORDING
-					if (target_user->pGrid->HasEnoughOrFrontalPictures(2)) {
-						// extract images
-						std::vector<cv::Mat*> face_patches;
-						std::vector<int> sample_weights;
-						target_user->pGrid->ExtractGrid(face_patches, sample_weights);
-						int user_id = target_user->GetUserID();
-						
+				}
+
+				// extract images
+				std::vector<cv::Mat*> face_patches;
+				std::vector<int> sample_weights;
+				bool has_samples = target_user->pGrid->ExtractUnprocessedImageBatchWithTimeout(5, 5, face_patches, sample_weights);
+
+				if (has_samples) {
+					// extract images
+					int user_id = target_user->GetUserID();
+
+
+					//cv::imshow("update", imgproc::ImageProc::createOne(face_patches, 1, 10));
+					//cv::waitKey(0);
+					//cv::destroyAllWindows();
+
 #ifdef _DLIB_PREALIGN
-						io::PartialUpdateAligned* new_request = new io::PartialUpdateAligned(pServerConn, face_patches, sample_weights, user_id);
+					io::PartialUpdateAligned* new_request = new io::PartialUpdateAligned(pServerConn, face_patches, sample_weights, user_id);
 #else
-						throw;
+					throw;
 #endif
-						// make update request
-						pRequestHandler->addRequest(new_request);
+					// make update request
+					pRequestHandler->addRequest(new_request);
 
-						// update linking
-						mRequestToUser[new_request] = target_user;
-						mUserToRequests[target_user].insert(new_request);
+					// update linking
+					mRequestToUser[new_request] = target_user;
+					mUserToRequests[target_user].insert(new_request);
 
-						// set user action status
-						target_user->SetStatus(ActionStatus_Waiting);
-						target_user->pGrid->Clear();
+					// set user action status
+					target_user->SetStatus(ActionStatus_Waiting);
+					//target_user->pGrid->Clear();
 
-					}
-#endif
+				}
+
+				// reset grid
+				if (target_user->pGrid->ResetIfFullOrStagnating(10, 7)) {
+					std::cout << "--- Grid resetted!\n";
 				}
 			}
 		}

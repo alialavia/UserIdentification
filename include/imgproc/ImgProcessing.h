@@ -44,7 +44,17 @@ namespace imgproc {
 			}
 		}
 
-		static cv::Mat createOne(std::vector<cv::Mat> & images, int cols, int min_gap_size)
+		static cv::Mat createOne(const std::vector<cv::Mat*> & images, int cols, int min_gap_size)
+		{
+			std::vector<cv::Mat> tmp;
+
+			for (int i = 0; i < images.size(); i++) {
+				tmp.push_back(*images[i]);
+			}
+			return createOne(tmp, cols, min_gap_size);
+		}
+
+		static cv::Mat createOne(const std::vector<cv::Mat> & images, int cols, int min_gap_size)
 		{
 			// let's first find out the maximum dimensions
 			int max_width = 0;

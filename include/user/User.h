@@ -54,7 +54,7 @@ namespace user
 #endif
 		{
 #ifdef FACEGRID_RECORDING
-			pGrid = new tracking::RadialFaceGrid(2, 15, 15);
+			pGrid = new tracking::RadialFaceGrid(2, 6, 7);
 #endif
 		}
 		~User()

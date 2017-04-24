@@ -1,4 +1,4 @@
-#ifndef TRACKING_FACETRACKER_H_
+﻿#ifndef TRACKING_FACETRACKER_H_
 #define TRACKING_FACETRACKER_H_
 
 #include <base/UserIdentification.h>
@@ -13,6 +13,7 @@
 
 #include <imgproc\ImgProcessing.h>
 #include <chrono>
+#include <set>
 
 
 #define _DEBUG_FACETRACKER
@@ -49,6 +50,88 @@ namespace tracking
 		void DumpImageGrid(std::string filename = "capture", std::string log_name = "face_log.csv", std::string out_folder = "face_grid", bool append_log = false);
 		std::vector<cv::Mat*> ExtractGrid() const;
 		void ExtractGrid(std::vector<cv::Mat*> &images, std::vector<int> &weights) const;
+
+		void ExtractUnprocessedImages(std::vector<cv::Mat*> &images, std::vector<int> &weights) {
+
+				for (auto const& target : mAngles) {
+
+					if (!mProcessedImages.count(target.first)) {
+						images.push_back(target.first);
+						// calc weight
+						weights.push_back(CalcSampleWeight(target.second[0], target.second[1], target.second[2]));
+						mProcessedImages.insert(target.first);
+					}
+				}
+
+				if (images.size() > 0) {
+					mLastUpdate = std::chrono::duration_cast< std::chrono::milliseconds >(
+						std::chrono::system_clock::now().time_since_epoch()
+						).count();
+				}
+		}
+
+		bool ExtractUnprocessedImageBatchWithTimeout(int min_nr_images, int timeout_sec, std::vector<cv::Mat*> &images, std::vector<int> &weights) {
+
+			std::vector<cv::Mat*> images_tmp;
+			std::vector<int> weights_tmp;
+
+			for (auto const& target : mAngles) {
+
+				if (!mProcessedImages.count(target.first)) {
+					images_tmp.push_back(target.first);
+					// calc weight
+					weights_tmp.push_back(CalcSampleWeight(target.second[0], target.second[1], target.second[2]));
+					
+				}
+			}
+
+			if (images_tmp.size() > 0) {
+				int64_t now = std::chrono::duration_cast< std::chrono::milliseconds >(
+					std::chrono::system_clock::now().time_since_epoch()
+					).count();
+
+				// extract
+				if (images_tmp.size() >= min_nr_images ||
+					now - mLastExtraction > timeout_sec * 1000
+					) {
+					mLastExtraction = now;
+					// track processed images
+					for (size_t i = 0; i < images_tmp.size(); i++) {
+						mProcessedImages.insert(images_tmp[i]);
+					}
+					images = images_tmp;
+					weights = weights_tmp;
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		bool ResetIfFullOrStagnating(int max_images, int timeout_sec = 7) {
+
+			if (nr_images() >= max_images) {
+				Clear();
+				return true;
+			}
+
+			// reset on timeout
+			if (mLastUpdate > 0) {
+				int64_t now = std::chrono::duration_cast< std::chrono::milliseconds >(
+					std::chrono::system_clock::now().time_since_epoch()
+					).count();
+
+				// no image recorded over 7 sek
+				if (now - mLastUpdate > timeout_sec*1000) {
+					Clear();
+					return true;
+				}
+			}
+
+			return false;
+		}
+		
+
 
 		void GetFaceGridPitchYaw(cv::Mat &dst, size_t canvas_height=500);
 
@@ -145,6 +228,17 @@ namespace tracking
 				frontal_images++;
 			}
 
+			if (mLastUpdate == 0) {
+				mLastExtraction = std::chrono::duration_cast< std::chrono::milliseconds >(
+					std::chrono::system_clock::now().time_since_epoch()
+					).count();
+			}
+
+			// save timestamp
+			mLastUpdate = std::chrono::duration_cast< std::chrono::milliseconds >(
+				std::chrono::system_clock::now().time_since_epoch()
+				).count();
+
 			return true;
 		}
 
@@ -154,7 +248,9 @@ namespace tracking
 		{
 			image_grid.Reset();
 			mAngles.clear();
+			mProcessedImages.clear();
 			frontal_images = 0;
+			mLastUpdate = 0;
 		}
 
 		size_t nr_images() {
@@ -177,6 +273,9 @@ namespace tracking
 
 		// array3d index to precies angles
 		std::map<cv::Mat*, cv::Vec3d> mAngles;
+		std::set<cv::Mat*> mProcessedImages;
+		int64_t mLastUpdate = 0;
+		int64_t mLastExtraction = 0;
 
 		size_t frontal_images = 0;
 
@@ -207,6 +306,7 @@ namespace tracking
 
 
 	class RadialFaceGridLabeled : public RadialFaceGrid {
+
 
 	public:
 

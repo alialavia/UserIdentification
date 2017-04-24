@@ -140,8 +140,8 @@ size_t ImageHandler::LoadImageBatch(std::vector<cv::Mat> &img_batch, std::vector
 	cv::Mat image;
 
 	int i = 0;
-	do {
 
+	while (i < batch_size && (mAllFilesLoaded = !FindNextFile(mDirHandle, &mCurrentFile)) == false) {
 		const bool is_directory = (mCurrentFile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 		if (is_directory)
 			continue;
@@ -168,7 +168,7 @@ size_t ImageHandler::LoadImageBatch(std::vector<cv::Mat> &img_batch, std::vector
 		// increment batch size
 		i++;
 
-	} while (i < batch_size && (mAllFilesLoaded = !FindNextFile(mDirHandle, &mCurrentFile)) == false);
+	}
 
 	return img_batch.size();
 
