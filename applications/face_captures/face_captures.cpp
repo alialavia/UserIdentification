@@ -363,7 +363,7 @@ int main(int argc, char** argv)
 					else if ((int)('i') == key_save)
 					{
 						std::cout << "--- Saving images...\n";
-						grid.DumpImageGrid(FLAGS_img_basename, "picture_log.csv", FLAGS_output_folder);
+						grid.DumpImageGridInCapturingOrder(FLAGS_img_basename, "picture_log.csv", FLAGS_output_folder);
 						grid.Clear();
 						STATE = State_none;
 						cv::destroyAllWindows();
@@ -382,7 +382,7 @@ int main(int argc, char** argv)
 					else {
 						if (grid.nr_images() == FLAGS_auto_save_interval) {
 							std::cout << "Autosaving..." << std::endl;
-							grid.DumpImageGrid(FLAGS_img_basename, "picture_log.csv", FLAGS_output_folder, true);
+							grid.DumpImageGridInCapturingOrder(FLAGS_img_basename, "picture_log.csv", FLAGS_output_folder, true);
 							grid.Clear();
 							cv::destroyAllWindows();
 						}
