@@ -127,6 +127,10 @@ class Logger:
         print "\033[0;" + style + msg + " " + self.endc
 
     @classmethod
+    def print_clr(self, msg, color="white", bg="red"):
+        print "\033[0;" + getattr(FontColor, color) + ";" + getattr(BGColor, bg) + msg + self.endc
+
+    @classmethod
     def print_example(self):
         print("\033[1;37;40m \033[2;37:40m TextColour BlackBackground          TextColour GreyBackground                WhiteText ColouredBackground\033[0;37;40m\n")
         print("\033[1;30;40m Dark Gray      \033[0m 1;30;40m            \033[0;30;47m Black      \033[0m 0;30;47m               \033[0;37;41m Black      \033[0m 0;37;41m")
