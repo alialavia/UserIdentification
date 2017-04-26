@@ -14,12 +14,14 @@
 #include <imgproc\ImgProcessing.h>
 #include <chrono>
 #include <set>
+#include <tuple>
 
 
 #define _DEBUG_FACETRACKER
 
 namespace tracking
 {
+	typedef std::vector<std::tuple<cv::Mat*, int64_t>> picture_order;
 
 	class RadialFaceGrid  {
 	public:
@@ -46,49 +48,80 @@ namespace tracking
 		~RadialFaceGrid() {
 
 		}
+		int64_t get_timestamp()
+		{
+			return std::chrono::duration_cast< std::chrono::milliseconds >(
+				std::chrono::system_clock::now().time_since_epoch()
+				).count();
+		}
 
 		void DumpImageGrid(std::string filename = "capture", std::string log_name = "face_log.csv", std::string out_folder = "face_grid", bool append_log = false);
+		void DumpImageGridInCapturingOrder(std::string filename = "capture", std::string log_name = "face_log.csv", std::string out_folder = "face_grid", bool append_log = false);
 		std::vector<cv::Mat*> ExtractGrid() const;
 		void ExtractGrid(std::vector<cv::Mat*> &images, std::vector<int> &weights) const;
 
-		void ExtractUnprocessedImages(std::vector<cv::Mat*> &images, std::vector<int> &weights) {
-
-				for (auto const& target : mAngles) {
-
-					if (!mProcessedImages.count(target.first)) {
-						images.push_back(target.first);
-						// calc weight
-						weights.push_back(CalcSampleWeight(target.second[0], target.second[1], target.second[2]));
-						mProcessedImages.insert(target.first);
+		void ExtractUnprocessedImages(std::vector<cv::Mat*> &images, std::vector<int> &weights, bool temporal_order=true) {
+				if(temporal_order)
+				{
+					// iterate in capturing order, check image ptr
+					for (auto const& item: mImageOrder) {
+						cv::Mat* mptr = std::get<0>(item);
+						if (!mProcessedImages.count(mptr)) {
+							cv::Vec3d angles = mAngles[mptr];
+							images.push_back(mptr);
+							// calc weight
+							weights.push_back(CalcSampleWeight(angles[0], angles[1], angles[2]));
+							mProcessedImages.insert(mptr);
+						}
+					}
+				}else
+				{
+					for (auto const& target : mAngles) {
+						if (!mProcessedImages.count(target.first)) {
+							images.push_back(target.first);
+							// calc weight
+							weights.push_back(CalcSampleWeight(target.second[0], target.second[1], target.second[2]));
+							mProcessedImages.insert(target.first);
+						}
 					}
 				}
 
 				if (images.size() > 0) {
-					mLastUpdate = std::chrono::duration_cast< std::chrono::milliseconds >(
-						std::chrono::system_clock::now().time_since_epoch()
-						).count();
+					mLastUpdate = get_timestamp();
 				}
 		}
 
-		bool ExtractUnprocessedImageBatchWithTimeout(int min_nr_images, int timeout_sec, std::vector<cv::Mat*> &images, std::vector<int> &weights) {
+		bool ExtractUnprocessedImageBatchWithTimeout(int min_nr_images, int timeout_sec, std::vector<cv::Mat*> &images, std::vector<int> &weights, bool temporal_order=true) {
 
 			std::vector<cv::Mat*> images_tmp;
 			std::vector<int> weights_tmp;
 
-			for (auto const& target : mAngles) {
-
-				if (!mProcessedImages.count(target.first)) {
-					images_tmp.push_back(target.first);
-					// calc weight
-					weights_tmp.push_back(CalcSampleWeight(target.second[0], target.second[1], target.second[2]));
-					
+			if (temporal_order)
+			{
+				// iterate in capturing order, check image ptr
+				for (auto const& item : mImageOrder) {
+					cv::Mat* mptr = std::get<0>(item);
+					if (!mProcessedImages.count(mptr)) {
+						cv::Vec3d angles = mAngles[mptr];
+						images_tmp.push_back(mptr);
+						// calc weight
+						weights_tmp.push_back(CalcSampleWeight(angles[0], angles[1], angles[2]));
+					}
+				}
+			}
+			else
+			{
+				for (auto const& target : mAngles) {
+					if (!mProcessedImages.count(target.first)) {
+						images_tmp.push_back(target.first);
+						// calc weight
+						weights_tmp.push_back(CalcSampleWeight(target.second[0], target.second[1], target.second[2]));
+					}
 				}
 			}
 
 			if (images_tmp.size() > 0) {
-				int64_t now = std::chrono::duration_cast< std::chrono::milliseconds >(
-					std::chrono::system_clock::now().time_since_epoch()
-					).count();
+				int64_t now = get_timestamp();
 
 				// extract
 				if (images_tmp.size() >= min_nr_images ||
@@ -117,9 +150,7 @@ namespace tracking
 
 			// reset on timeout
 			if (mLastUpdate > 0) {
-				int64_t now = std::chrono::duration_cast< std::chrono::milliseconds >(
-					std::chrono::system_clock::now().time_since_epoch()
-					).count();
+				int64_t now = get_timestamp();
 
 				// no image recorded over 7 sek
 				if (now - mLastUpdate > timeout_sec*1000) {
@@ -131,8 +162,6 @@ namespace tracking
 			return false;
 		}
 		
-
-
 		void GetFaceGridPitchYaw(cv::Mat &dst, size_t canvas_height=500);
 
 		static int CalcSampleWeight(int roll, int pitch, int yaw){
@@ -223,21 +252,20 @@ namespace tracking
 			// store rotation
 			mAngles[ptr] = ang;
 
+			// store timestamp
+			mImageOrder.push_back(std::make_tuple(ptr, get_timestamp()));
+
 			// register frontal pictures
 			if (abs(pitch) < cPFrontal && abs(yaw) < cYFrontal) {
 				frontal_images++;
 			}
 
 			if (mLastUpdate == 0) {
-				mLastExtraction = std::chrono::duration_cast< std::chrono::milliseconds >(
-					std::chrono::system_clock::now().time_since_epoch()
-					).count();
+				mLastExtraction = get_timestamp();
 			}
 
 			// save timestamp
-			mLastUpdate = std::chrono::duration_cast< std::chrono::milliseconds >(
-				std::chrono::system_clock::now().time_since_epoch()
-				).count();
+			mLastUpdate = get_timestamp();
 
 			return true;
 		}
@@ -249,6 +277,7 @@ namespace tracking
 			image_grid.Reset();
 			mAngles.clear();
 			mProcessedImages.clear();
+			mImageOrder.clear();
 			frontal_images = 0;
 			mLastUpdate = 0;
 		}
@@ -274,6 +303,7 @@ namespace tracking
 		// array3d index to precies angles
 		std::map<cv::Mat*, cv::Vec3d> mAngles;
 		std::set<cv::Mat*> mProcessedImages;
+		picture_order mImageOrder;
 		int64_t mLastUpdate = 0;
 		int64_t mLastExtraction = 0;
 

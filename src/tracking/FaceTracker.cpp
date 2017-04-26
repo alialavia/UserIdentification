@@ -57,6 +57,52 @@ void RadialFaceGrid::DumpImageGrid(std::string img_basename, std::string log_nam
 	}
 }
 
+void RadialFaceGrid::DumpImageGridInCapturingOrder(std::string img_basename, std::string log_name, std::string out_folder, bool append_log) {
+
+	time_t t = std::time(0);
+	long int now = static_cast<long int> (t);
+
+	char ch = out_folder.back();
+	if (ch != '/')
+	{
+		out_folder += "/";
+	}
+
+	// generate unique log name using timestamp
+	if (!append_log) {
+		log_name = std::to_string(now) + "_" + log_name;
+	}
+
+	// open file writer
+	io::CSVWriter o_h(out_folder + log_name);
+
+
+	for (auto const& item : mImageOrder) {
+		cv::Mat* mptr = std::get<0>(item);
+		cv::Vec3d angles = mAngles[mptr];
+
+		std::string pose_string = "_r_" + std::to_string(angles[0]) + "_p_" + std::to_string(angles[1]) + "_y_" + std::to_string(angles[2]) + "_";
+
+		// construct filename
+		std::string filename = img_basename + "_" + std::to_string(std::get<1>(item)) + pose_string + ".png";
+
+		// save image
+		io::ImageHandler::SaveImage(*mptr, out_folder, filename);
+
+		// save file name and metadata
+		o_h.addEntry(filename);
+
+		// roll, pitch, yaw
+		o_h.addEntry(angles[0]);
+		o_h.addEntry(angles[1]);
+		o_h.addEntry(angles[2]);
+		o_h.EndRow();
+
+
+	}
+}
+
+
 std::vector<cv::Mat*> RadialFaceGrid::ExtractGrid() const
 {
 	std::vector <cv::Mat*> ptrs;
