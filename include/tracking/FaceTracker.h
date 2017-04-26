@@ -372,9 +372,24 @@ namespace tracking
 			// store rotation
 			mAngles[ptr] = ang;
 
+			// store timestamp
+			mImageOrder.push_back(std::make_tuple(ptr, get_timestamp()));
+
+			// register frontal pictures
+			if (abs(pitch) < cPFrontal && abs(yaw) < cYFrontal) {
+				frontal_images++;
+			}
+
+			if (mLastUpdate == 0) {
+				mLastExtraction = get_timestamp();
+			}
+
+			// save timestamp
+			mLastUpdate = get_timestamp();
+
 			// convert to grayscale
-			cv::Mat greyMat;
-			cv::cvtColor(face, greyMat, CV_BGR2GRAY);
+			//cv::Mat greyMat;
+			//cv::cvtColor(face, greyMat, CV_BGR2GRAY);
 
 			//if (imgproc::FocusMeasure::LAPD(greyMat) < 4) {
 			//	mLabels[ptr] = Blurred;

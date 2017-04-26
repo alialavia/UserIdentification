@@ -76,12 +76,11 @@ void RadialFaceGrid::DumpImageGridInCapturingOrder(std::string img_basename, std
 	// open file writer
 	io::CSVWriter o_h(out_folder + log_name);
 
-
 	for (auto const& item : mImageOrder) {
 		cv::Mat* mptr = std::get<0>(item);
 		cv::Vec3d angles = mAngles[mptr];
 
-		std::string pose_string = "_r_" + std::to_string(angles[0]) + "_p_" + std::to_string(angles[1]) + "_y_" + std::to_string(angles[2]) + "_";
+		std::string pose_string = "_r_" + std::to_string(int(angles[0])) + "_p_" + std::to_string(int(angles[1])) + "_y_" + std::to_string(int(angles[2])) + "_";
 
 		// construct filename
 		std::string filename = img_basename + "_" + std::to_string(std::get<1>(item)) + pose_string + ".png";
@@ -97,8 +96,6 @@ void RadialFaceGrid::DumpImageGridInCapturingOrder(std::string img_basename, std
 		o_h.addEntry(angles[1]);
 		o_h.addEntry(angles[2]);
 		o_h.EndRow();
-
-
 	}
 }
 
