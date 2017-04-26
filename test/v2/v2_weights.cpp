@@ -87,6 +87,17 @@ int main(int argc, char** argv)
 
 					faces[i].IsFrontal(true);
 					faces[i].GetEulerAngles(roll, pitch, yaw);
+
+					// visualize head pose
+					cv::Point center = cv::Point(face_snap.rows / 2, face_snap.cols / 2);
+					float max_yaw = 40.;
+					float max_pitch = 40.;
+					float max_length = 100.;
+					cv::Point p0 = center;
+					cv::Point p1 = center - cv::Point(yaw/max_yaw*max_length, pitch/max_pitch*max_length);
+
+					cv::arrowedLine(face_snap, p0, p1, cv::Scalar(0,0,255), 2);
+
 					cv::putText(face_snap, "Weight: "+std::to_string(tracking::RadialFaceGrid::CalcSampleWeight(roll, pitch, yaw)), cv::Point(10, 10), cv::FONT_HERSHEY_SIMPLEX, font_size, cv::Scalar(255,255,255), 1, 8);
 					cv::putText(face_snap, "P: "+std::to_string(pitch)+" | Y: "+std::to_string(yaw), cv::Point(10, 40), cv::FONT_HERSHEY_SIMPLEX, font_size, cv::Scalar(255,255,255), 1, 8);
 					cv::imshow("test", face_snap);
