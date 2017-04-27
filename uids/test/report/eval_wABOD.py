@@ -18,6 +18,7 @@ from uids.utils.DataAnalysis import *
 from scipy import misc
 from sklearn import metrics
 import time
+import csv
 
 
 # path managing
@@ -372,44 +373,57 @@ def eval_wabod():
     pose2 = pose2[:, 1:]
 
     # mix sets and crop
-    training_set_sizes = [5, 10, 20, 40]
+    training_set_sizes = [5, 10]
+    nr_test_images = 100
     nr_random_iters = 5
-    nr_test_images = 200
 
     emb1, pose1 = mix_crop(emb1, pose1, nr_test_images, random_state=None)
     emb2, pose2 = mix_crop(emb2, pose2, nr_test_images, random_state=None)
 
-
-
     # ------------ start evaluation
 
-    roc_auc_comparison_avg = {
+
+    aoc_avg = {
         'abod': [],
         'wabod': [],
-        'wwabod': []
+        'abod_w': [],
+        'wabod_w': []
+    }
+
+    aoc_wavg = {
+        'abod': [],
+        'wabod': [],
+        'abod_w': [],
+        'wabod_w': []
     }
 
     for t_size in training_set_sizes:
 
         roc_auc_comparison = {
             'abod': [],
+            'abod_w': [],
             'wabod': [],
-            'wwabod': []
+            'wabod_w': []
         }
 
+        iter_weights = []
+
         sys.stdout.write("Training with size {} ".format(t_size))
-
-
+        start = time.time()
         for i in range(0, nr_random_iters):
-            if i == 0:
-                start = time.time()
             if i == 1:
-                sys.stdout.write(" | Estimated time: {:.2f} sec, Iteration: ".format((time.time()-start)* nr_random_iters))
+                est_time = (time.time()-start) * nr_random_iters
+                if est_time > 60:
+                    est_time = est_time/60.0
+                    sys.stdout.write(" | Estimated time: {:.2f} min, Iteration: ".format(est_time))
+                else:
+                    sys.stdout.write(" | Estimated time: {:.2f} sec, Iteration: ".format(est_time))
             if i > 0:
                 sys.stdout.write("{}, ".format(i+1))
 
-            emb_train_subset, pose_train_subset = mix_crop(emb_train, pose_train, t_size, random_state=i+1)
 
+            # select training subset
+            emb_train_subset, pose_train_subset = mix_crop(emb_train, pose_train, t_size, random_state=i+1)
             true_labels = np.concatenate((np.repeat(1,len(emb1)), np.repeat(0,len(emb2))))
 
             # calc regular abod
@@ -431,33 +445,74 @@ def eval_wabod():
             # fpr, tpr, thresholds = metrics.roc_curve(true_labels, abod_scores_weighted, sample_weight=weights, pos_label=1)
             # roc_auc_comparison['wwabod'].append(auc(fpr, tpr))
 
+            # iteration metrics
             auc_val = roc_auc_score(true_labels, abod_scores, sample_weight=None)
             roc_auc_comparison['abod'].append(auc_val)
+            auc_val = roc_auc_score(true_labels, abod_scores, sample_weight=weights)
+            roc_auc_comparison['abod_w'].append(auc_val)
             auc_val = roc_auc_score(true_labels, abod_scores_weighted, sample_weight=None)
             roc_auc_comparison['wabod'].append(auc_val)
             auc_val = roc_auc_score(true_labels, abod_scores_weighted, sample_weight=weights)
-            roc_auc_comparison['wwabod'].append(auc_val)
+            roc_auc_comparison['wabod_w'].append(auc_val)
+
+            # iteration weight - average of sample weights
+            iter_weights.append(np.mean(abod_scores_weighted))
 
         print "\n"
 
-        # calc average
-        roc_auc_comparison_avg['abod'].append(np.mean(roc_auc_comparison['abod']))
-        roc_auc_comparison_avg['wabod'].append(np.mean(roc_auc_comparison['wabod']))
-        roc_auc_comparison_avg['wwabod'].append(np.mean(roc_auc_comparison['wwabod']))
+        # regular mean
+        aoc_avg['abod'].append(np.mean(roc_auc_comparison['abod']))
+        aoc_avg['wabod'].append(np.mean(roc_auc_comparison['wabod']))
 
-    # ------------ plot results
-    for type in roc_auc_comparison.keys():
-        plt.figure("Average AOC - {}".format(type))
-        print "Plotting type ", type
-        print roc_auc_comparison_avg[type]
-        plt.plot(training_set_sizes, roc_auc_comparison_avg[type])
-        plt.ylim([-0.1, 1.2])
-        plt.xlabel('Training Set Size')
-        plt.ylabel('Average AOC')
-        plt.title('ROC curve')
-        plt.show()
+        # regular mean of weighted metrics
+        aoc_avg['abod_w'].append(np.mean(roc_auc_comparison['abod_w']))
+        aoc_avg['wabod_w'].append(np.mean(roc_auc_comparison['wabod_w']))
 
-    plt.show()
+        # weighted mean of regular metrics
+        aoc_wavg['abod'].append(np.average(roc_auc_comparison['abod'], weights=iter_weights))
+        aoc_wavg['wabod'].append(np.average(roc_auc_comparison['wabod'], weights=iter_weights))
+
+        # weighted mean of weighted metrics
+        aoc_wavg['abod_w'].append(np.average(roc_auc_comparison['abod_w'], weights=iter_weights))
+        aoc_wavg['wabod_w'].append(np.average(roc_auc_comparison['wabod_w'], weights=iter_weights))
+
+    # save results to file
+    filename = 'ABOD_variant_performance.csv'
+    with open(filename, 'wb') as csvfile:
+        # write configuration of best results over multiple random tests
+        writer = csv.writer(csvfile, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+
+        writer.writerow(["AUC - Area Under Curve Evaluation"])
+        writer.writerow(["Nr Iterations", nr_random_iters])
+        writer.writerow(["Test Set size (total)", nr_test_images*2])
+        writer.writerow("")
+        writer.writerow(["Unweighted Average"])        # iterate over
+        writer.writerow(["Nr. Training Samples"] + training_set_sizes)
+        for type in aoc_avg.keys():
+            writer.writerow([type] + aoc_avg[type])
+
+        writer.writerow("")
+        writer.writerow(["Weighted Average"])        # iterate over
+        writer.writerow(["Nr. Training Samples"] + training_set_sizes)
+        for type in aoc_wavg.keys():
+            writer.writerow([type] + aoc_wavg[type])
+
+    print aoc_avg
+    print aoc_wavg
+
+    # # ------------ plot results
+    # for type in roc_auc_comparison_avg.keys():
+    #     plt.figure("Average AOC - {}".format(type))
+    #     print "Plotting type ", type
+    #     print roc_auc_comparison_avg[type]
+    #     plt.plot(training_set_sizes, roc_auc_comparison_avg[type])
+    #     plt.ylim([-0.1, 1.2])
+    #     plt.xlabel('Training Set Size')
+    #     plt.ylabel('Average AOC')
+    #     plt.title('ROC curve')
+    #     plt.show()
+    #
+    # plt.show()
 
 
 if __name__ == '__main__':
@@ -467,5 +522,6 @@ if __name__ == '__main__':
     # plot_roc(y, scores, pos_label=1)
 
     eval_wabod()
+
 
 
