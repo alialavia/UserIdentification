@@ -8,6 +8,7 @@ from numpy.linalg import norm
 from sklearn.metrics import pairwise_distances
 from sklearn.utils.extmath import fast_dot
 from uids.features.ConfidenceGen import WeightGenerator
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 class SetMeanDistCosine:
@@ -159,8 +160,11 @@ class ABOD:
             sys.exit('ERROR\tangleBAC\tdistance can not be zero!')
 
         # alternative: clip(cos_AB_AC_, -1, 1)
-
         cos_AB_AC_ = clip(cos_AB_AC_, -1, 1)
+
+        # K(X, Y) = < X, Y > / ( | | X | | * | | Y | |)
+        # a lot slower:
+        # cos_AB_AC_ = cosine_similarity(vector_AB.reshape(1,-1), vector_AC.reshape(1,-1))
 
         if math.fabs(cos_AB_AC_) > 1:
 
@@ -201,7 +205,7 @@ class WeightedABOD(ABOD):
 
     @staticmethod
     def biased_weighted_var(values, weights):
-        if True:
+        if False:
             # no influence
             pass
             weights = weights/np.sum(weights)

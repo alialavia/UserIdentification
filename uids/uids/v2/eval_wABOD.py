@@ -16,6 +16,8 @@ import pickle
 from sklearn.utils import shuffle
 from uids.utils.DataAnalysis import *
 from scipy import misc
+from sklearn import metrics
+import time
 
 
 # path managing
@@ -40,6 +42,33 @@ def test_metrics():
     dec, scores = cls.predict([[2.2, 1], [4, 1]])
     print dec, scores
 
+
+
+
+def plot_roc(y_true, scores, pos_label=1, sample_weight=None):
+
+    # remember:
+
+    # fpr, tpr, thresholds = roc_curve(y, scores)
+    # roc_auc = auc(fpr, tpr)
+    # pl.plot(fpr, tpr)
+    #
+    # precision, recall, thresholds = precision_recall_curve(y, scores)
+    # pr_auc = auc(recall, precision)
+    # pl.plot(recall, precision)
+
+
+    fpr, tpr, thresholds = metrics.roc_curve(y_true, scores, sample_weight=sample_weight, pos_label=pos_label)
+    roc_auc = auc(fpr, tpr)
+    plt.plot(fpr, tpr, 'b', label='AUC = %0.5f' % roc_auc)
+    plt.legend(loc='lower right')
+    plt.plot([0, 1], [0, 1], 'r--')
+    plt.xlim([-0.1, 1.2])
+    plt.ylim([-0.1, 1.2])
+    plt.xlabel('False positive rate')
+    plt.ylabel('True positive rate')
+    plt.title('ROC curve')
+    plt.show()
 
 def display_image(embedding_name, indices, img_folder_name=""):
 
@@ -98,10 +127,10 @@ def weighted_avg_and_var(values, weights, normalized_weights=False):
     return (average, variance_unbiased)
 
 
-def mix_crop(s1, s2, max_nr_samples=40):
-    # s1, s2 = shuffle(s1, s2, random_state=5)
+def mix_crop(s1, s2, max_nr_samples=40, random_state=None):
+    if random_state is not None:
+        s1, s2 = shuffle(s1, s2, random_state=random_state)
     max_nr_samples = max_nr_samples if max_nr_samples < len(s1) else len(s1)
-
     s1 = s1[0:max_nr_samples]
     s2 = s2[0:max_nr_samples]
     return s1, s2
@@ -122,67 +151,6 @@ def test_var():
     # expected: high
     print np.var(samples)
     print weighted_var(samples, weights)
-
-
-def generate_roc():
-    abod_gen = WeightedABOD()
-    grid = abod_gen.weight_gen
-
-    # training
-    emb_train = load_embeddings("matthias1.pkl")
-    pose_train = load_embeddings("matthias1_poses.pkl")
-
-    # load test samples and poses
-    emb1 = load_embeddings("matthias2.pkl")
-    pose1 = load_embeddings("matthias2_poses.pkl")
-
-    emb2 = load_embeddings("christian_test1.pkl")
-    pose2 = load_embeddings("christian_test1_poses.pkl")
-
-    # drop roll
-    pose_train = pose_train[:, 1:]
-    pose1 = pose1[:, 1:]
-    pose2 = pose2[:, 1:]
-
-    # mix sets and crop
-    emb_train, pose_train = mix_crop(emb_train, pose_train, 40)
-    emb1, pose1 = mix_crop(emb1, pose1, 200)
-    emb2, pose2 = mix_crop(emb2, pose2, 200)
-
-    # calc regular abod
-    abod_il = ABOD.get_score(emb1, emb_train)
-    abod_ol = ABOD.get_score(emb2, emb_train)
-    abod_scores = np.concatenate((abod_il, abod_ol))
-    labels_regular = np.concatenate((np.repeat(1,len(abod_il)), np.repeat(-1,len(abod_ol))))
-
-    print "ABOD calculation complete. Plotting..."
-
-    # generate roc
-    plt.figure('Recular ABOD score')
-    precision, recall, _ = precision_recall_curve(labels_regular, abod_scores, pos_label=1)
-    # plt.plot(recall, precision)
-    # plt.show()
-
-
-    return
-
-    # plt.plot(recall, precision)
-
-
-    return
-
-    # plt.plot(recall, precision)
-
-    # calc weighted abod
-    abod_il_weighted, sample_weights = abod_gen.get_weighted_score(emb1, pose1, emb_train, pose_train)
-    abod_ol_weighted, sample_weights = abod_gen.get_weighted_score(emb2, pose2, emb_train, pose_train)
-    abod_scores_weighted = np.concatenate((abod_il_weighted, abod_ol_weighted))
-
-    # generate roc
-    plt.figure('Weighted ABOD score')
-    precision, recall, _ = precision_recall_curve(labels_regular, abod_scores_weighted, pos_label=1)
-    plt.plot(recall, precision)
-    plt.show()
 
 
 def profile(emb_train, pose_train, emb_test, pose_test, name_train="matthias1", name_test="matthias2", is_inlier=True):
@@ -248,8 +216,6 @@ def profile(emb_train, pose_train, emb_test, pose_test, name_train="matthias1", 
 
         # --------------- evaluate
 
-
-
         if is_inlier:
             # if abod_il_weighted[sorted_indices[0]] > abod_il[sorted_indices[0]]:
             #     log.print_clr("WABOD better!")
@@ -296,7 +262,7 @@ def test_weighted_abod():
     pose1 = pose1[:, 1:]
 
     # mix sets and crop
-    emb_train, pose_train = mix_crop(emb_train, pose_train, 40)
+    emb_train, pose_train = mix_crop(emb_train, pose_train, 10)
     emb1, pose1 = mix_crop(emb1, pose1, 200)
 
 
@@ -336,8 +302,170 @@ def test_weighted_abod():
     #
 
 
+def generate_roc():
+    abod_gen = WeightedABOD()
+    grid = abod_gen.weight_gen
+
+    # training
+    emb_train = load_embeddings("matthias1.pkl")
+    pose_train = load_embeddings("matthias1_poses.pkl")
+
+    # load test samples and poses
+    emb1 = load_embeddings("matthias2.pkl")
+    pose1 = load_embeddings("matthias2_poses.pkl")
+
+    emb2 = load_embeddings("christian_test2.pkl")
+    pose2 = load_embeddings("christian_test2_poses.pkl")
+
+    # drop roll
+    pose_train = pose_train[:, 1:]
+    pose1 = pose1[:, 1:]
+    pose2 = pose2[:, 1:]
+
+    # mix sets and crop
+    emb_train, pose_train = mix_crop(emb_train, pose_train, 5)
+    emb1, pose1 = mix_crop(emb1, pose1, 200)
+    emb2, pose2 = mix_crop(emb2, pose2, 200)
+
+    # calc regular abod
+    abod_il = ABOD.get_score(emb1, emb_train)
+    abod_ol = ABOD.get_score(emb2, emb_train)
+    abod_scores = np.concatenate((abod_il, abod_ol))
+    labels_regular = np.concatenate((np.repeat(1,len(abod_il)), np.repeat(-1,len(abod_ol))))
+
+    print "Calculating weighted ABOD..."
+
+    # calc weighted abod
+    abod_il_weighted, sample_weights_il = abod_gen.get_weighted_score(emb1, pose1, emb_train, pose_train)
+    abod_ol_weighted, sample_weights_ul = abod_gen.get_weighted_score(emb2, pose2, emb_train, pose_train)
+    abod_scores_weighted = np.concatenate((abod_il_weighted, abod_ol_weighted))
+    weights = np.concatenate((sample_weights_il, sample_weights_ul))
+    print weights
+
+    print "ABOD calculation complete. Plotting..."
+    plt.figure('Regular ABOD')
+    plot_roc(labels_regular, abod_scores, pos_label=1)
+    plt.figure('Weighted ABOD')
+    plot_roc(labels_regular, abod_scores_weighted, pos_label=1)
+    plt.figure('Weighted ABOD with weights')
+    plot_roc(labels_regular, abod_scores_weighted, pos_label=1, sample_weight=weights)
+
+
+def eval_wabod():
+    abod_gen = WeightedABOD()
+    grid = abod_gen.weight_gen
+
+    # training
+    emb_train = load_embeddings("matthias1.pkl")
+    pose_train = load_embeddings("matthias1_poses.pkl")
+
+    # load test samples and poses
+    emb1 = load_embeddings("matthias2.pkl")
+    pose1 = load_embeddings("matthias2_poses.pkl")
+
+    emb2 = load_embeddings("christian_test2.pkl")
+    pose2 = load_embeddings("christian_test2_poses.pkl")
+
+    # drop roll
+    pose_train = pose_train[:, 1:]
+    pose1 = pose1[:, 1:]
+    pose2 = pose2[:, 1:]
+
+    # mix sets and crop
+    training_set_sizes = [5, 10, 20, 40]
+    nr_random_iters = 5
+    nr_test_images = 200
+
+    emb1, pose1 = mix_crop(emb1, pose1, nr_test_images, random_state=None)
+    emb2, pose2 = mix_crop(emb2, pose2, nr_test_images, random_state=None)
+
+
+
+    # ------------ start evaluation
+
+    roc_auc_comparison_avg = {
+        'abod': [],
+        'wabod': [],
+        'wwabod': []
+    }
+
+    for t_size in training_set_sizes:
+
+        roc_auc_comparison = {
+            'abod': [],
+            'wabod': [],
+            'wwabod': []
+        }
+
+        sys.stdout.write("Training with size {} ".format(t_size))
+
+
+        for i in range(0, nr_random_iters):
+            if i == 0:
+                start = time.time()
+            if i == 1:
+                sys.stdout.write(" | Estimated time: {:.2f} sec, Iteration: ".format((time.time()-start)* nr_random_iters))
+            if i > 0:
+                sys.stdout.write("{}, ".format(i+1))
+
+            emb_train_subset, pose_train_subset = mix_crop(emb_train, pose_train, t_size, random_state=i+1)
+
+            true_labels = np.concatenate((np.repeat(1,len(emb1)), np.repeat(0,len(emb2))))
+
+            # calc regular abod
+            abod_il = ABOD.get_score(emb1, emb_train_subset)
+            abod_ol = ABOD.get_score(emb2, emb_train_subset)
+            abod_scores = np.concatenate((abod_il, abod_ol))
+
+            # calc weighted abod
+            abod_il_weighted, sample_weights_il = abod_gen.get_weighted_score(emb1, pose1, emb_train_subset, pose_train_subset)
+            abod_ol_weighted, sample_weights_ul = abod_gen.get_weighted_score(emb2, pose2, emb_train_subset, pose_train_subset)
+            abod_scores_weighted = np.concatenate((abod_il_weighted, abod_ol_weighted))
+            weights = np.concatenate((sample_weights_il, sample_weights_ul))
+
+            # get area under curve
+            # fpr, tpr, thresholds = metrics.roc_curve(true_labels, abod_scores, sample_weight=None, pos_label=1)
+            # roc_auc_comparison['abod'].append(auc(fpr, tpr))
+            # fpr, tpr, thresholds = metrics.roc_curve(true_labels, abod_scores_weighted, sample_weight=None, pos_label=1)
+            # roc_auc_comparison['wabod'].append(auc(fpr, tpr))
+            # fpr, tpr, thresholds = metrics.roc_curve(true_labels, abod_scores_weighted, sample_weight=weights, pos_label=1)
+            # roc_auc_comparison['wwabod'].append(auc(fpr, tpr))
+
+            auc_val = roc_auc_score(true_labels, abod_scores, sample_weight=None)
+            roc_auc_comparison['abod'].append(auc_val)
+            auc_val = roc_auc_score(true_labels, abod_scores_weighted, sample_weight=None)
+            roc_auc_comparison['wabod'].append(auc_val)
+            auc_val = roc_auc_score(true_labels, abod_scores_weighted, sample_weight=weights)
+            roc_auc_comparison['wwabod'].append(auc_val)
+
+        print "\n"
+
+        # calc average
+        roc_auc_comparison_avg['abod'].append(np.mean(roc_auc_comparison['abod']))
+        roc_auc_comparison_avg['wabod'].append(np.mean(roc_auc_comparison['wabod']))
+        roc_auc_comparison_avg['wwabod'].append(np.mean(roc_auc_comparison['wwabod']))
+
+    # ------------ plot results
+    for type in roc_auc_comparison.keys():
+        plt.figure("Average AOC - {}".format(type))
+        print "Plotting type ", type
+        print roc_auc_comparison_avg[type]
+        plt.plot(training_set_sizes, roc_auc_comparison_avg[type])
+        plt.ylim([-0.1, 1.2])
+        plt.xlabel('Training Set Size')
+        plt.ylabel('Average AOC')
+        plt.title('ROC curve')
+        plt.show()
+
+    plt.show()
+
 
 if __name__ == '__main__':
-    generate_roc()
+
+    # y = np.array([1, 1, 2, 2])
+    # scores = np.array([0.1, 0.4, 0.35, 0.8])
+    # plot_roc(y, scores, pos_label=1)
+
+    eval_wabod()
 
 
