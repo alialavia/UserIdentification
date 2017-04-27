@@ -17,6 +17,7 @@ from sklearn.metrics.pairwise import *
 from numpy import genfromtxt
 import matplotlib.mlab as mlab
 import random
+from uids.features.ConfidenceGen import WeightGenerator
 
 
 # path managing
@@ -45,7 +46,51 @@ def load_labels(filename):
 
 # ------------------------------------------------
 
-
-
 if __name__ == '__main__':
-    test2()
+
+    gen1 = WeightGenerator(embedding_file='pose_matthias2.pkl', pose_file='pose_matthias2_poses.pkl')
+    gen2 = WeightGenerator(embedding_file='christian_pose1.pkl', pose_file='christian_pose1_poses.pkl')
+    gen3 = WeightGenerator(embedding_file='pose_elias.pkl', pose_file='pose_elias_poses.pkl')
+    gen4 = WeightGenerator(embedding_file='pose_laia.pkl', pose_file='pose_laia_poses.pkl')
+    gen5 = WeightGenerator(embedding_file='pose_matthias3.pkl', pose_file='pose_matthias3_poses.pkl')
+
+
+
+    print "Top left: ", gen1.euclidean_dist([0,0], [30,-30])
+    # print "Top left: ", gen2.euclidean_dist([0,0], [30,-30])
+    # print "Top left: ", gen3.euclidean_dist([0,0], [30,-30])
+    # print "Top left: ", gen4.euclidean_dist([0,0], [30,-30])
+    print "Top left: ", gen5.euclidean_dist([0,0], [30,-30])
+
+
+    ref_pose = np.array([20,20])
+
+    plt.figure('Matthias')
+    gen1.disp_heatmap(ref_pose)
+    # plt.figure('Matthias - count map')
+    # gen1.disp_count_heatmap()
+    # plt.figure('Matthias - Variance')
+    # gen1.disp_variance_heatmap()
+
+
+    plt.figure('Matthias2')
+    gen5.disp_heatmap(ref_pose)
+    # plt.figure('Matthias2 - count map')
+    # gen5.disp_count_heatmap()
+
+
+    # plt.figure('Elias')
+    # gen3.disp_heatmap(ref_pose)
+    # plt.figure('Elias - Variance')
+    # gen3.disp_variance_heatmap()
+
+    plt.figure('Laia')
+    gen4.disp_heatmap(ref_pose)
+    # plt.figure('Laia - Variance')
+    # gen4.disp_variance_heatmap()
+    plt.figure('Laia - count map')
+    gen4.disp_count_heatmap()
+
+    plt.show()
+
+

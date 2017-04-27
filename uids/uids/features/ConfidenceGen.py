@@ -7,6 +7,7 @@ import math
 import time
 from sklearn.metrics.pairwise import *
 from uids.utils.Logger import Logger as log
+import matplotlib.pyplot as plt
 
 
 # path managing
@@ -31,6 +32,9 @@ def load_data(filename):
 class WeightGenerator:
 
     grid = None
+    variance_map = None
+    count_map = None
+
     grid_size = 0
     d_p = None
     d_y = None
@@ -61,6 +65,8 @@ class WeightGenerator:
             raise 0
 
         grid = []
+        variance = []
+        count = []
 
         for i in range(min_i, max_i):
             p_lower = d_p / 2 * (1 + i * 2)
@@ -68,6 +74,8 @@ class WeightGenerator:
             # print "--- {} ... {}: {} elems".format(p_lower, p_upper, np.count_nonzero(mask_pitch))
 
             const_pitch_embs = []
+            const_pitch_emb_variance = []
+            const_pitch_count = []
 
             for j in range(min_i, max_i):
                 y_lower = d_y / 2 * (1 + j * 2)
@@ -76,18 +84,27 @@ class WeightGenerator:
                 mask_yaw = (y_lower < poses[:, 2]) & (poses[:, 2] < y_upper)
                 mask = mask_pitch & mask_yaw
                 nr_pictures = np.count_nonzero(mask)
+                const_pitch_count.append(nr_pictures)
 
                 if nr_pictures == 0:
-
                     print "P({}..{}), Y({}..{}): nr elems {}".format(p_lower, p_upper, y_lower, y_upper, nr_pictures)
-                    raise "========= missing!"
-                    const_pitch_embs.append([0])
+                    # raise "========= missing!"
+                    const_pitch_embs.append(np.array([0]*128))
+                    const_pitch_emb_variance.append(0)
                 else:
                     const_pitch_embs.append(np.mean(embeddings[mask], axis=0))
+                    dist = pairwise_distances(embeddings[mask], embeddings[mask], metric='euclidean')
+                    dist = np.square(dist)
+                    const_pitch_emb_variance.append(np.var(dist))
+
             # add row
             # print "row items: ", len(const_pitch_embs)
-            grid.append(const_pitch_embs)
+            grid.append(np.array(const_pitch_embs))
+            variance.append(np.array(const_pitch_emb_variance))
+            count.append(np.array(const_pitch_count))
 
+        self.count_map = np.array(count)
+        self.variance_map = np.array(variance)
         self.grid = np.array(grid)
         self.grid_size = self.grid.shape[0]
 
@@ -109,6 +126,29 @@ class WeightGenerator:
         # pitch, yaw
         return int(i), int(j)
 
+
+    def disp_count_heatmap(self):
+        var = np.fliplr(np.flipud(self.count_map))
+        plt.imshow(var, cmap='GnBu_r', interpolation='nearest')
+        cbar = plt.colorbar()
+        cl = plt.getp(cbar.ax, 'ymajorticklabels')
+        plt.setp(cl, fontsize=16)
+
+    def disp_variance_heatmap(self):
+        var = np.fliplr(np.flipud(self.variance_map))
+        plt.imshow(var, cmap='GnBu_r', interpolation='nearest')
+        cbar = plt.colorbar()
+        cl = plt.getp(cbar.ax, 'ymajorticklabels')
+        plt.setp(cl, fontsize=16)
+
+    def disp_heatmap(self, ref_pitch_yaw):
+        sep = self.get_weight_matrix(ref_pitch_yaw)
+        sep = np.fliplr(np.flipud(sep))
+        plt.imshow(sep, cmap='GnBu_r', interpolation='nearest')
+        cbar = plt.colorbar()
+        cl = plt.getp(cbar.ax, 'ymajorticklabels')
+        plt.setp(cl, fontsize=16)
+
     def select(self, pitch_yaw):
         pitch_yaw = np.clip(pitch_yaw, -36, 36)
         pitch = pitch_yaw[0]
@@ -125,6 +165,13 @@ class WeightGenerator:
         dist = pairwise_distances(emb1.reshape(1, -1), emb2.reshape(1, -1), metric='euclidean')[0][0]
         dist = np.square(dist)
         return dist
+
+    def get_weight_matrix(self, pitch_yaw1):
+        emb_ref = self.select(pitch_yaw1)
+        g_tmp = self.grid.reshape(81,128)
+        dist = pairwise_distances(emb_ref, g_tmp, metric='euclidean')
+        dist = np.square(dist)
+        return dist.reshape(9, 9)
 
     def get_weight(self, pitch_yaw1, pitch_yaw2):
 
@@ -143,8 +190,10 @@ class WeightGenerator:
         # weight = 100*(1-dist**2)
         weight = 1-dist
 
-        # print dist
+        # clip to range
+        weight = np.clip(weight, 0.01,1)
 
+        # print dist
         return weight
 
     def get_triplet_weight(self, pitch_yaw_ref, pitch_yaw1, pitch_yaw2):
