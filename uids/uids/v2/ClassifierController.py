@@ -4,16 +4,18 @@ from uids.data_models.StandardCluster import StandardCluster
 from sklearn.metrics.pairwise import *
 from uids.v2.set_metrics import *
 
+
 class BaseMetaController:
 
     def __init__(self):
         pass
 
     # --------- HELPERS
-
-    def is_consistent_set(self, samples):
-        # check set for inconsistencies
-        return True
+    @staticmethod
+    def calc_adjacent_dist(samples):
+        dist = array([np.linalg.norm(samples[i] - samples[i + 1]) for i in range(0, len(samples) - 1)])
+        dist = np.square(dist)
+        return dist
 
     # ----------- unused
     @staticmethod
@@ -40,8 +42,9 @@ class BaseMetaController:
             dist = pairwise_distances(samples, samples, metric='cosine')
             thresh = 0.7
         elif metric == 'euclidean':
-            dist = pairwise_distances(samples, samples, metric='euclidean')
-            dist = np.square(dist)
+            # dist = pairwise_distances(samples, samples, metric='euclidean')
+            # dist = np.square(dist)
+            dist = BaseMetaController.calc_adjacent_dist(samples)
             thresh = 1.4
         else:
             raise ValueError
@@ -54,6 +57,7 @@ class BaseMetaController:
             log.severe("Inconsistent set! Inter-sample distances: {}".format(dist))
             return False
         return True
+
 
 class BaseDataQueue(BaseMetaController):
 
