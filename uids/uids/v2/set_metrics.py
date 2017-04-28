@@ -191,7 +191,7 @@ class WeightedABOD(ABOD):
     weight_gen = None
 
     def __init__(self):
-        self.weight_gen = WeightGenerator()
+        self.weight_gen = WeightGenerator(embedding_file='pose_matthias3.pkl', pose_file='pose_matthias3_poses.pkl')
 
     @staticmethod
     def unbiased_weighted_var(values, weights):

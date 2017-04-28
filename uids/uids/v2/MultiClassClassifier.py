@@ -56,7 +56,7 @@ class MultiCl(MultiClassClassifierBase):
         conf = self.calc_normalized_positive_confidence(predictions[target_class_id], sample_weight)
         return True, conf
 
-    def predict_class(self, samples, sample_weight):
+    def predict_class(self, samples, sample_weight=None):
         """
         first use "is_guaranteed_new_class"!
         :param samples:
@@ -64,19 +64,17 @@ class MultiCl(MultiClassClassifierBase):
         :return: inconsistent, class, confidence
         """
 
-        is_consistent = True
+        # disable sample weights
+        sample_weight = None
 
         # individual classifier predictions (binary)
         predictions = {}
-        true_pos_rate = 0.8
+        true_pos_rate = 0.7
         true_pos_thresh = int(true_pos_rate*len(samples))
-        false_pos_rate = 0.2
+        false_pos_rate = 0.4
         false_pos_thresh = int(false_pos_rate * len(samples))
 
-
-        target_classes = []
-
-        true_positives = []
+        target_positive_classes = []
         true_positives_rates = []
         false_positives = []
 
@@ -96,12 +94,12 @@ class MultiCl(MultiClassClassifierBase):
                 false_positive_samples = np.count_nonzero(predictions[class_id] == -1)
 
                 # count certain detections
-                if true_positive_samples > true_pos_thresh:
-                    true_positives.append(class_id)
+                if true_positive_samples >= true_pos_thresh:
+                    target_positive_classes.append(class_id)
                     true_positives_rates.append(true_positive_samples)
 
                 # count uncertain detections
-                if false_positive_samples > false_pos_thresh:
+                if false_positive_samples >= false_pos_thresh:
                     false_positives.append(class_id)
 
         is_consistent = True
@@ -110,30 +108,31 @@ class MultiCl(MultiClassClassifierBase):
 
         # check for inconsistent predictions
         if len(false_positives) == 0:
-
-            if len(true_positives) == 0:
+            if len(target_positive_classes) == 0:
                 # new class!
                 target_class = -1
-            elif len(true_positives) == 1:
-                # target class
-                target_class = true_positives[0]
+            elif len(target_positive_classes) == 1:
+                # single target class
+                target_class = target_positive_classes[0]
             else:
-                is_consistent = False # not a valid result
+                # multiple target classes
+                is_consistent = False   # not a valid result
                 best_index = np.argmax(true_positives_rates)
-                target_class = true_positives[best_index]
+                target_class = target_positive_classes[best_index]
         else:
-            is_consistent = False  # not a valid result
-            if len(true_positives) == 0:
+            is_consistent = False  # not a valid/safe result
+            if len(target_positive_classes) == 0:
                 # new class!
                 target_class = -1
-            elif len(true_positives) == 1:
+            elif len(target_positive_classes) == 1:
                 # target class
-                target_class = true_positives[0]
+                target_class = target_positive_classes[0]
             else:
                 best_index = np.argmax(true_positives_rates)
-                target_class = true_positives[best_index]
+                target_class = target_positive_classes[best_index]
 
-        if is_consistent:
+        # TODO: not active right now
+        if is_consistent and False:
             # check for strong samples with inconsistent predictions
             mask = sample_weight > safe_weight
             if np.count_nonzero(mask):
@@ -162,7 +161,7 @@ class MultiCl(MultiClassClassifierBase):
             confidence = 1.0
 
         print "---- Prediction: ", predictions
-        print "---- Target class decision: {} / conf: {} / TP: {}, FP: {} / min. TP: {} max. FP: {}".format(target_class, confidence, len(true_positives), len(false_positives), true_pos_thresh, false_pos_thresh)
+        print "---- Target class decision: {} / conf: {} / TP: {}, FP: {} / min. TP: {} max. FP: {}".format(target_class, confidence, len(target_positive_classes), len(false_positives), true_pos_thresh, false_pos_thresh)
 
         return is_consistent, target_class, confidence
 
@@ -216,12 +215,14 @@ class MultiCl(MultiClassClassifierBase):
         confidence = np.dot(predictions, np.transpose(norm_f * weights))
         return confidence
 
-    def calc_normalized_positive_confidence(self, predictions, weights):
+    def calc_normalized_positive_confidence(self, predictions, weights=None):
         """
         :param predictions: E [0,1]
         :param weights:
-        :return:
+        :return: sum of predictions*weights
         """
+        if weights is None:
+            weights = np.repeat(1, len(predictions))
         assert len(predictions) == len(weights)
         predictions = np.clip(predictions, 0, 1)
         norm_f = 1.0/np.sum(weights)

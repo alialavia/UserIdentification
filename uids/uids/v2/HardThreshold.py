@@ -87,7 +87,7 @@ class SetSimilarityHardThreshold(SetSimilarityThresholdBase):
     __thresh = None
     metric = None
 
-    def __init__(self, threshold=0.99, cluster=None, metric='ABOD'):
+    def __init__(self, threshold=0.3, cluster=None, metric='ABOD'):
         SetSimilarityThresholdBase.__init__(self, cluster=cluster)
         self.__thresh = threshold
         self.metric = metric
@@ -100,11 +100,11 @@ class SetSimilarityHardThreshold(SetSimilarityThresholdBase):
         print "==== L2: ", ["%0.3f" % i for i in self.data_cluster.class_mean_dist(samples, metric='euclidean')]
 
         if self.metric == 'ABOD':
-            below_thresh = similarity_scores > self.__thresh
+            positive = similarity_scores > self.__thresh
         else:
-            below_thresh = similarity_scores < self.__thresh
+            positive = similarity_scores < self.__thresh
 
-        return np.array([1 if v else -1 for v in below_thresh])
+        return np.array([1 if v else -1 for v in positive])
 
 
 
