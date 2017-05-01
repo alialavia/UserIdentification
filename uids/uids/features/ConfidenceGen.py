@@ -55,6 +55,7 @@ class WeightGenerator:
         d_y = self.d_y
 
         if d_p == 8:
+            # -36 .. 36
             min_i = -5
             max_i = 4
         elif d_p == 4:
@@ -126,7 +127,6 @@ class WeightGenerator:
         # pitch, yaw
         return int(i), int(j)
 
-
     def disp_count_heatmap(self):
         var = np.fliplr(np.flipud(self.count_map))
         plt.imshow(var, cmap='GnBu_r', interpolation='nearest')
@@ -142,7 +142,7 @@ class WeightGenerator:
         plt.setp(cl, fontsize=16)
 
     def disp_heatmap(self, ref_pitch_yaw):
-        sep = self.get_weight_matrix(ref_pitch_yaw)
+        sep = self.get_dist_matrix(ref_pitch_yaw)
         sep = np.fliplr(np.flipud(sep))
         plt.imshow(sep, cmap='GnBu_r', interpolation='nearest')
         cbar = plt.colorbar()
@@ -159,14 +159,28 @@ class WeightGenerator:
         i, j = self.calc_index(pitch, yaw)
         return self.grid[i, j]
 
-    def euclidean_dist(self, pitch_yaw1, pitch_yaw2):
+    def euclidean_dist_squared(self, pitch_yaw1, pitch_yaw2):
         emb1 = self.select(pitch_yaw1)
         emb2 = self.select(pitch_yaw2)
         dist = pairwise_distances(emb1.reshape(1, -1), emb2.reshape(1, -1), metric='euclidean')[0][0]
         dist = np.square(dist)
         return dist
 
-    def get_weight_matrix(self, pitch_yaw1):
+    def euclidean_dist(self, pitch_yaw1, pitch_yaw2):
+        emb1 = self.select(pitch_yaw1)
+        emb2 = self.select(pitch_yaw2)
+        dist = pairwise_distances(emb1.reshape(1, -1), emb2.reshape(1, -1), metric='euclidean')[0][0]
+        return dist
+
+    # get dist weight
+    def get_dist_weight_clipped(self, pitch_yaw1, pitch_yaw2):
+        emb1 = self.select(pitch_yaw1)
+        emb2 = self.select(pitch_yaw2)
+        dist = pairwise_distances(emb1.reshape(1, -1), emb2.reshape(1, -1), metric='euclidean')[0][0]
+        dist = np.clip(dist, 0, 1) + 1
+        return dist
+
+    def get_dist_matrix(self, pitch_yaw1):
         emb_ref = self.select(pitch_yaw1)
         g_tmp = self.grid.reshape(81,128)
         dist = pairwise_distances(emb_ref, g_tmp, metric='euclidean')
@@ -177,7 +191,7 @@ class WeightGenerator:
 
         pitch_yaw1 = np.clip(pitch_yaw1, -36, 36)
         pitch_yaw2 = np.clip(pitch_yaw2, -36, 36)
-        dist = np.clip(self.euclidean_dist(pitch_yaw1, pitch_yaw2), 0, 1)
+        dist = np.clip(self.euclidean_dist_squared(pitch_yaw1, pitch_yaw2), 0, 1)
         if dist < 0.1:
             pass
             # print pitch_yaw1, pitch_yaw2
