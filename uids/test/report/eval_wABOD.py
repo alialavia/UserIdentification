@@ -19,6 +19,7 @@ from scipy import misc
 from sklearn import metrics
 import time
 import csv
+from numpy.random import RandomState
 
 
 # path managing
@@ -111,6 +112,7 @@ def display_image(embedding_name, indices, img_folder_name=""):
     else:
         print "Can not load image names in: {}".format(filename)
 
+
 def weighted_avg_and_var(values, weights, normalized_weights=False):
     """
     values, weights -- Numpy ndarrays with the same shape.
@@ -130,11 +132,15 @@ def weighted_avg_and_var(values, weights, normalized_weights=False):
 
 def mix_crop(s1, s2, max_nr_samples=40, random_state=None):
     if random_state is not None:
+        # prng = RandomState(random_state)
+        # s1 = prng.permutation(s1)
+        # s2 = prng.permutation(s2)
         s1, s2 = shuffle(s1, s2, random_state=random_state)
     max_nr_samples = max_nr_samples if max_nr_samples < len(s1) else len(s1)
     s1 = s1[0:max_nr_samples]
     s2 = s2[0:max_nr_samples]
     return s1, s2
+
 
 def weighted_var(values, weights):
     """
@@ -145,6 +151,7 @@ def weighted_var(values, weights):
     variance_biased = np.average((values-average)**2)  # Fast and numerically precise
     # print "variance biased: ", variance_biased
     return variance_biased
+
 
 def test_var():
     samples = [1,1.1,1,1,1.2,5,8,2,3]
@@ -245,7 +252,7 @@ def test_weighted_abod():
 
     print grid.get_weight([24,-18], [13,36])
 
-    # print abod_gen.weight_gen.euclidean_dist([30,0], [20,0])
+    # print abod_gen.weight_gen.euclidean_dist_squared([30,0], [20,0])
 
     # training
     emb_train = load_embeddings("matthias1.pkl")
@@ -353,16 +360,19 @@ def generate_roc():
 
 
 def eval_wabod():
-    abod_gen = WeightedABOD()
-    grid = abod_gen.weight_gen
+
+    # mix sets and crop
+    training_set_sizes = [20]
+    nr_test_images = 100
+    nr_random_iters = 2
 
     # training
-    emb_train = load_embeddings("matthias1.pkl")
-    pose_train = load_embeddings("matthias1_poses.pkl")
+    emb_train = load_embeddings("matthias_test.pkl")
+    pose_train = load_embeddings("matthias_test_poses.pkl")
 
     # load test samples and poses
-    emb1 = load_embeddings("matthias2.pkl")
-    pose1 = load_embeddings("matthias2_poses.pkl")
+    emb1 = load_embeddings("matthias1.pkl")
+    pose1 = load_embeddings("matthias1_poses.pkl")
 
     emb2 = load_embeddings("christian_test2.pkl")
     pose2 = load_embeddings("christian_test2_poses.pkl")
@@ -372,16 +382,20 @@ def eval_wabod():
     pose1 = pose1[:, 1:]
     pose2 = pose2[:, 1:]
 
-    # mix sets and crop
-    training_set_sizes = [5, 10]
-    nr_test_images = 100
-    nr_random_iters = 5
+    if len(emb1) < nr_test_images:
+        print "Not enough images"
+        raise ValueError
+    if len(emb1) < nr_test_images:
+        print "Not enough images"
+        raise ValueError
 
     emb1, pose1 = mix_crop(emb1, pose1, nr_test_images, random_state=None)
     emb2, pose2 = mix_crop(emb2, pose2, nr_test_images, random_state=None)
 
     # ------------ start evaluation
 
+    abod_gen = WeightedABOD()
+    grid = abod_gen.weight_gen
 
     aoc_avg = {
         'abod': [],
@@ -397,6 +411,11 @@ def eval_wabod():
         'wabod_w': []
     }
 
+    prediction_time_avg = {
+        'abod': [],
+        'wabod': []
+    }
+
     for t_size in training_set_sizes:
 
         roc_auc_comparison = {
@@ -404,6 +423,10 @@ def eval_wabod():
             'abod_w': [],
             'wabod': [],
             'wabod_w': []
+        }
+        prediction_time = {
+            'abod': [],
+            'wabod': []
         }
 
         iter_weights = []
@@ -421,19 +444,22 @@ def eval_wabod():
             if i > 0:
                 sys.stdout.write("{}, ".format(i+1))
 
-
             # select training subset
             emb_train_subset, pose_train_subset = mix_crop(emb_train, pose_train, t_size, random_state=i+1)
             true_labels = np.concatenate((np.repeat(1,len(emb1)), np.repeat(0,len(emb2))))
 
             # calc regular abod
+            start = time.time()
             abod_il = ABOD.get_score(emb1, emb_train_subset)
             abod_ol = ABOD.get_score(emb2, emb_train_subset)
+            prediction_time['abod'].append(time.time() - start)
             abod_scores = np.concatenate((abod_il, abod_ol))
 
             # calc weighted abod
+            start = time.time()
             abod_il_weighted, sample_weights_il = abod_gen.get_weighted_score(emb1, pose1, emb_train_subset, pose_train_subset)
             abod_ol_weighted, sample_weights_ul = abod_gen.get_weighted_score(emb2, pose2, emb_train_subset, pose_train_subset)
+            prediction_time['wabod'].append(time.time() - start)
             abod_scores_weighted = np.concatenate((abod_il_weighted, abod_ol_weighted))
             weights = np.concatenate((sample_weights_il, sample_weights_ul))
 
@@ -476,8 +502,12 @@ def eval_wabod():
         aoc_wavg['abod_w'].append(np.average(roc_auc_comparison['abod_w'], weights=iter_weights))
         aoc_wavg['wabod_w'].append(np.average(roc_auc_comparison['wabod_w'], weights=iter_weights))
 
+        prediction_time_avg['abod'].append(np.mean(prediction_time['abod']))
+        prediction_time_avg['wabod'].append(np.mean(prediction_time['wabod']))
+
     # save results to file
     filename = 'ABOD_variant_performance.csv'
+    print "Saving file to: {}".format(filename)
     with open(filename, 'wb') as csvfile:
         # write configuration of best results over multiple random tests
         writer = csv.writer(csvfile, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -497,8 +527,12 @@ def eval_wabod():
         for type in aoc_wavg.keys():
             writer.writerow([type] + aoc_wavg[type])
 
-    print aoc_avg
-    print aoc_wavg
+        writer.writerow("")
+        writer.writerow(["Prediction Time"])
+        writer.writerow(["Nr. Training Samples"] + training_set_sizes)
+        for type in prediction_time_avg.keys():
+            writer.writerow([type] + prediction_time_avg[type])
+
 
     # # ------------ plot results
     # for type in roc_auc_comparison_avg.keys():
