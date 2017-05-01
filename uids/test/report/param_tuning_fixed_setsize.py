@@ -12,8 +12,10 @@ from sklearn.model_selection import KFold
 from sklearn.metrics import precision_recall_curve
 import csv
 from numpy import random
-from uids.online_learning.ABOD import ABOD
+from uids.sklearn.Classifiers import *
 from sklearn import metrics
+from numpy.random import RandomState
+
 
 # path managing
 fileDir = os.path.dirname(os.path.realpath(__file__))
@@ -118,13 +120,21 @@ def tune_classifier(clf, param_grid, avg_cycles=10, nr_training_samples=50, nr_t
     iter_prediction_time = []
     iter_youden_indices = []
 
+    prng = RandomState()
+
     for i in range(0, nr_iters):
 
         # shuffle same every time
-        random.seed(i)  # Reset random state
-        random.shuffle(class_ds1)
-        random.shuffle(class_ds2)
-        random.shuffle(outlier_ds)
+
+        prng = RandomState(i + 1)
+        class_ds1 = prng.permutation(class_ds1)
+        class_ds2 = prng.permutation(class_ds2)
+        outlier_ds = prng.permutation(outlier_ds)
+
+        # random.seed(i)  # Reset random state
+        # random.shuffle(class_ds1)
+        # random.shuffle(class_ds2)
+        # random.shuffle(outlier_ds)
 
         kf = KFold(n_splits=nr_splits, shuffle=False)
         param_combinations = get_all_param_variants(param_grid)
@@ -172,14 +182,9 @@ def tune_classifier(clf, param_grid, avg_cycles=10, nr_training_samples=50, nr_t
 
                     training_samples = np.concatenate((scene1_samples[train_indices], scene2_samples[train_indices]))
 
-                    # fit
-                    if clf_name in {'OneClassSVM', 'IsolationForest', 'ABOD'}:
-                        start = current_milli_time()
-                        clf.fit(training_samples)
-                        training_time_config.append(current_milli_time()-start)
-                    else:
-                        print "Classifier {} not supported".format(clf_name)
-                        raise Exception
+                    start = current_milli_time()
+                    clf.fit(training_samples)
+                    training_time_config.append(current_milli_time() - start)
 
                     # build test set, add scene 2 , add outlier dataset
                     test_with_outliers = np.concatenate((scene1_samples[test_indices], scene2_samples[test_indices], outlier_ds[0:(nr_test_samples/2)]))
@@ -231,14 +236,9 @@ def tune_classifier(clf, param_grid, avg_cycles=10, nr_training_samples=50, nr_t
                 # calculate precision and recall in kfold cross validation
                 for test_indices, train_indices in kf.split(class_samples_s1):
 
-                    # fit
-                    if clf_name in {'OneClassSVM', 'IsolationForest', 'ABOD'}:
-                        start = current_milli_time()
-                        clf.fit(class_samples_s1[train_indices])
-                        training_time_config.append(current_milli_time()-start)
-                    else:
-                        print "Classifier {} not supported".format(clf_name)
-                        raise Exception
+                    start = current_milli_time()
+                    clf.fit(class_samples_s1[train_indices])
+                    training_time_config.append(current_milli_time() - start)
 
                     # build test set, add scene 2 , add outlier dataset
                     test_with_outliers = np.concatenate((class_samples_s1[test_indices], class_ds2[0:nr_test_samples/4], outlier_ds[0:(nr_test_samples/2)]))
@@ -281,8 +281,6 @@ def tune_classifier(clf, param_grid, avg_cycles=10, nr_training_samples=50, nr_t
                     precision_scores_config.append(precision)
                     recall_scores_config.append(recall)
                     f1_scores_config.append(f1_score)
-
-
 
             # average precision and recall values
             precision_avg = np.mean(precision_scores_config)
@@ -376,6 +374,7 @@ def tune_classifier(clf, param_grid, avg_cycles=10, nr_training_samples=50, nr_t
             writer.writerow(["F1 score, std: {} +- {}".format(np.mean(iter_f1_scores), 2 * np.std(iter_f1_scores))])
             writer.writerow(["Youden index, std: {} +- {}".format(np.mean(iter_youden_indices), 2 * np.std(iter_youden_indices))])
             writer.writerow("")
+
             if clf_name == 'OneClassSVM':
                 writer.writerow(["Train", "Test", "Folds", "Nu Median", "Nu Mean", "Nu Std", "P", "P std.", "R", "R std", "F1", "F1 std", "Youdens", "Youdens std", "Training Time", "Trainig Time std", "Prediction Time", "Prediction Time std"])
                 writer.writerow([
@@ -396,6 +395,16 @@ def tune_classifier(clf, param_grid, avg_cycles=10, nr_training_samples=50, nr_t
                                  np.mean(iter_training_time), np.std(iter_training_time),
                                  np.mean(iter_prediction_time), np.std(iter_prediction_time)
                                  ])
+            if clf_name == 'L2Estimator' or clf_name == 'ABODEstimator':
+                writer.writerow(["Train", "Test", "Folds", "T Median", "T Mean", "T Std", "P", "P std.", "R", "R std", "F1", "F1 std", "Youdens", "Youdens std", "Training Time", "Trainig Time std", "Prediction Time", "Prediction Time std"])
+                writer.writerow([
+                                 nr_training_samples, nr_test_samples, nr_splits, np.median([tmp['T'] for tmp in iter_params]), np.mean([tmp['T'] for tmp in iter_params]), np.std([tmp['T'] for tmp in iter_params]),
+                                 np.mean(iter_precision), np.std(iter_precision), np.mean(iter_recall), np.std(iter_recall),
+                                 np.mean(iter_f1_scores), np.std(iter_f1_scores),
+                                 np.mean(iter_youden_indices), np.std(iter_youden_indices),
+                                 np.mean(iter_training_time), np.std(iter_training_time),
+                                 np.mean(iter_prediction_time), np.std(iter_prediction_time)
+                                 ])
 
             writer.writerow("")
             writer.writerow(["Precision, Recall, Training-Time (s):"])
@@ -410,6 +419,9 @@ def tune_classifier(clf, param_grid, avg_cycles=10, nr_training_samples=50, nr_t
             elif clf_name == 'IsolationForest':
                 nus = ["%0.6f" % tmp['contamination'] for tmp in iter_params]
                 writer.writerow(nus)
+            elif clf_name == 'L2Estimator' or clf_name == 'ABODEstimator':
+                thresholds = ["%0.4f" % tmp['T'] for tmp in iter_params]
+                writer.writerow(thresholds)
             else:
                 writer.writerow(iter_params)
             writer.writerow("")
@@ -444,14 +456,9 @@ if __name__ == '__main__':
         tune_classifier(clf, params_svm, avg_cycles=3, nr_training_samples=20, nr_test_samples=120, combine_scenes=True)
 
     if False:
-        params_if = {'contamination': np.arange(0.005, 0.1, 0.005)}
+        params = {'contamination': np.arange(0.005, 0.1, 0.005)}
         clf = IsolationForest(random_state=np.random.RandomState(42))
-        tune_classifier(clf, params_if)
-
-    if False:
-        params_abod = {'uncertainty_bandwidth': [0], 'threshold': np.arange(0.05, 0.5, 0.05)}
-        clf = ABOD()
-        tune_classifier(clf, params_abod, avg_cycles=2)
+        tune_classifier(clf, params, avg_cycles=5, nr_training_samples=10, nr_test_samples=640, combine_scenes=False)
 
     # eval Isolation Forest
     if False:
@@ -460,23 +467,23 @@ if __name__ == '__main__':
         eval = []
         # single scene
         eval.append(tune_classifier(clf, params_if, avg_cycles=5, nr_training_samples=10, nr_test_samples=640, combine_scenes=False, filename="IF_single-scene_train10_test640.csv"))
-        # eval.append(tune_classifier(clf, params_if, avg_cycles=100, nr_training_samples=20, nr_test_samples=640, combine_scenes=False, filename="IF_single-scene_train20_test640.csv"))
-        # eval.append(tune_classifier(clf, params_if, avg_cycles=100, nr_training_samples=40, nr_test_samples=640, combine_scenes=False, filename="IF_single-scene_train40_test640.csv"))
-        # eval.append(tune_classifier(clf, params_if, avg_cycles=100, nr_training_samples=80, nr_test_samples=640, combine_scenes=False, filename="IF_single-scene_train80_test640.csv"))
-        # eval.append(tune_classifier(clf, params_if, avg_cycles=100, nr_training_samples=160, nr_test_samples=640, combine_scenes=False, filename="IF_single-scene_train160_test640.csv"))
-        # # multi scene
-        # eval.append(tune_classifier(clf, params_if, avg_cycles=100, nr_training_samples=10, nr_test_samples=640, combine_scenes=True, filename="IF_multi-scene_train10_test640.csv"))
-        # eval.append(tune_classifier(clf, params_if, avg_cycles=100, nr_training_samples=20, nr_test_samples=640, combine_scenes=True, filename="IF_multi-scene_train20_test640.csv"))
-        # eval.append(tune_classifier(clf, params_if, avg_cycles=100, nr_training_samples=40, nr_test_samples=640, combine_scenes=True, filename="IF_multi-scene_train40_test640.csv"))
-        # eval.append(tune_classifier(clf, params_if, avg_cycles=100, nr_training_samples=80, nr_test_samples=640, combine_scenes=True, filename="IF_multi-scene_train80_test640.csv"))
-        # eval.append(tune_classifier(clf, params_if, avg_cycles=100, nr_training_samples=160, nr_test_samples=640, combine_scenes=True, filename="IF_multi-scene_train160_test640.csv"))
+        eval.append(tune_classifier(clf, params_if, avg_cycles=100, nr_training_samples=20, nr_test_samples=640, combine_scenes=False, filename="IF_single-scene_train20_test640.csv"))
+        eval.append(tune_classifier(clf, params_if, avg_cycles=100, nr_training_samples=40, nr_test_samples=640, combine_scenes=False, filename="IF_single-scene_train40_test640.csv"))
+        eval.append(tune_classifier(clf, params_if, avg_cycles=100, nr_training_samples=80, nr_test_samples=640, combine_scenes=False, filename="IF_single-scene_train80_test640.csv"))
+        eval.append(tune_classifier(clf, params_if, avg_cycles=100, nr_training_samples=160, nr_test_samples=640, combine_scenes=False, filename="IF_single-scene_train160_test640.csv"))
+        # multi scene
+        eval.append(tune_classifier(clf, params_if, avg_cycles=100, nr_training_samples=10, nr_test_samples=640, combine_scenes=True, filename="IF_multi-scene_train10_test640.csv"))
+        eval.append(tune_classifier(clf, params_if, avg_cycles=100, nr_training_samples=20, nr_test_samples=640, combine_scenes=True, filename="IF_multi-scene_train20_test640.csv"))
+        eval.append(tune_classifier(clf, params_if, avg_cycles=100, nr_training_samples=40, nr_test_samples=640, combine_scenes=True, filename="IF_multi-scene_train40_test640.csv"))
+        eval.append(tune_classifier(clf, params_if, avg_cycles=100, nr_training_samples=80, nr_test_samples=640, combine_scenes=True, filename="IF_multi-scene_train80_test640.csv"))
+        eval.append(tune_classifier(clf, params_if, avg_cycles=100, nr_training_samples=160, nr_test_samples=640, combine_scenes=True, filename="IF_multi-scene_train160_test640.csv"))
         # display results
         print "\n\n___________________________________________________\n\n"
         for e in eval:
             print e
 
     # eval OneClassSVM
-    if True:
+    if False:
         params_svm = {'nu': np.arange(0.001, 0.1, 0.001), 'kernel': ['rbf']}
         clf = svm.OneClassSVM()
         eval = []
@@ -496,3 +503,81 @@ if __name__ == '__main__':
         print "\n\n___________________________________________________\n\n"
         for e in eval:
             print e
+
+    # eval L2Estimator
+    if True:
+        params = {'T': np.arange(0.5, 1.3, 0.01)}
+        clf = L2Estimator()
+        tune_classifier(clf, params, avg_cycles=5, nr_training_samples=10, nr_test_samples=640, combine_scenes=False)
+        eval = []
+        # single scene
+        eval.append(
+            tune_classifier(clf, params, avg_cycles=100, nr_training_samples=10, nr_test_samples=640, combine_scenes=False,
+                            filename="L2Estimator_single-scene_train10_test640.csv"))
+        eval.append(
+            tune_classifier(clf, params, avg_cycles=100, nr_training_samples=20, nr_test_samples=640, combine_scenes=False,
+                            filename="L2Estimator_single-scene_train20_test640.csv"))
+        eval.append(
+            tune_classifier(clf, params, avg_cycles=100, nr_training_samples=40, nr_test_samples=640, combine_scenes=False,
+                            filename="L2Estimator_single-scene_train40_test640.csv"))
+        eval.append(
+            tune_classifier(clf, params, avg_cycles=100, nr_training_samples=80, nr_test_samples=640, combine_scenes=False,
+                            filename="L2Estimator_single-scene_train80_test640.csv"))
+        eval.append(
+            tune_classifier(clf, params, avg_cycles=100, nr_training_samples=160, nr_test_samples=640, combine_scenes=False,
+                            filename="L2Estimator_single-scene_train160_test640.csv"))
+        # multi scene
+        eval.append(
+            tune_classifier(clf, params, avg_cycles=100, nr_training_samples=10, nr_test_samples=640, combine_scenes=True,
+                            filename="L2Estimator_multi-scene_train10_test640.csv"))
+        eval.append(
+            tune_classifier(clf, params, avg_cycles=100, nr_training_samples=20, nr_test_samples=640, combine_scenes=True,
+                            filename="L2Estimator_multi-scene_train20_test640.csv"))
+        eval.append(
+            tune_classifier(clf, params, avg_cycles=100, nr_training_samples=40, nr_test_samples=640, combine_scenes=True,
+                            filename="L2Estimator_multi-scene_train40_test640.csv"))
+        eval.append(
+            tune_classifier(clf, params, avg_cycles=100, nr_training_samples=80, nr_test_samples=640, combine_scenes=True,
+                            filename="L2Estimator_multi-scene_train80_test640.csv"))
+        eval.append(
+            tune_classifier(clf, params, avg_cycles=100, nr_training_samples=160, nr_test_samples=640, combine_scenes=True,
+                            filename="L2Estimator_multi-scene_train160_test640.csv"))
+
+    # eval ABODEstimator
+    if False:
+        params = {'T': np.arange(0.2, 0.5, 0.01)}
+        clf = ABODEstimator()
+        tune_classifier(clf, params, avg_cycles=5, nr_training_samples=10, nr_test_samples=640, combine_scenes=False)
+        eval = []
+        # single scene
+        eval.append(
+            tune_classifier(clf, params, avg_cycles=100, nr_training_samples=10, nr_test_samples=640, combine_scenes=False,
+                            filename="ABODEstimator_single-scene_train10_test640.csv"))
+        eval.append(
+            tune_classifier(clf, params, avg_cycles=100, nr_training_samples=20, nr_test_samples=640, combine_scenes=False,
+                            filename="ABODEstimator_single-scene_train20_test640.csv"))
+        eval.append(
+            tune_classifier(clf, params, avg_cycles=100, nr_training_samples=40, nr_test_samples=640, combine_scenes=False,
+                            filename="ABODEstimator_single-scene_train40_test640.csv"))
+        eval.append(
+            tune_classifier(clf, params, avg_cycles=100, nr_training_samples=80, nr_test_samples=640, combine_scenes=False,
+                            filename="ABODEstimator_single-scene_train80_test640.csv"))
+        eval.append(
+            tune_classifier(clf, params, avg_cycles=100, nr_training_samples=160, nr_test_samples=640, combine_scenes=False,
+                            filename="ABODEstimator_single-scene_train160_test640.csv"))
+        # multi scene
+        eval.append(
+            tune_classifier(clf, params, avg_cycles=100, nr_training_samples=10, nr_test_samples=640, combine_scenes=True,
+                            filename="ABODEstimator_multi-scene_train10_test640.csv"))
+        eval.append(
+            tune_classifier(clf, params, avg_cycles=100, nr_training_samples=20, nr_test_samples=640, combine_scenes=True,
+                            filename="ABODEstimator_multi-scene_train20_test640.csv"))
+        eval.append(
+            tune_classifier(clf, params, avg_cycles=100, nr_training_samples=40, nr_test_samples=640, combine_scenes=True,
+                            filename="ABODEstimator_multi-scene_train40_test640.csv"))
+        eval.append(
+            tune_classifier(clf, params, avg_cycles=100, nr_training_samples=80, nr_test_samples=640, combine_scenes=True,
+                            filename="ABODEstimator_multi-scene_train80_test640.csv"))
+        eval.append(
+            tune_classifier(clf, params, avg_cycles=100, nr_training_samples=160, nr_test_samples=640, combine_scenes=True,
+                            filename="ABODEstimator_multi-scene_train160_test640.csv"))
