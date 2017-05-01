@@ -9,6 +9,8 @@
 #include <io/RequestTypes.h>
 #include <imgproc\ImgProcessing.h>
 #include <io\RequestHandler.h>
+#include <tuple>
+#include <set>
 
 typedef io::PartialImageIdentificationAligned IDReq;
 typedef io::PartialUpdateAligned Update;
@@ -51,7 +53,6 @@ void LoadResponses(io::NetworkRequestHandler* request_handler) {
 		std::cout << "--- OK\n";
 	}
 
-
 	io::ErrorResponse err_response;
 	if (request_handler->PopResponse(&err_response, request_lookup))
 	{
@@ -93,13 +94,14 @@ int main(int argc, char** argv)
 	std::vector<cv::Mat> face_patches;
 	std::vector<std::string> file_names;
 	size_t nr_images = 0;
+	std::tuple<int, int> pose = std::make_tuple(10, 10);
 
 	// -------------------- identification
 
 	// generate 1st model
 	nr_images = ih.LoadImageBatch(face_patches, file_names, 10);
 	imgproc::ImageProc::batchResize(face_patches, 96, 96);
-	IDReq *id_request1 = new IDReq(&server_conn, face_patches, std::vector<int>(nr_images, 5), 3);
+	IDReq *id_request1 = new IDReq(&server_conn, face_patches, std::vector<std::tuple<int, int>>(nr_images, pose), 3);
 	request_handler.addRequest(id_request1);
 
 
@@ -126,86 +128,62 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
-	// updates
-	nr_images = ih.LoadImageBatch(face_patches, file_names, 2);
-	imgproc::ImageProc::batchResize(face_patches, 96, 96);
-	Update *update1 = new Update(&server_conn, face_patches, std::vector<int>(nr_images, 6), 1);
-	request_handler.addRequest(update1);
+	//// updates
+	//nr_images = ih.LoadImageBatch(face_patches, file_names, 2);
+	//imgproc::ImageProc::batchResize(face_patches, 96, 96);
+	//Update *update1 = new Update(&server_conn, face_patches, std::vector<std::tuple<int, int>>(nr_images, pose), 1);
+	//request_handler.addRequest(update1);
 
-	cv::imshow("bla", imgproc::ImageProc::createOne(face_patches, 1, 10));
-	cv::waitKey(0);
-	request_handler.processAllPendingRequests();
+	//cv::imshow("bla", imgproc::ImageProc::createOne(face_patches, 1, 10));
+	//cv::waitKey(0);
+	//request_handler.processAllPendingRequests();
 
+	//nr_images = ih.LoadImageBatch(face_patches, file_names, 5);
+	//imgproc::ImageProc::batchResize(face_patches, 96, 96);
+	//Update *update2 = new Update(&server_conn, face_patches, std::vector<std::tuple<int, int>>(nr_images, pose), 1);
+	//request_handler.addRequest(update2);
+
+	//cv::imshow("bla", imgproc::ImageProc::createOne(face_patches, 1, 10));
+	//cv::waitKey(0);
+	//request_handler.processAllPendingRequests();
+
+	//Update *update;
+
+	//nr_images = ih.LoadImageBatch(face_patches, file_names, 5);
+	//imgproc::ImageProc::batchResize(face_patches, 96, 96);
+	//update = new Update(&server_conn, face_patches, std::vector<std::tuple<int, int>>(nr_images, pose), 1);
+	//request_handler.addRequest(update);
+
+	//cv::imshow("bla", imgproc::ImageProc::createOne(face_patches, 1, 10));
+	//cv::waitKey(0);
+	//request_handler.processAllPendingRequests();
+
+
+	//nr_images = ih.LoadImageBatch(face_patches, file_names, 5);
+	//imgproc::ImageProc::batchResize(face_patches, 96, 96);
+	//update = new Update(&server_conn, face_patches, std::vector<std::tuple<int, int>>(nr_images, pose), 1);
+	//request_handler.addRequest(update);
+
+	//cv::imshow("bla", imgproc::ImageProc::createOne(face_patches, 1, 10));
+	//cv::waitKey(0);
+	//request_handler.processAllPendingRequests();
+
+
+	// closed set Re-id
+	std::cout << "Closed set reidentification ..." << std::endl;
 	nr_images = ih.LoadImageBatch(face_patches, file_names, 5);
 	imgproc::ImageProc::batchResize(face_patches, 96, 96);
-	Update *update2 = new Update(&server_conn, face_patches, std::vector<int>(nr_images, 6), 1);
-	request_handler.addRequest(update2);
+	std::unordered_set<int> target_set;
+	target_set.insert(1);
+	io::ImageIdentificationAlignedCS* new_request = new io::ImageIdentificationAlignedCS(
+		&server_conn, face_patches, target_set
+	);
+	request_handler.addRequest(new_request);
 
-	cv::imshow("bla", imgproc::ImageProc::createOne(face_patches, 1, 10));
-	cv::waitKey(0);
+
 	request_handler.processAllPendingRequests();
+	LoadResponses(&request_handler);
 
-	Update *update;
-
-	nr_images = ih.LoadImageBatch(face_patches, file_names, 5);
-	imgproc::ImageProc::batchResize(face_patches, 96, 96);
-	update = new Update(&server_conn, face_patches, std::vector<int>(nr_images, 6), 1);
-	request_handler.addRequest(update);
-
-	cv::imshow("bla", imgproc::ImageProc::createOne(face_patches, 1, 10));
-	cv::waitKey(0);
-	request_handler.processAllPendingRequests();
-
-
-
-	nr_images = ih.LoadImageBatch(face_patches, file_names, 5);
-	imgproc::ImageProc::batchResize(face_patches, 96, 96);
-	update = new Update(&server_conn, face_patches, std::vector<int>(nr_images, 6), 1);
-	request_handler.addRequest(update);
-
-	cv::imshow("bla", imgproc::ImageProc::createOne(face_patches, 1, 10));
-	cv::waitKey(0);
-	request_handler.processAllPendingRequests();
-
-
-	nr_images = ih.LoadImageBatch(face_patches, file_names, 5);
-	imgproc::ImageProc::batchResize(face_patches, 96, 96);
-	update = new Update(&server_conn, face_patches, std::vector<int>(nr_images, 6), 1);
-	request_handler.addRequest(update);
-
-	cv::imshow("bla", imgproc::ImageProc::createOne(face_patches, 1, 10));
-	cv::waitKey(0);
-	request_handler.processAllPendingRequests();
-
-
-	nr_images = ih.LoadImageBatch(face_patches, file_names, 5);
-	imgproc::ImageProc::batchResize(face_patches, 96, 96);
-	update = new Update(&server_conn, face_patches, std::vector<int>(nr_images, 6), 1);
-	request_handler.addRequest(update);
-
-	cv::imshow("bla", imgproc::ImageProc::createOne(face_patches, 1, 10));
-	cv::waitKey(0);
-	request_handler.processAllPendingRequests();
-
-
-	nr_images = ih.LoadImageBatch(face_patches, file_names, 5);
-	imgproc::ImageProc::batchResize(face_patches, 96, 96);
-	update = new Update(&server_conn, face_patches, std::vector<int>(nr_images, 6), 1);
-	request_handler.addRequest(update);
-
-	cv::imshow("bla", imgproc::ImageProc::createOne(face_patches, 1, 10));
-	cv::waitKey(0);
-	request_handler.processAllPendingRequests();
-
-
-	nr_images = ih.LoadImageBatch(face_patches, file_names, 5);
-	imgproc::ImageProc::batchResize(face_patches, 96, 96);
-	update = new Update(&server_conn, face_patches, std::vector<int>(nr_images, 6), 1);
-	request_handler.addRequest(update);
-
-	cv::imshow("bla", imgproc::ImageProc::createOne(face_patches, 1, 10));
-	cv::waitKey(0);
-	request_handler.processAllPendingRequests();
 
 	server_conn.Close();
 	return 0;
