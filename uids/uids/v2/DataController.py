@@ -58,7 +58,7 @@ class DataController:
         for class_id, __clf in self.class_clusters.iteritems():
             if class_id in class_ids:
                 class_ids_clean.append(class_id)
-                distances.append(self.class_clusters[id].class_mean_dist(samples, metric))
+                distances.append(self.class_clusters[class_id].class_mean_dist(samples, metric))
         return np.array(distances), np.array(class_ids_clean)
 
     # --------- MANIFOLD LEARNING

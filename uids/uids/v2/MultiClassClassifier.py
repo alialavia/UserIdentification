@@ -181,6 +181,8 @@ class MultiCl(MultiClassClassifierBase):
         if len(clean_ids) == 0:
             return None
 
+        mean_dist_l2 = list(mean_dist_l2)
+        clean_ids = list(clean_ids)
         log.info('cl', "Closed set distance scores (L2 squared): {} | max: {}".format(clean_ids, mean_dist_l2))
 
         min_index = mean_dist_l2.index(min(mean_dist_l2))
