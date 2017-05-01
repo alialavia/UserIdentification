@@ -343,7 +343,7 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 
 				// extract images
 				std::vector<cv::Mat*> face_patches;
-				std::vector<int> sample_weights;
+				std::vector<std::tuple<int, int>> sample_weights;
 				bool has_samples = target_user->pGrid->ExtractUnprocessedImageBatchWithTimeout(5, 6, face_patches, sample_weights);
 
 				if (has_samples) {
@@ -415,7 +415,7 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 
 				// extract images
 				std::vector<cv::Mat*> face_patches;
-				std::vector<int> sample_weights;
+				std::vector<std::tuple<int, int>> sample_weights;
 				bool has_samples = target_user->pGrid->ExtractUnprocessedImageBatchWithTimeout(5, 5, face_patches, sample_weights);
 
 				if (has_samples) {

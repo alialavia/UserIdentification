@@ -4,6 +4,7 @@
 #include <opencv2/core/mat.hpp>
 #include <io/Networking.h>
 #include <unordered_set>
+#include <tuple>
 
 namespace io {
 	class TCPClient;
@@ -191,17 +192,70 @@ namespace io {
 	};
 
 
+	//class PartialImageIdentificationAligned : public NetworkRequest
+	//{
+	//public:
+	//	PartialImageIdentificationAligned(
+	//		io::TCPClient* server_conn,
+	//		std::vector<cv::Mat*> images,
+	//		std::vector<int> img_weights,
+	//		int tracking_id
+	//	) :
+	//		NetworkRequest(server_conn, NetworkRequest_PartialImageIdentificationAligned),
+	//		mImageWeights(img_weights),
+	//		mTrackingID(tracking_id)
+	//	{
+	//		// make deep copy of images
+	//		for (size_t i = 0; i < images.size(); i++) {
+	//			mImages.push_back((*images[i]).clone());
+	//		}
+	//	}
+	//	PartialImageIdentificationAligned(
+	//		io::TCPClient* server_conn,
+	//		std::vector<cv::Mat> images,
+	//		std::vector<int> img_weights,
+	//		int tracking_id
+	//	) :
+	//		NetworkRequest(server_conn, NetworkRequest_PartialImageIdentificationAligned),
+	//		mImageWeights(img_weights),
+	//		mTrackingID(tracking_id)
+	//	{
+	//		// make deep copy of images
+	//		for (size_t i = 0; i < images.size(); i++) {
+	//			mImages.push_back(images[i].clone());
+	//		}
+	//	}
+
+	//protected:
+
+	//	// submit specific payload
+	//	void SubmitPayload() {
+	//		// tracking id
+	//		pServerConn->SendUInt(mTrackingID);
+	//		// images
+	//		pServerConn->SendImageBatchQuadraticSameSize(mImages);
+	//		// weights
+	//		pServerConn->SendUCharArray(mImageWeights);
+	//	}
+
+	//	// payload: quadratic(!) images of same size
+	//	std::vector<cv::Mat> mImages;
+	//	std::vector<int> mImageWeights;
+	//	int mTrackingID;
+
+	//};
+
 	class PartialImageIdentificationAligned : public NetworkRequest
 	{
 	public:
 		PartialImageIdentificationAligned(
 			io::TCPClient* server_conn,
 			std::vector<cv::Mat*> images,
-			std::vector<int> img_weights,
+			std::vector<std::tuple<int, int>> img_poses,
 			int tracking_id
 		) :
 			NetworkRequest(server_conn, NetworkRequest_PartialImageIdentificationAligned),
-			mImageWeights(img_weights),
+			mImagePoses(img_poses),
 			mTrackingID(tracking_id)
 		{
 			// make deep copy of images
@@ -212,11 +266,11 @@ namespace io {
 		PartialImageIdentificationAligned(
 			io::TCPClient* server_conn,
 			std::vector<cv::Mat> images,
-			std::vector<int> img_weights,
+			std::vector<std::tuple<int, int>> img_poses,
 			int tracking_id
 		) :
 			NetworkRequest(server_conn, NetworkRequest_PartialImageIdentificationAligned),
-			mImageWeights(img_weights),
+			mImagePoses(img_poses),
 			mTrackingID(tracking_id)
 		{
 			// make deep copy of images
@@ -234,12 +288,17 @@ namespace io {
 			// images
 			pServerConn->SendImageBatchQuadraticSameSize(mImages);
 			// weights
-			pServerConn->SendUCharArray(mImageWeights);
+			for (auto& elem : mImagePoses) {
+				// pitch
+				pServerConn->SendChar(std::get<0>(elem));
+				// yaw
+				pServerConn->SendChar(std::get<1>(elem));
+			}
 		}
 
 		// payload: quadratic(!) images of same size
 		std::vector<cv::Mat> mImages;
-		std::vector<int> mImageWeights;
+		std::vector<std::tuple<int,int>> mImagePoses;
 		int mTrackingID;
 
 	};
@@ -375,19 +434,71 @@ namespace io {
 		int mUserID;
 	};
 
+	//class PartialUpdateAligned : public NetworkRequest
+	//{
+	//public:
+	//	PartialUpdateAligned(
+	//		io::TCPClient* server_conn,
+	//		std::vector<cv::Mat*> images,
+	//		std::vector<int> weights,
+	//		int user_id,
+	//		// specify sub type (prealigned, robust)
+	//		NetworkRequestType sub_type = NetworkRequest_PartialUpdateAlignedRobust
+	//	) :
+	//		NetworkRequest(server_conn, sub_type),
+	//		mImageWeights(weights),
+	//		mUserID(user_id)
+	//	{
+	//		// make deep copy of images
+	//		for (size_t i = 0; i < images.size(); i++) {
+	//			mImages.push_back((*images[i]).clone());
+	//		}
+	//	}
+	//	PartialUpdateAligned(
+	//		io::TCPClient* server_conn,
+	//		std::vector<cv::Mat> images,
+	//		std::vector<int> weights,
+	//		int user_id,
+	//		NetworkRequestType sub_type = NetworkRequest_PartialUpdateAlignedRobust
+	//	) :
+	//		NetworkRequest(server_conn, sub_type),
+	//		mImageWeights(weights),
+	//		mUserID(user_id)
+	//	{
+	//		mImages = images;
+	//	}
+	//protected:
+
+	//	// submit specific payload
+	//	void SubmitPayload() {
+	//		pServerConn->SendUInt(mUserID);	// user id
+	//		// images
+	//		pServerConn->SendImageBatchQuadraticSameSize(mImages);
+	//		// weights
+	//		pServerConn->SendUCharArray(mImageWeights);
+	//	}
+
+	//	// payload: quadratic(!) images of same size
+	//	std::vector<cv::Mat> mImages;
+	//	std::vector<int> mImageWeights;
+	//	// Todo: careful! Int sent as Uint
+	//	int mUserID;
+	//};
+
+
 	class PartialUpdateAligned : public NetworkRequest
 	{
 	public:
 		PartialUpdateAligned(
 			io::TCPClient* server_conn,
 			std::vector<cv::Mat*> images,
-			std::vector<int> weights,
+			std::vector<std::tuple<int, int>> img_poses,
 			int user_id,
 			// specify sub type (prealigned, robust)
 			NetworkRequestType sub_type = NetworkRequest_PartialUpdateAlignedRobust
 		) :
 			NetworkRequest(server_conn, sub_type),
-			mImageWeights(weights),
+			mImagePoses(img_poses),
 			mUserID(user_id)
 		{
 			// make deep copy of images
@@ -398,12 +509,12 @@ namespace io {
 		PartialUpdateAligned(
 			io::TCPClient* server_conn,
 			std::vector<cv::Mat> images,
-			std::vector<int> weights,
+			std::vector<std::tuple<int, int>> img_poses,
 			int user_id,
 			NetworkRequestType sub_type = NetworkRequest_PartialUpdateAlignedRobust
 		) :
 			NetworkRequest(server_conn, sub_type),
-			mImageWeights(weights),
+			mImagePoses(img_poses),
 			mUserID(user_id)
 		{
 			mImages = images;
@@ -412,20 +523,25 @@ namespace io {
 
 		// submit specific payload
 		void SubmitPayload() {
-			pServerConn->SendUInt(mUserID);	// user id
+			// user id
+			pServerConn->SendUInt(mUserID);	
 			// images
 			pServerConn->SendImageBatchQuadraticSameSize(mImages);
 			// weights
-			pServerConn->SendUCharArray(mImageWeights);
+			for (auto& elem : mImagePoses) {
+				// pitch
+				pServerConn->SendChar(std::get<0>(elem));
+				// yaw
+				pServerConn->SendChar(std::get<1>(elem));
+			}
 		}
 
 		// payload: quadratic(!) images of same size
 		std::vector<cv::Mat> mImages;
-		std::vector<int> mImageWeights;
+		std::vector<std::tuple<int, int>> mImagePoses;
 		// Todo: careful! Int sent as Uint
 		int mUserID;
 	};
-
 
 
 	class ImageAlignment : public NetworkRequest

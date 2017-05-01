@@ -52,6 +52,15 @@ class DataController:
         else:
             return None
 
+    def class_mean_distances(self, samples, class_ids, metric='euclidean'):
+        distances = []
+        class_ids_clean = []
+        for class_id, __clf in self.class_clusters.iteritems():
+            if class_id in class_ids:
+                class_ids_clean.append(class_id)
+                distances.append(self.class_clusters[id].class_mean_dist(samples, metric))
+        return np.array(distances), np.array(class_ids_clean)
+
     # --------- MANIFOLD LEARNING
     # TODO: implement
 

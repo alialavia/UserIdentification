@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import numpy as np
 import response_types as r
 from uids.utils.Logger import Logger as log
 # config
@@ -18,8 +19,16 @@ class PartialImageIdentificationAligned:
         # receive images
         images = server.receive_image_batch_squared_same_size(conn)
 
-        # get weights
-        weights = server.receive_uchar_array(conn)
+        # get sample poses
+        sample_poses = []
+        for x in range(0, len(images)):
+            pitch = server.receive_char(conn)
+            yaw = server.receive_char(conn)
+            sample_poses.append([pitch, yaw])
+        sample_poses = np.array(sample_poses)
+
+        # TODO: calculate weights
+        weights = np.repeat(10, len(images))
 
         # generate embedding
         embeddings = server.embedding_gen.get_embeddings(images, False)
@@ -55,7 +64,6 @@ class PartialImageIdentificationAligned:
 
         # get user nice name
         user_name = server.user_db.get_name_from_id(id_pred)
-
 
         print ".... is_save: {}, is_consistent: {}, id_pred: {}, confidence: {}".format(is_save_set, is_consistent, id_pred, confidence)
 
@@ -124,8 +132,16 @@ class PartialUpdateAligned:
         # receive images
         images = server.receive_image_batch_squared_same_size(conn)
 
-        # receive weights
-        weights = server.receive_uchar_array(conn)
+        # get sample poses
+        sample_poses = []
+        for x in range(0, len(images)):
+            pitch = server.receive_char(conn)
+            yaw = server.receive_char(conn)
+            sample_poses.append([pitch, yaw])
+        sample_poses = np.array(sample_poses)
+
+        # TODO: calculate weights
+        weights = np.repeat(10, len(images))
 
         # generate embedding
         embeddings = server.embedding_gen.get_embeddings(images, align=False)
@@ -164,6 +180,48 @@ class PartialUpdateAligned:
             user_name = "unnamed"
         r.PredictionFeedback(server, conn, id_pred, user_name, confidence=int(confidence*100.0))
 
+
+class ImageIdentificationPrealignedCS:
+
+    def __init__(self, server, conn, handle):
+
+        nr_users = server.receive_uint(conn)
+        target_users = []
+        for x in range(0, nr_users):
+            # get target class ids (uint)
+            user_id = server.receive_uint(conn)
+            target_users.append(user_id)
+
+        # receive images
+        images = server.receive_image_batch_squared_same_size(conn)
+
+        log.severe('ImageIdentificationPrealignedCS')
+
+        # generate embedding
+        embeddings = server.embedding_gen.get_embeddings(images, False)
+
+        if not embeddings.any():
+            r.Error(server, conn, "Could not generate face embeddings.")
+            return
+
+        # closed set user id prediction
+        user_id = server.classifier.predict_closed_set(target_users, embeddings)
+
+        if user_id is None:
+            r.Error(server, conn, "Label could not be predicted - Samples are contradictory.")
+            return
+
+        # get user nice name
+        user_name = server.user_db.get_name_from_id(user_id)
+
+        if user_name is None:
+            user_name = "unnamed"
+
+        # get profile picture
+        profile_picture = server.user_db.get_profile_picture(user_id)
+        log.info('server', "User identification complete: {} [ID], {} [Username]".format(user_id, user_name))
+        r.Identification(server, conn, int(user_id), user_name,
+                         profile_picture=profile_picture)
 
 # --------------- MISC
 

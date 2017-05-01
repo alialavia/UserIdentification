@@ -34,27 +34,27 @@ class MultiCl(MultiClassClassifierBase):
     # -------- standard methods
 
     # TODO: untested
-    def validate_class(self, samples, sample_weight, target_class_id):
-        """
-        first use "is_guaranteed_new_class"!
-        :param samples:
-        :param sample_weight:
-        :return: inconsistent, confidence
-        """
-
-        # individual classifier predictions (binary)
-        predictions = {}
-        for class_id, cls in self.classifiers.iteritems():
-            predictions[class_id] = cls.predict(samples)
-
-        is_consistent = self.check_multicl_predictions(predictions, target_class_id)
-
-        if not is_consistent:
-            return False, 1.0
-
-        # calculate confidence for target class
-        conf = self.calc_normalized_positive_confidence(predictions[target_class_id], sample_weight)
-        return True, conf
+    # def validate_class(self, samples, sample_weight, target_class_id):
+    #     """
+    #     first use "is_guaranteed_new_class"!
+    #     :param samples:
+    #     :param sample_weight:
+    #     :return: inconsistent, confidence
+    #     """
+    #
+    #     # individual classifier predictions (binary)
+    #     predictions = {}
+    #     for class_id, cls in self.classifiers.iteritems():
+    #         predictions[class_id] = cls.predict(samples)
+    #
+    #     is_consistent = self.check_multicl_predictions(predictions, target_class_id)
+    #
+    #     if not is_consistent:
+    #         return False, 1.0
+    #
+    #     # calculate confidence for target class
+    #     conf = self.calc_normalized_positive_confidence(predictions[target_class_id], sample_weight)
+    #     return True, conf
 
     def predict_class(self, samples, sample_weight=None):
         """
@@ -173,6 +173,19 @@ class MultiCl(MultiClassClassifierBase):
 
         return is_consistent, target_class, confidence
 
+    def predict_closed_set(self, target_classes, samples):
+
+        # choose nearest class
+        mean_dist_l2, clean_ids = self.data_controller.class_mean_distances(samples, target_classes)
+
+        if len(clean_ids) == 0:
+            return None
+
+        log.info('cl', "Closed set distance scores (L2 squared): {} | max: {}".format(clean_ids, mean_dist_l2))
+
+        min_index = mean_dist_l2.index(min(mean_dist_l2))
+        return clean_ids[min_index]
+
     # ----------- multicl meta recognition
 
     def check_multicl_predictions(self, predictions, target_class, weights=None, save_weight=7):
@@ -216,12 +229,14 @@ class MultiCl(MultiClassClassifierBase):
 
         return validity, fn, fp
 
+
     def calc_abs_confidence(self, predictions, weights, max_weight):
         assert len(predictions) == len(weights)
         predictions = np.clip(predictions, 0, 1)
         norm_f = 1.0/max_weight
         confidence = np.dot(predictions, np.transpose(norm_f * weights))
         return confidence
+
 
     def calc_normalized_positive_confidence(self, predictions, weights=None):
         """
@@ -236,7 +251,6 @@ class MultiCl(MultiClassClassifierBase):
         norm_f = 1.0/np.sum(weights)
         confidence = np.dot(predictions, np.transpose(norm_f * weights))
         return confidence
-
 
     # ------------------
 

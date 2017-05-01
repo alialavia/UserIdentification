@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-"""Global server configuration - Request/Response names match models in src/request src/response"""
 ROUTING = {
    "REQUEST": {  # request id range: 0-255
        "ID": {
            "PartialImageIdentificationAligned": 4,  # identify user from image
+           "ImageIdentificationPrealignedCS": 3,
            "PartialUpdateAligned": 15,
            "ProfilePictureUpdate": 23,
            "CancelIdentification": 221,
@@ -13,6 +13,7 @@ ROUTING = {
        },
        "NAME": {
            4: "PartialImageIdentificationAligned",
+           3: "ImageIdentificationPrealignedCS",
            15: "PartialUpdateAligned",
            23: "ProfilePictureUpdate",
            221: "CancelIdentification",
@@ -41,3 +42,4 @@ ROUTING = {
        }
    }
 }
+"""Global server configuration - Request/Response names match models in src/request src/response"""

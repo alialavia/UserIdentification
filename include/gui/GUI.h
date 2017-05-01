@@ -34,14 +34,15 @@ namespace gui {
 				target_roi.width = target_roi.x + img_copy.cols - target.cols;
 			}
 
-			try {
-				img_copy = img_copy(src_roi);
-				img_copy.copyTo(target(target_roi));
+			if (target_roi.y + target_roi.height > 0) {
+				try {
+					img_copy = img_copy(src_roi);
+					img_copy.copyTo(target(target_roi));
+				}
+				catch (...) {
+					// ...
+				}
 			}
-			catch (...) {
-				// ...
-			}
-
 		}
 
 	}

@@ -141,6 +141,56 @@ namespace tracking
 			return false;
 		}
 
+		bool ExtractUnprocessedImageBatchWithTimeout(int min_nr_images, int timeout_sec, std::vector<cv::Mat*> &images, std::vector<std::tuple<int, int>> &weights, bool temporal_order = true) {
+
+			std::vector<cv::Mat*> images_tmp;
+			std::vector<std::tuple<int, int>> weights_tmp;
+
+			if (temporal_order)
+			{
+				// iterate in capturing order, check image ptr
+				for (auto const& item : mImageOrder) {
+					cv::Mat* mptr = std::get<0>(item);
+					if (!mProcessedImages.count(mptr)) {
+						cv::Vec3d angles = mAngles[mptr];
+						images_tmp.push_back(mptr);
+						// save pitch and yaw
+						weights_tmp.push_back(std::make_tuple(angles[1], angles[2]));
+					}
+				}
+			}
+			else
+			{
+				for (auto const& target : mAngles) {
+					if (!mProcessedImages.count(target.first)) {
+						images_tmp.push_back(target.first);
+						// calc weight
+						weights_tmp.push_back(std::make_tuple(target.second[1], target.second[2]));
+					}
+				}
+			}
+
+			if (images_tmp.size() > 0) {
+				int64_t now = get_timestamp();
+
+				// extract
+				if (images_tmp.size() >= min_nr_images ||
+					now - mLastExtraction > timeout_sec * 1000
+					) {
+					mLastExtraction = now;
+					// track processed images
+					for (size_t i = 0; i < images_tmp.size(); i++) {
+						mProcessedImages.insert(images_tmp[i]);
+					}
+					images = images_tmp;
+					weights = weights_tmp;
+					return true;
+				}
+			}
+
+			return false;
+		}
+
 		bool ResetIfFullOrStagnating(int max_images, int timeout_sec = 7) {
 
 			if (nr_images() >= max_images) {
