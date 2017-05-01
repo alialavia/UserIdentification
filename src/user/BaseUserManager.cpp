@@ -65,7 +65,8 @@ void BaseUserManager::RefreshUserTracking(
 #ifdef _DLIB_PREALIGN
 				mpDlibAligner ,
 #endif
-				scene_id
+				scene_id,
+				IDStatus_NonTarget	// init as object - till face is detected
 			);
 		}
 	}
@@ -153,7 +154,6 @@ void BaseUserManager::UpdateTrackingStatus() {
 
 		// ------------------------ check human status
 
-
 		uit1->second->GetStatus(ids);
 
 		// update face detection counter
@@ -168,7 +168,12 @@ void BaseUserManager::UpdateTrackingStatus() {
 				uit1->second->SetStatus(IDStatus_Unknown);
 			}
 		}
-		else {
+		else if (ids == IDStatus_NonTarget) {
+			// start target tracking if face has been seen once
+			if (uit1->second->IsHuman()) {
+				uit1->second->SetStatus(IDStatus_Unknown);
+			}
+		}else {
 			if (uit1->second->IsTrackingObject()) {
 				// reset UserID
 				uit1->second->ResetUserIdentity();
@@ -457,8 +462,6 @@ void BaseUserManager::RenderGUI(cv::Mat &img)
 		ActionStatus action;
 		target_user->GetStatus(id_status, action);
 
-		// show current prediction
-		cv::putText(img, "Prediction: "+std::to_string(target_user->mUserIDPredicted)+" || " + std::to_string(target_user->mPredictionConfidence) + "/100", cv::Point(bb.x + 10, bb.y + 70), cv::FONT_HERSHEY_SIMPLEX, font_size, color, 1, 8);
 
 		if (id_status == IDStatus_Identified || id_status == IDStatus_Uncertain)
 		{
@@ -514,14 +517,15 @@ void BaseUserManager::RenderGUI(cv::Mat &img)
 				bg_color = cv::Scalar(133, 21, 199);
 			} 
 
-			
-
 		}
 		else if (id_status == IDStatus_IsObject) {
 			text1 = "OBJECT TRACKING";
 			color = cv::Scalar(0, 0, 0);
 			bg_color = cv::Scalar(0, 0, 255);
 			// dont draw objects
+			continue;
+		}
+		else if (id_status == IDStatus_NonTarget) {
 			continue;
 		}
 		else
@@ -544,6 +548,9 @@ void BaseUserManager::RenderGUI(cv::Mat &img)
 
 			color = cv::Scalar(0, 0, 255);
 		}
+
+		// show current prediction
+		cv::putText(img, "Prediction: " + std::to_string(target_user->mUserIDPredicted) + " || " + std::to_string(target_user->mPredictionConfidence) + "/100", cv::Point(bb.x + 10, bb.y + 70), cv::FONT_HERSHEY_SIMPLEX, font_size, color, 1, 8);
 
 		int baseline = 0;
 		cv::Size textSize = cv::getTextSize(text1, cv::FONT_HERSHEY_SIMPLEX, font_size, 1, &baseline);

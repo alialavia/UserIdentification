@@ -15,6 +15,7 @@ namespace user
 
 	enum IdentificationStatus
 	{
+		IDStatus_NonTarget = -1, // not considered yet (e.g. face has to be seen first)
 		IDStatus_Unknown = 0,	 // has no ID yet
 		IDStatus_Identified = 1, // has ID and is safe
 		IDStatus_Uncertain = 2,	 // has ID but is not safe
@@ -43,10 +44,11 @@ namespace user
 #ifdef _DLIB_PREALIGN
 			features::DlibFaceAligner* aligner, 
 #endif
-			int tracking_id = -1
+			int tracking_id = -1,
+			IdentificationStatus id_Status = IDStatus_Unknown
 		) : mUserID(-1), mTrackingID(tracking_id), mUserNiceName(""), 
 		// init user status
-		mIDStatus(IDStatus_Unknown), mActionStatus(ActionStatus_Idle), 
+		mIDStatus(id_Status), mActionStatus(ActionStatus_Idle),
 		mTrackingStatus(TrackingConsistency_OK), 
 		mFaceData(nullptr), mUpdatingProfilePicture(false), mNrFramesNoFace(0), mNrFramesNoMovement(0)
 #ifdef _DLIB_PREALIGN
@@ -127,6 +129,7 @@ namespace user
 		std::string GetHumanStatusString();
 		void IncrementBBMovementStatus();
 		bool IsTrackingObject();
+		bool IsHuman();
 
 		// ids of possible confused users (for closed set identification)
 		std::unordered_set<int> mClosedSetConfusionIDs;

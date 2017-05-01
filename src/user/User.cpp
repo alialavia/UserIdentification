@@ -317,3 +317,11 @@ bool User::IsTrackingObject() {
 	return false;
 }
 
+bool User::IsHuman() {
+	if (mFaceData != nullptr) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}
