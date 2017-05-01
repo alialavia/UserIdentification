@@ -81,7 +81,7 @@ def eval_unrestr_perf(clf, avg_cycles=10, nr_test_samples=160, filename=""):
     save_csv = True
     randomize = True
     nr_iters = avg_cycles
-    training_sizes = [5, 10]
+    training_sizes = [5, 10, 20, 40]
 
     emb1 = load_embeddings("matthias/matthias_test.pkl")
     emb2 = load_embeddings("matthias/matthias_test2.pkl")
@@ -128,7 +128,18 @@ def eval_unrestr_perf(clf, avg_cycles=10, nr_test_samples=160, filename=""):
         iter_training_time = []
         iter_prediction_time = []
 
+        sys.stdout.write("Training with size {} ".format(nr_training_samples))
+        start = time.time()
         for i in range(0, nr_iters):
+            if i == 1:
+                est_time = (time.time()-start) * nr_training_samples
+                if est_time > 60:
+                    est_time = est_time/60.0
+                    sys.stdout.write(" | Estimated time: {:.2f} min, Iteration: ".format(est_time))
+                else:
+                    sys.stdout.write(" | Estimated time: {:.2f} sec, Iteration: ".format(est_time))
+            if i > 0:
+                sys.stdout.write("{}, ".format(i+1))
 
             # shuffle every round
             prng = RandomState(i+1)
@@ -169,6 +180,8 @@ def eval_unrestr_perf(clf, avg_cycles=10, nr_test_samples=160, filename=""):
             iter_f1_scores.append(f1_score)
             iter_youden_indices.append(precision+recall-1)
 
+        print "\n"
+
         avg_precision.append(np.mean(iter_precision))
         avg_recall.append(np.mean(iter_recall))
         avg_f1_scores.append(np.mean(iter_f1_scores))
@@ -176,11 +189,8 @@ def eval_unrestr_perf(clf, avg_cycles=10, nr_test_samples=160, filename=""):
         avg_prediction_time.append(np.mean(iter_prediction_time))
         avg_youden_indices.append(np.mean(iter_youden_indices))
 
-    for nr_training_samples in training_sizes:
-        print "T SIZE: ", nr_training_samples
 
     if True:
-        # keep only best
         if filename == "":
             filename = clf_name+'_unrestr_accuracy.csv'
 
@@ -204,7 +214,6 @@ def eval_unrestr_perf(clf, avg_cycles=10, nr_test_samples=160, filename=""):
             # writer.writerow(["%0.6f" % i for i in iter_precision])
             # writer.writerow(["%0.6f" % i for i in iter_recall])
             # writer.writerow(["%0.6f" % i for i in iter_training_time])
-
 
 
 
