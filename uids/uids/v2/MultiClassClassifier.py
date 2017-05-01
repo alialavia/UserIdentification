@@ -79,7 +79,7 @@ class MultiCl(MultiClassClassifierBase):
         false_positives = []
 
         # select classes in range
-        classes_in_range = self.data_controller.classes_in_range(samples=samples, metric='cosine', thresh=0.7)
+        classes_in_range = self.data_controller.classes_in_range(samples=samples, metric='euclidean', thresh=1.1)
 
         if not classes_in_range:
             log.info('cl', "No classes in range...")
@@ -91,20 +91,28 @@ class MultiCl(MultiClassClassifierBase):
                 predictions[class_id] = cls.predict(samples)
 
                 true_positive_samples = np.count_nonzero(predictions[class_id] == 1)
-                false_positive_samples = np.count_nonzero(predictions[class_id] == -1)
 
                 # count certain detections
                 if true_positive_samples >= true_pos_thresh:
                     target_positive_classes.append(class_id)
                     true_positives_rates.append(true_positive_samples)
-
-                # count uncertain detections
-                if false_positive_samples >= false_pos_thresh:
+                elif true_positive_samples >= false_pos_thresh:
+                    # not true class - check if too many false positives
                     false_positives.append(class_id)
+
+                # else:
+                #     false_positive_samples = np.count_nonzero(predictions[class_id] == -1)
+                #     # count uncertain detections
+                #     if false_positive_samples >= false_pos_thresh:
+                #         false_positives.append(class_id)
+
+
 
         is_consistent = True
         target_class = None
         safe_weight = 7
+
+        print "... T_fp: {}, T_tp: {} |  fp: {}, tp: {}".format(false_pos_thresh, true_pos_thresh, false_positives, target_positive_classes)
 
         # check for inconsistent predictions
         if len(false_positives) == 0:
@@ -132,22 +140,22 @@ class MultiCl(MultiClassClassifierBase):
                 target_class = target_positive_classes[best_index]
 
         # TODO: not active right now
-        if is_consistent and False:
-            # check for strong samples with inconsistent predictions
-            mask = sample_weight > safe_weight
-            if np.count_nonzero(mask):
-                # check if safe samples predict wrong class
-                for class_id, pred in predictions.iteritems():
-                    if class_id == target_class:
-                        # false negative
-                        if np.count_nonzero(pred[mask] < 0):
-                            is_consistent = False
-                            break
-                    else:
-                        # false positive
-                        if np.count_nonzero(pred[mask] > 0):
-                            is_consistent = False
-                            break
+        # if is_consistent and False:
+        #     # check for strong samples with inconsistent predictions
+        #     mask = sample_weight > safe_weight
+        #     if np.count_nonzero(mask):
+        #         # check if safe samples predict wrong class
+        #         for class_id, pred in predictions.iteritems():
+        #             if class_id == target_class:
+        #                 # false negative
+        #                 if np.count_nonzero(pred[mask] < 0):
+        #                     is_consistent = False
+        #                     break
+        #             else:
+        #                 # false positive
+        #                 if np.count_nonzero(pred[mask] > 0):
+        #                     is_consistent = False
+        #                     break
 
         # calculate confidence
         confidence = 0.
@@ -280,7 +288,7 @@ class MultiCl(MultiClassClassifierBase):
             return True
 
         # select classes in range
-        classes_in_range = self.data_controller.classes_in_range(samples=samples, metric='cosine', thresh=0.7)
+        classes_in_range = self.data_controller.classes_in_range(samples=samples, metric='euclidean', thresh=1.1)
 
         if len(classes_in_range) == 0:
             log.info('cls', "No class in range... (cosine < 0.7)")

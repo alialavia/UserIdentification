@@ -31,7 +31,7 @@ class PartialImageIdentificationAligned:
         # accumulate samples (optional)
         is_save_set, current_samples, current_weights = server.classifier.id_controller.accumulate_samples(tracking_id, new_samples=embeddings, sample_weights=weights)
 
-        print "tracking id: {}, sample weights: {}".format(tracking_id, weights)
+        log.info('server', "tracking id: {}, sample weights: {}".format(tracking_id, weights))
 
         if len(current_samples) == 0:
             # queue has just been resetted
@@ -56,6 +56,9 @@ class PartialImageIdentificationAligned:
         # get user nice name
         user_name = server.user_db.get_name_from_id(id_pred)
 
+
+        print ".... is_save: {}, is_consistent: {}, id_pred: {}, confidence: {}".format(is_save_set, is_consistent, id_pred, confidence)
+
         if user_name is None:
             user_name = "unnamed"
 
@@ -75,6 +78,8 @@ class PartialImageIdentificationAligned:
                     server.classifier.init_new_class(user_id, current_samples)
                     id_pred = user_id
                 else:
+                    # for s in current_samples:
+                    #     print "s: {:.2f}".format(s[0])
                     # add data for training and return identification
                     # add to data model
                     server.classifier.data_controller.add_samples(user_id=id_pred, new_samples=current_samples)
@@ -132,10 +137,16 @@ class PartialUpdateAligned:
         # accumulate samples - check for inconsistencies
         verified_data, reset_user, id_pred, confidence = server.classifier.update_controller.accumulate_samples(user_id, embeddings, weights)
 
-        print "verified_data (len), reset_user, id_pred, confidence: ", len(verified_data), reset_user, id_pred, confidence
+        log.info('cl', "verified_data (len: {}), reset_user: {}: ID {}, conf {}".format(len(verified_data), reset_user, id_pred, confidence))
 
         # forward save part of data
         if verified_data.size:
+            # for s in embeddings:
+            #     print "new: {:.8f}".format(s[0])
+            # print "------------------"
+            # for s in verified_data:
+            #     print "s: {:.5f}".format(s[0])
+
             # add to data model
             server.classifier.data_controller.add_samples(user_id=user_id, new_samples=verified_data)
             # add to classifier training queue
@@ -162,6 +173,8 @@ class CancelIdentification:
     def __init__(self, server, conn, handle):
         # receive tracking id
         tracking_id = server.receive_uint(conn)
+
+        log.info('server', "Dropping identification queue for tracking id {}".format(tracking_id))
         # drop samples
         server.classifier.id_controller.drop_samples(tracking_id=tracking_id)
         r.OK(server, conn)

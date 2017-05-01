@@ -72,6 +72,7 @@ class L2Estimator(BaseEstimator):
 
     def __init__(self, T=0.99, comparison='mean_ref'):
         self.T = T
+        self.comparison = comparison
 
     def fit(self, X, y=None):
         """
@@ -131,6 +132,7 @@ class CosineDistEstimator(BaseEstimator):
 
     def __init__(self, T=0.7, comparison='mean_ref'):
         self.T = T
+        self.comparison = comparison
 
     def fit(self, X, y=None):
         """

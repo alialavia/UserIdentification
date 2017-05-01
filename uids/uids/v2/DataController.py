@@ -21,7 +21,7 @@ class DataController:
             if range < thresh:
                 class_ids.append(id)
             else:
-                log.info('db', "Class {} out of range (0.7 [ref] < {:.3f})".format(id, range))
+                log.info('db', "Class {} out of range [{}] ({} [ref] < {:.3f})".format(id, metric, thresh, range))
 
         return class_ids
 

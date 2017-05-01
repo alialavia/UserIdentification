@@ -62,11 +62,12 @@ class ABOD:
                     AC = dist_lookup[i_sample][j]
 
                     if np.array_equal(B, C):
-                        log.error("Points are equal: B == C! Assuming classification of training point (ABOD 1000)")
-                        varList.append(1000)
                         print "Bi/Cj: {}/{}".format(i, j)
-                        # sys.exit('ERROR\tangleBAC\tmath domain ERROR, |cos<AB, AC>| <= 1')
-                        continue
+                        log.error("Points are equal: B == C! Reference Set contains two times the same samples (ABOD 1000)")
+                        sys.exit("Points are equal: B == C! Reference Set contains two times the same samples (ABOD 1000)")
+                        # varList.append(1000)
+                        # # sys.exit('ERROR\tangleBAC\tmath domain ERROR, |cos<AB, AC>| <= 1')
+                        # continue
 
                     angle_BAC = ABOD.angleBAC(A, B, C, AB, AC)
                     # angle_BAC = ABOD.angleFast(A-B, A-C)

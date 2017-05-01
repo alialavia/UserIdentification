@@ -408,8 +408,6 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 			// send model updates - reinforced learning
 			if (action == ActionStatus_DataCollection) {
 
-
-
 				if (target_user->TryToRecordFaceSample(scene_rgb))
 				{
 
