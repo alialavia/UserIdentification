@@ -9,6 +9,7 @@ from sklearn.metrics import pairwise_distances
 from sklearn.utils.extmath import fast_dot
 from uids.features.ConfidenceGen import WeightGenerator
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.base import BaseEstimator
 
 
 class SetMeanDistCosine:
@@ -63,8 +64,8 @@ class ABOD:
 
                     if np.array_equal(B, C):
                         print "Bi/Cj: {}/{}".format(i, j)
-                        log.error("Points are equal: B == C! Reference Set contains two times the same samples (ABOD 1000)")
-                        sys.exit("Points are equal: B == C! Reference Set contains two times the same samples (ABOD 1000)")
+                        log.error("Points are equal: B == C! Reference Set contains two times the same samples")
+                        sys.exit("Points are equal: B == C! Reference Set contains two times the same samples")
                         # varList.append(1000)
                         # # sys.exit('ERROR\tangleBAC\tmath domain ERROR, |cos<AB, AC>| <= 1')
                         # continue
@@ -117,9 +118,10 @@ class ABOD:
                     AC = dist_lookup[i_sample][j]
 
                     if np.array_equal(B, C):
-                        log.error("Points are equal: B == C! Assuming classification of training point (ABOD 1000)")
-                        factor_list.append(1000)
                         print "Bi/Cj: {}/{}".format(i, j)
+                        log.error("Points are equal: B == C! Assuming classification of training point")
+                        sys.exit("Points are equal: B == C! Reference Set contains two times the same samples")
+                        factor_list.append(1000)
                         # sys.exit('ERROR\tangleBAC\tmath domain ERROR, |cos<AB, AC>| <= 1')
                         continue
 
@@ -187,12 +189,19 @@ class ABOD:
         return angle
 
 
-class WeightedABOD(ABOD):
+class WeightedABOD(ABOD, BaseEstimator):
 
     weight_gen = None
+    # 1: 1/(P12^2*P13^2)
+    # 2: 1/(P12+P13)
+    # 3: variance with weighted mean
+    # 4: weighted variance (regular mean)
+    # 5: weighted variance with weighted mean
+    variant = None
 
-    def __init__(self):
+    def __init__(self, variant):
         self.weight_gen = WeightGenerator(embedding_file='pose_matthias3.pkl', pose_file='pose_matthias3_poses.pkl')
+        self.variant = variant
 
     @staticmethod
     def unbiased_weighted_var(values, weights):
@@ -205,18 +214,15 @@ class WeightedABOD(ABOD):
         return variance_unbiased
 
     @staticmethod
-    def biased_weighted_var(values, weights):
-        if False:
-            # no influence
-            pass
-            weights = weights/np.sum(weights)
-
-        average = np.average(values, weights=weights)
+    def biased_weighted_var(values, weights, weighted_average=True):
+        if weighted_average:
+            average = np.average(values, weights=weights)
+        else:
+            average = np.average(values)
         variance_biased = np.average((values - average) ** 2, weights=weights)  # Fast and numerically precise
         return variance_biased
 
     def get_weighted_score(self, test_samples, test_poses, ref_samples, ref_poses):
-
         assert test_samples.ndim == 2
         assert ref_samples.ndim == 2
 
@@ -228,7 +234,9 @@ class WeightedABOD(ABOD):
 
         # if only one sample: cannot calculate abof
         if len(ref_samples) < 3:
-            log.severe('Cannot calculate ABOF with {} reference samples (variance calculation needs at least 3 reference points)'.format(len(reference_set)))
+            log.severe(
+                'Cannot calculate ABOF with {} reference samples (variance calculation needs at least 3 reference points)'.format(
+                    len(ref_samples)))
             raise Exception
 
         for i_sample, A in enumerate(test_samples):
@@ -239,7 +247,6 @@ class WeightedABOD(ABOD):
                 B = ref_samples[i]
                 # distance
                 AB = dist_lookup[i_sample][i]
-
                 for j in range(i + 1):
                     if j == i:  # ensure B != C
                         continue
@@ -249,7 +256,7 @@ class WeightedABOD(ABOD):
                     AC = dist_lookup[i_sample][j]
 
                     if np.array_equal(B, C):
-                        log.error("Points are equal: B == C! Assuming classification of training point (ABOD 1000)")
+                        sys.exit("Points are equal: B == C! Reference Set contains two times the same samples")
                         factor_list.append(1000)
                         print "Bi/Cj: {}/{}".format(i, j)
                         # sys.exit('ERROR\tangleBAC\tmath domain ERROR, |cos<AB, AC>| <= 1')
@@ -257,28 +264,39 @@ class WeightedABOD(ABOD):
 
                     angle_BAC = ABOD.angleBAC(A, B, C, AB, AC)
 
-                    w1 = self.weight_gen.get_weight(test_poses[i_sample], ref_poses[i])
-                    w2 = self.weight_gen.get_weight(test_poses[i_sample], ref_poses[j])
-
-                    # get weights from i_sample to ref samples
-                    factor_weight = self.weight_gen.get_triplet_weight(test_poses[i_sample], ref_poses[i], ref_poses[j])
-                    weight_list.append(factor_weight)
+                    w1 = self.weight_gen.get_dist_clipped(test_poses[i_sample], ref_poses[i])
+                    w2 = self.weight_gen.get_dist_clipped(test_poses[i_sample], ref_poses[j])
+                    weight_list.append(2./float(w1+w2))     # 1/(a+b)/2
 
                     # compute each element of variance list
                     try:
                         # apply weighting
-                        tmp = angle_BAC / float(math.pow(AB *AC, 2))
+                        if self.variant == 1:
+                            tmp = angle_BAC / float(math.pow(AB * AC, 2) * (w1 + w2))
+                        elif self.variant == 2:
+                            tmp = angle_BAC / float(math.pow(AB * AC, 2) * (w1 + w2))
+                        else:
+                            tmp = angle_BAC / float(math.pow(AB * AC, 2))
+
                     except ZeroDivisionError:
                         log.severe("ERROR\tABOF\tfloat division by zero! Trying to predict training point?'")
                         tmp = 500
                         # sys.exit('ERROR\tABOF\tfloat division by zero! Trying to predict training point?')
                     factor_list.append(tmp)
 
-                # print weight_list
             # calculate weighted variance
-            biased_weighted_var = WeightedABOD.biased_weighted_var(np.array(factor_list), np.array(weight_list))
-            factors.append(biased_weighted_var)
+            if self.variant == 3:
+                weighted_average = np.average(factor_list, weights=np.array(weight_list))
+                var = np.average((factor_list - weighted_average) ** 2)
+            elif self.variant == 4:
+                var = WeightedABOD.biased_weighted_var(np.array(factor_list), np.array(weight_list), weighted_average=False)
+            elif self.variant == 5:
+                var = WeightedABOD.biased_weighted_var(np.array(factor_list), np.array(weight_list))
+            else:
+                var = np.var(np.array(factor_list))
+
+            factors.append(var)
+            # weight_list = np.repeat(1, len(factors))
             sample_weights.append(np.average(weight_list))
 
         return np.array(factors), np.array(sample_weights)
-
