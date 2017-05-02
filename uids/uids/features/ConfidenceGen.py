@@ -8,6 +8,7 @@ import time
 from sklearn.metrics.pairwise import *
 from uids.utils.Logger import Logger as log
 import matplotlib.pyplot as plt
+from scipy.spatial.distance import cdist
 
 
 # path managing
@@ -162,23 +163,27 @@ class WeightGenerator:
     def euclidean_dist_squared(self, pitch_yaw1, pitch_yaw2):
         emb1 = self.select(pitch_yaw1)
         emb2 = self.select(pitch_yaw2)
-        dist = pairwise_distances(emb1.reshape(1, -1), emb2.reshape(1, -1), metric='euclidean')[0][0]
+        # dist = pairwise_distances(emb1.reshape(1, -1), emb2.reshape(1, -1), metric='euclidean')[0][0]
+        dist = cdist(emb1.reshape(1, -1), emb2.reshape(1, -1), 'euclidean')
         dist = np.square(dist)
         return dist
 
     def euclidean_dist(self, pitch_yaw1, pitch_yaw2):
         emb1 = self.select(pitch_yaw1)
         emb2 = self.select(pitch_yaw2)
-        dist = pairwise_distances(emb1.reshape(1, -1), emb2.reshape(1, -1), metric='euclidean')[0][0]
+        # dist = pairwise_distances(emb1.reshape(1, -1), emb2.reshape(1, -1), metric='euclidean')[0][0]
+        dist = cdist(emb1.reshape(1, -1), emb2.reshape(1, -1), 'euclidean')
         return dist
 
     # get dist weight
-    def get_dist_weight_clipped(self, pitch_yaw1, pitch_yaw2):
+    def get_dist_clipped(self, pitch_yaw1, pitch_yaw2):
         emb1 = self.select(pitch_yaw1)
         emb2 = self.select(pitch_yaw2)
-        dist = pairwise_distances(emb1.reshape(1, -1), emb2.reshape(1, -1), metric='euclidean')[0][0]
-        dist = np.clip(dist, 0, 1) + 1
-        return dist
+        # dist = pairwise_distances(emb1.reshape(1, -1), emb2.reshape(1, -1), metric='euclidean')[0][0]
+        dist = cdist(emb1.reshape(1, -1), emb2.reshape(1, -1), 'euclidean')
+        # dist = np.clip(np.square(dist), 0.01, 1)
+        dist = np.clip(np.square(dist), 0.25, 1)
+        return float(dist*132-32)
 
     def get_dist_matrix(self, pitch_yaw1):
         emb_ref = self.select(pitch_yaw1)
@@ -192,13 +197,6 @@ class WeightGenerator:
         pitch_yaw1 = np.clip(pitch_yaw1, -36, 36)
         pitch_yaw2 = np.clip(pitch_yaw2, -36, 36)
         dist = np.clip(self.euclidean_dist_squared(pitch_yaw1, pitch_yaw2), 0, 1)
-        if dist < 0.1:
-            pass
-            # print pitch_yaw1, pitch_yaw2
-
-        if dist > 0.2:
-            pass
-            # print pitch_yaw1, pitch_yaw2
 
         # calculate weight
         # weight = 100*(1-dist**2)
