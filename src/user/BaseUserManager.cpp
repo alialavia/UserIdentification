@@ -443,7 +443,6 @@ void BaseUserManager::RenderGUI(cv::Mat &img)
 		if (target_user->GetProfilePicture(profile_image))
 		{
 			gui::safe_copyTo(img, profile_image, cv::Rect(bb.x, bb.y - 100, 100, 100));
-
 			// render inside bb
 			if(false)
 			{
@@ -461,7 +460,6 @@ void BaseUserManager::RenderGUI(cv::Mat &img)
 		IdentificationStatus id_status;
 		ActionStatus action;
 		target_user->GetStatus(id_status, action);
-
 
 		if (id_status == IDStatus_Identified || id_status == IDStatus_Uncertain)
 		{
@@ -563,8 +561,13 @@ void BaseUserManager::RenderGUI(cv::Mat &img)
 		}
 
 		// draw flat background
-		img(bg_patch) = bg_color;
-
+		try {
+			img(bg_patch) = bg_color;
+		}
+		catch (...) {
+			// ...
+		}
+		
 		cv::putText(img, text1, cv::Point(bb.x+10, bb.y+20), cv::FONT_HERSHEY_SIMPLEX, font_size, color, 1, 8);
 		cv::putText(img, text2, cv::Point(bb.x+10, bb.y+40), cv::FONT_HERSHEY_SIMPLEX, font_size, color, 1, 8);
 
