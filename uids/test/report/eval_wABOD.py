@@ -1,14 +1,8 @@
 import numpy as np
-import Queue
-from sklearn.ensemble import IsolationForest
 from uids.utils.Logger import Logger as log
 # v2 models
 from uids.v2.set_metrics import ABOD
 from uids.v2.HardThreshold import SetSimilarityHardThreshold
-from uids.data_models.StandardCluster import StandardCluster
-from uids.v2.MultiClassClassifierBase import MultiClassClassifierBase
-from uids.v2.DataController import DataController
-from uids.v2.ClassifierController import IdentificationController, UpdateController, BaseMetaController
 from uids.v2.set_metrics import *
 import os
 import random
@@ -36,15 +30,6 @@ def load_embeddings(filename):
             f.close()
         return np.array(embeddings)
     return None
-
-
-def test_metrics():
-    cls = SetSimilarityHardThreshold(metric='ABOD', threshold=0.7)
-    cls.partial_fit([[2, 1], [4, 65], [4, 3]])
-    dec, scores = cls.predict([[2.2, 1], [4, 1]])
-    print dec, scores
-
-
 
 
 def plot_roc(y_true, scores, pos_label=1, sample_weight=None):
