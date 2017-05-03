@@ -193,7 +193,7 @@ class WeightedABOD(ABOD, BaseEstimator):
 
     weight_gen = None
     # 1: 1/(P12^2*P13^2)
-    # 2: 1/(P12+P13)
+    # 2: 1/(P12^2+P13^2)
     # 3: variance with weighted mean
     # 4: weighted variance (regular mean)
     # 5: weighted variance with weighted mean
@@ -272,7 +272,7 @@ class WeightedABOD(ABOD, BaseEstimator):
                     try:
                         # apply weighting
                         if self.variant == 1:
-                            tmp = angle_BAC / float(math.pow(AB * AC, 2) * (w1 + w2))
+                            tmp = angle_BAC / float(math.pow(AB * AC, 2) * (w1 * w2))
                         elif self.variant == 2:
                             tmp = angle_BAC / float(math.pow(AB * AC, 2) * (w1 + w2))
                         else:

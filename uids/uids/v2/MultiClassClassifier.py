@@ -183,7 +183,7 @@ class MultiCl(MultiClassClassifierBase):
 
         mean_dist_l2 = list(mean_dist_l2)
         clean_ids = list(clean_ids)
-        log.info('cl', "Closed set distance scores (L2 squared): {} | max: {}".format(clean_ids, mean_dist_l2))
+        log.info('cl', "Closed set distance scores (L2 squared): IDs {} | Class dist. : {}".format(clean_ids, mean_dist_l2))
 
         min_index = mean_dist_l2.index(min(mean_dist_l2))
         return clean_ids[min_index]
