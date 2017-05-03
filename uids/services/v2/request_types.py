@@ -204,12 +204,17 @@ class ImageIdentificationPrealignedCS:
             r.Error(server, conn, "Could not generate face embeddings.")
             return
 
-        # closed set user id prediction
-        user_id = server.classifier.predict_closed_set(target_users, embeddings)
+        if -1 in target_users:
+            # open set user id prediction
+            current_weights = np.repeat(1, len(embeddings))
+            is_consistent, user_id, confidence = server.classifier.predict_class(embeddings, current_weights)
+        else:
+            # closed set user id prediction
+            user_id = server.classifier.predict_closed_set(target_users, embeddings)
 
-        if user_id is None:
-            r.Error(server, conn, "Label could not be predicted - Samples are contradictory.")
-            return
+            if user_id is None:
+                r.Error(server, conn, "Label could not be predicted - Samples are contradictory.")
+                return
 
         # get user nice name
         user_name = server.user_db.get_name_from_id(user_id)

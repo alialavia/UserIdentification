@@ -9,6 +9,7 @@ from sklearn.metrics.pairwise import *
 from uids.utils.Logger import Logger as log
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import cdist
+import sys
 
 
 # path managing
@@ -45,6 +46,9 @@ class WeightGenerator:
         log.info('db', "Initializing weight generator...")
         # initialize grid
         embeddings = load_data(embedding_file)
+        if embeddings is None:
+            log.severe("Could not load file {} in dir uids/models/confience_weights/ for weight generator...".format(embeddings))
+            sys.exit(0)
         poses = load_data(pose_file)
         self.generate(embeddings, poses)
 

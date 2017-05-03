@@ -4,6 +4,7 @@ from abc import abstractmethod
 from sklearn.metrics.pairwise import *
 from uids.v2.set_metrics import ABOD
 
+
 class ClusterBase:
 
     __valid_similarity_metrics = {
