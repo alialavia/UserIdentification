@@ -1,8 +1,11 @@
 from uids.utils.DataAnalysis import *
-from uids.data_models.StandardCluster import StandardCluster
+from uids.data_models.MeanShiftCluster import MeanShiftCluster
 from uids.data_models.ClusterBase import ClusterBase
 from sklearn.metrics.pairwise import *
 import time
+from uids.utils.Logger import Logger as log
+from abc import abstractmethod
+
 
 class SetSimilarityThresholdBase:
     """
@@ -19,8 +22,8 @@ class SetSimilarityThresholdBase:
     def __init__(self, cluster=None, metric='ABOD'):
 
         if cluster is None:
-            print "No data cluster linked. Using new StandardCluster."
-            self.data_cluster = StandardCluster()
+            print "No data cluster linked. Using new MeanShiftCluster."
+            self.data_cluster = MeanShiftCluster()
             self.__external_cluster = False
         else:
             self.data_cluster = cluster
@@ -51,6 +54,12 @@ class SetSimilarityThresholdBase:
         :return:
         """
 
+        cluster_type = self.data_cluster.__class__.__name__
+
+        if cluster_type != 'MeanShiftCluster':
+            log.severe("Prediction for cluster type '{}' is not implemented yet! Add custom decision_function() first.".format(cluster_type))
+            raise NotImplementedError("Implement threshold prediction for specific cluster type.")
+
         # calc hashes
         hashed = [self.get_hash(s) for s in samples]
 
@@ -80,6 +89,13 @@ class SetSimilarityThresholdBase:
 
         return similarity_scores
 
+    @abstractmethod
+    def predict(self, samples):
+        """
+        Specifies how to update self.data with incomming samples
+        """
+        raise NotImplementedError("Implement Cluster Update.")
+
 
 class SetSimilarityHardThreshold(SetSimilarityThresholdBase):
 
@@ -96,7 +112,7 @@ class SetSimilarityHardThreshold(SetSimilarityThresholdBase):
 
         # get similarity scores
         similarity_scores = self.decision_function(samples)
-        print "==== ABOD: ", ["%0.3f" % i for i in similarity_scores]
+        print "==== {}: ".format(self.metric), ["%0.3f" % i for i in similarity_scores]
         print "==== L2: ", ["%0.3f" % i for i in self.data_cluster.class_mean_dist(samples, metric='euclidean')]
 
         if self.metric == 'ABOD':
@@ -105,6 +121,4 @@ class SetSimilarityHardThreshold(SetSimilarityThresholdBase):
             positive = similarity_scores < self.__thresh
 
         return np.array([1 if v else -1 for v in positive])
-
-
 

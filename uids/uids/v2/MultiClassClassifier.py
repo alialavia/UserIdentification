@@ -4,7 +4,7 @@ from MultiClassClassifierBase import MultiClassClassifierBase
 from set_metrics import ABOD
 
 from uids.v2.HardThreshold import SetSimilarityHardThreshold
-from uids.data_models.StandardCluster import StandardCluster
+from uids.data_models.MeanShiftCluster import MeanShiftCluster
 from uids.v2.MultiClassClassifierBase import MultiClassClassifierBase
 from uids.v2.DataController import DataController
 from uids.v2.ClassifierController import IdentificationController, UpdateController

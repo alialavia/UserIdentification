@@ -1,19 +1,21 @@
 import numpy as np
 from uids.utils.Logger import Logger as log
-from uids.data_models.StandardCluster import StandardCluster
+from uids.data_models.MeanShiftCluster import MeanShiftCluster, MeanShiftPoseCluster
+from uids.features.ConfidenceGen import WeightGenerator
 
 
 class DataController:
 
     # raw CNN embeddings in clusters
     class_clusters = {}
+    weight_gen = None
 
     def __init__(self):
-        pass
+        self.weight_gen = WeightGenerator()
 
     # --------- CLASS HASHING
 
-    def classes_in_range(self, samples, thresh=0.7, metric='cosine'):
+    def classes_in_range(self, samples, thresh=1.3, metric='euclidean'):
         class_ids = []
         for id, c in self.class_clusters.iteritems():
             # only predict for "reasonable"/near classes
@@ -28,13 +30,13 @@ class DataController:
     def get_class_means(self):
         return [c.mean() for id, c in self.class_clusters.iteritems()]
 
-    # --------- DATA MANAGEMENT
+    # --------- DATA MANAGEMENT (regular clusters)
 
     def add_samples(self, user_id, new_samples):
         """embeddings: array of embeddings"""
         if user_id not in self.class_clusters:
             # initialize
-            self.class_clusters[user_id] = StandardCluster(max_size=60)
+            self.class_clusters[user_id] = MeanShiftCluster(max_size=60)
             self.class_clusters[user_id].update(new_samples)
         else:
             # update
@@ -62,5 +64,11 @@ class DataController:
         return np.array(distances), np.array(class_ids_clean)
 
     # --------- MANIFOLD LEARNING
+
     # TODO: implement
+    def merge_near_classes(self):
+        pass
+        # for id, c in self.class_clusters.iteritems():
+        #     c.mean()
+
 

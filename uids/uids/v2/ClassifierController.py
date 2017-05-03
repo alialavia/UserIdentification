@@ -1,6 +1,6 @@
 import numpy as np
 from uids.utils.Logger import Logger as log
-from uids.data_models.StandardCluster import StandardCluster
+from uids.data_models.MeanShiftCluster import MeanShiftCluster
 from sklearn.metrics.pairwise import *
 from uids.v2.set_metrics import *
 
