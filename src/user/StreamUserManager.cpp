@@ -493,6 +493,9 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 #else
 						throw;
 #endif
+						// make reverification request
+						pRequestHandler->addRequest(new_request, true);
+
 						// update linking
 						mRequestToUser[new_request] = target_user;
 						mUserToRequests[target_user].insert(new_request);
@@ -504,6 +507,6 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 				}
 			}
 		}
-
 	}	// end user iteration
 }
+
