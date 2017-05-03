@@ -74,13 +74,16 @@ class ABOD:
     def decision_function(self, samples):
         return self.__predict(samples)
 
-    def get_proba(self):
-        # probability that it is the class (uncertain samples not counted)
-        cls_scores = (self.prediction > 0).sum()
-        nr_triggered = len(self.prediction[self.prediction != 0])
-        if nr_triggered == 0:
-            return 1
-        return cls_scores / float(nr_triggered)
+    # TODO: fix
+    # def get_proba(self):
+    #     # probability that it is the class (uncertain samples not counted)
+    #
+    #     print "get_proba self.prediction: {}".format(self.prediction)
+    #     cls_scores = (self.prediction > 0).sum()
+    #     nr_triggered = len(self.prediction[self.prediction != 0])
+    #     if nr_triggered == 0:
+    #         return 1
+    #     return cls_scores / float(nr_triggered)
 
     def mean_dist(self, samples):
         return np.mean(pairwise_distances(samples, self.data, metric='cosine'))

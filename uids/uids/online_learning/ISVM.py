@@ -1,7 +1,7 @@
 from uids.utils.DataAnalysis import *
 from sklearn.svm import SVC
 from uids.data_models.HullCluster import HullCluster
-from uids.data_models.StandardCluster import StandardCluster
+from uids.data_models.MeanShiftCluster import MeanShiftCluster
 from uids.data_models.ClusterBase import ClusterBase
 
 
@@ -24,7 +24,7 @@ class ISVM:
         self.random_data = random_data
         self.clf = SVC(kernel='linear', probability=True, C=1)
         if cluster is None:
-            self.data_cluster = StandardCluster()
+            self.data_cluster = MeanShiftCluster()
         else:
             assert issubclass(cluster, ClusterBase)
             self.data_cluster = cluster

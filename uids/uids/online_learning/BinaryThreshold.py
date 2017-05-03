@@ -1,5 +1,5 @@
 from uids.utils.DataAnalysis import *
-from uids.data_models.StandardCluster import StandardCluster
+from uids.data_models.MeanShiftCluster import MeanShiftCluster
 from uids.data_models.ClusterBase import ClusterBase
 
 
@@ -17,7 +17,7 @@ class BinaryThreshold:
 
     def __init__(self, cluster=None):
         if cluster is None:
-            self.data_cluster = StandardCluster()
+            self.data_cluster = MeanShiftCluster()
         else:
             assert issubclass(cluster, ClusterBase)
             self.data_cluster = cluster

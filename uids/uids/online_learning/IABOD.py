@@ -1,7 +1,7 @@
 from uids.online_learning.ABOD import ABOD
 from uids.utils.Logger import Logger as log
 from uids.data_models.HullCluster import HullCluster
-from uids.data_models.StandardCluster import StandardCluster
+from uids.data_models.MeanShiftCluster import MeanShiftCluster
 from uids.data_models.ClusterBase import ClusterBase
 import numpy as np
 from sklearn.metrics.pairwise import pairwise_distances
@@ -21,7 +21,7 @@ class IABOD(ABOD):
         ABOD.__init__(self)
         self.__test_offline = test_offline
         if cluster is None:
-            self.data_cluster = StandardCluster()
+            self.data_cluster = MeanShiftCluster()
         else:
             assert issubclass(cluster, ClusterBase)
             self.data_cluster = cluster
