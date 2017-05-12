@@ -83,6 +83,7 @@ class MultiCl(MultiClassClassifierBase):
 
         if not classes_in_range:
             log.info('cl', "No classes in range...")
+            return True, -1, 1
 
         for class_id, cls in self.classifiers.iteritems():
             # only consider near classes

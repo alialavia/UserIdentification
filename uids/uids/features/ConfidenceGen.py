@@ -180,14 +180,12 @@ class WeightGenerator:
         return dist
 
     # get dist weight
-    def get_dist_clipped(self, pitch_yaw1, pitch_yaw2):
+    def get_pose_weight(self, pitch_yaw1, pitch_yaw2):
         emb1 = self.select(pitch_yaw1)
         emb2 = self.select(pitch_yaw2)
-        # dist = pairwise_distances(emb1.reshape(1, -1), emb2.reshape(1, -1), metric='euclidean')[0][0]
         dist = cdist(emb1.reshape(1, -1), emb2.reshape(1, -1), 'euclidean')
-        # dist = np.clip(np.square(dist), 0.01, 1)
-        dist = np.clip(np.square(dist), 0.25, 1)
-        return float(dist*132-32)
+        dist = np.square(dist)
+        return self.pose_dist_to_conf(dist)
 
     def get_dist_matrix(self, pitch_yaw1):
         emb_ref = self.select(pitch_yaw1)
@@ -195,6 +193,12 @@ class WeightGenerator:
         dist = pairwise_distances(emb_ref, g_tmp, metric='euclidean')
         dist = np.square(dist)
         return dist.reshape(9, 9)
+
+    def pose_dist_to_conf(self, dist):
+        # clip distance
+        dist = np.clip(dist, 0.25, 1)
+        # 1 (no conf) ... 100 (full conf)
+        return -dist*132+133
 
     def get_weight(self, pitch_yaw1, pitch_yaw2):
 
@@ -239,7 +243,7 @@ class WeightGenerator:
         print "8", self.calc_index(28.5, 20)
         print "8", self.calc_index(30, 20)
 
-    def best_subset(self, test_pose, ref_poses, nr_samples=20):
+    def best_subset(self, test_pose, ref_poses, nr_samples=20, get_pose_confidence=False):
         # take 30 nearest samples from ref
 
         # calc dist test > ref
@@ -255,5 +259,11 @@ class WeightGenerator:
         nr_ref_elems = nr_samples if len(ref_poses) >= nr_samples else len(ref_poses)
 
         # print "Distances: ", dist[sorted_indices[0:nr_ref_elems]]
-        return sorted_indices[0:nr_ref_elems], dist[sorted_indices]
+        pose_distances = dist[sorted_indices]
+
+        # convert distance to confidence
+        if get_pose_confidence:
+            pose_distances = self.pose_dist_to_conf(pose_distances)
+
+        return sorted_indices[0:nr_ref_elems], pose_distances
 

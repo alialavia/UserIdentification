@@ -91,7 +91,7 @@ class MeanShiftPoseCluster(ClusterBase):
         # delete
         self.data = np.delete(self.data, indices_to_delete, axis=0)
 
-    def update(self, samples, poses=None):
+    def update(self, samples, poses=np.array([])):
         # add data
         self.data = np.concatenate((self.data, samples)) if self.data.size else np.array(samples)
         self.poses = np.concatenate((self.poses, samples)) if self.poses.size else np.array(poses)
@@ -102,7 +102,7 @@ class MeanShiftPoseCluster(ClusterBase):
         self.__reduce_after()
 
     # used in thresholding with this cluster
-    def sample_set_similarity_scores(self, samples, metric):
+    def sample_set_similarity_scores(self, samples, samples_poses=np.array([]), metric='ABOD', nr_ref_samples=40):
 
         if len(self.data) == 0:
             raise ValueError("Classifier has not been fitted yet. Use 'partial_fit(samples)' first!")
@@ -113,18 +113,21 @@ class MeanShiftPoseCluster(ClusterBase):
             if len(self.data) < 3:
                 raise ValueError("ABOD calculation needs at least 3 fitted samples!")
 
-            # select best fitting data
             abof_scores = []
-
-            for emb in samples:
-                indices, pose_separation = self.p_weight_gen.best_subset()
-                abof_val = ABOD.get_score(samples, reference_set=self.data)
+            confidence_scores = []
+            for i, emb in enumerate(samples):
+                # select best fitting data
+                best_indices, pose_confidences = self.p_weight_gen.best_subset(
+                    samples_poses[i], self.poses, nr_samples=nr_ref_samples, get_pose_confidence=True
+                )
+                abof_val = ABOD.get_score(samples, reference_set=self.data[best_indices])
                 abof_scores.append(abof_val)
 
-
+                # mean pose pased confidence score
+                confidence_scores.append(np.mean(pose_confidences))
 
             # get ABOD score for most relevant samples
-            return abof_score, weights
+            return abof_scores, confidence_scores
         else:
             raise ValueError("Invalid metric for MeanShiftPoseCluster. Select from: {}".format(self.__valid_similarity_metrics))
 

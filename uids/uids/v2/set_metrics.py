@@ -264,8 +264,8 @@ class WeightedABOD(ABOD, BaseEstimator):
 
                     angle_BAC = ABOD.angleBAC(A, B, C, AB, AC)
 
-                    w1 = self.weight_gen.get_dist_clipped(test_poses[i_sample], ref_poses[i])
-                    w2 = self.weight_gen.get_dist_clipped(test_poses[i_sample], ref_poses[j])
+                    w1 = self.weight_gen.get_pose_weight(test_poses[i_sample], ref_poses[i])
+                    w2 = self.weight_gen.get_pose_weight(test_poses[i_sample], ref_poses[j])
                     weight_list.append(2./float(w1+w2))     # 1/(a+b)/2
 
                     # compute each element of variance list
