@@ -303,13 +303,13 @@ class TCPServer:
         return msg
 
     def receive_char(self, client_socket, timeout=2):
-        """1 byte - unsigned: -127 .. 127"""
+        """1 byte - unsigned: -128 .. 127"""
         # read 1 byte = char = 8 bit (2^8), BYTE datatype: minimum value of -127 and a maximum value of 127
         raw_msg = self.receive_message(client_socket, 1, timeout=timeout)
         if not raw_msg:
             return None
         # 8-bit string to signed integer
-        numerical = struct.unpack('B', raw_msg)[0]
+        numerical = struct.unpack('b', raw_msg)[0]
         return numerical
 
     def receive_uchar(self, client_socket, timeout=2):
