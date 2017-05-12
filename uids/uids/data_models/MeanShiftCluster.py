@@ -94,7 +94,7 @@ class MeanShiftPoseCluster(ClusterBase):
     def update(self, samples, poses=np.array([])):
         # add data
         self.data = np.concatenate((self.data, samples)) if self.data.size else np.array(samples)
-        self.poses = np.concatenate((self.poses, samples)) if self.poses.size else np.array(poses)
+        self.poses = np.concatenate((self.poses, poses)) if self.poses.size else np.array(poses)
 
         # calculate mean
         self.data_mean = np.mean(self.data, axis=0).reshape(1, -1)
@@ -116,12 +116,14 @@ class MeanShiftPoseCluster(ClusterBase):
             abof_scores = []
             confidence_scores = []
             for i, emb in enumerate(samples):
+
                 # select best fitting data
                 best_indices, pose_confidences = self.p_weight_gen.best_subset(
                     samples_poses[i], self.poses, nr_samples=nr_ref_samples, get_pose_confidence=True
                 )
-                abof_val = ABOD.get_score(samples, reference_set=self.data[best_indices])
-                abof_scores.append(abof_val)
+
+                abof_val = ABOD.get_score(emb.reshape(1, -1), reference_set=self.data[best_indices])
+                abof_scores.append(abof_val[0])
 
                 # mean pose pased confidence score
                 confidence_scores.append(np.mean(pose_confidences))

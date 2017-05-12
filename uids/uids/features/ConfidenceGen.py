@@ -244,7 +244,7 @@ class WeightGenerator:
         print "8", self.calc_index(30, 20)
 
     def best_subset(self, test_pose, ref_poses, nr_samples=20, get_pose_confidence=False):
-        # take 30 nearest samples from ref
+        # take X nearest samples from ref
 
         # calc dist test > ref
         emb_test = self.select(test_pose)
