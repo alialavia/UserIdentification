@@ -13,33 +13,21 @@ class SetSimilarityThresholdBase:
     """
 
     __verbose = False
-    __external_cluster = True   # has an external data model
     data_cluster = None
 
     # hashed result buffer
     decision_fn_buffer = {}
+    matching_conf_buffer = {}
 
-    def __init__(self, cluster=None, metric='ABOD'):
-
-        if cluster is None:
-            print "No data cluster linked. Using new MeanShiftCluster."
-            self.data_cluster = MeanShiftCluster()
-            self.__external_cluster = False
-        else:
-            self.data_cluster = cluster
-
+    def __init__(self, cluster, metric='ABOD'):
+        self.data_cluster = cluster
         self.metric = metric
         self.cluster_timestamp = time.time()
 
     def partial_fit(self, samples):
-        if self.__external_cluster:
-            # DONT UPDATE EXTERNAL CLUSTERS!
-            pass
-        else:
-            # UPDATE INTERNAL CLUSTER (mainly for testing)
-            self.data_cluster.update(samples)
         # invalid buffered decision function
         self.decision_fn_buffer = {}
+        self.matching_conf_buffer = {}
 
     def get_hash(self, arr):
         arr.flags.writeable = False
@@ -47,7 +35,7 @@ class SetSimilarityThresholdBase:
         arr.flags.writeable = True
         return h
 
-    def decision_function(self, samples):
+    def decision_function(self, samples, samples_poses, nr_compaired_samples):
         """
         Distance of the samples X to the target class distribution
         :param samples:
@@ -63,28 +51,48 @@ class SetSimilarityThresholdBase:
             intersec_hashes = list(set(self.decision_fn_buffer.keys()) & set(hashed))
 
             similarity_scores = []
+            matching_confidence = []
+
             for i, h in enumerate(hashed):
 
                 if h in intersec_hashes:
                     similarity_scores.append(self.decision_fn_buffer[h])
+                    matching_confidence.append(self.matching_conf_buffer[h])
+                    print "Using hashed values..."
                 else:
-                    score = self.data_cluster.sample_set_similarity_scores(np.array([samples[i]]), self.metric)
-                    similarity_scores.append(score)
-                    # add to buffer
-                    self.decision_fn_buffer[h] = score
+                    abod_scores, confidence_scores = self.data_cluster.sample_set_similarity_scores(
+                        np.array([samples[i]]), samples_poses, self.metric, nr_ref_samples=nr_compaired_samples
+                    )
 
+                    similarity_scores.append(abod_scores[0])
+                    matching_confidence.append(confidence_scores[0])
+
+                    # add to buffer
+                    self.decision_fn_buffer[h] = abod_scores[0]
+                    self.matching_conf_buffer[h] = confidence_scores[0]
+
+            # print "sim scores1: ", similarity_scores
         else:
-            similarity_scores = self.data_cluster.sample_set_similarity_scores(samples, self.metric)
+            similarity_scores, matching_confidence = self.data_cluster.sample_set_similarity_scores(
+                samples, samples_poses, self.metric, nr_ref_samples=nr_compaired_samples
+            )
+
+            # print "sim scores2: ", similarity_scores
+
             # add to buffer
             for i, h in enumerate(hashed):
                 self.decision_fn_buffer[h] = similarity_scores[i]
+                self.matching_conf_buffer[h] = matching_confidence[i]
 
         similarity_scores = np.array(similarity_scores).flatten()
+        matching_confidence = np.array(matching_confidence).flatten()
 
-        return similarity_scores
+
+
+        return similarity_scores, matching_confidence
 
     @abstractmethod
-    def predict(self, samples):
+    def predict(self, samples, samples_poses):
         """
         Specifies how to update self.data with incomming samples
         """
@@ -96,29 +104,34 @@ class SetSimilarityHardThreshold(SetSimilarityThresholdBase):
     # hard decision threshold
     __thresh = None
     metric = None
+    nr_compaired_samples = 0
 
-    def __init__(self, threshold=0.3, cluster=None, metric='ABOD'):
+    def __init__(self, threshold=0.3, cluster=None, metric='ABOD', nr_compaired_samples=40):
         SetSimilarityThresholdBase.__init__(self, cluster=cluster)
         self.__thresh = threshold
         self.metric = metric
+        self.nr_compaired_samples = nr_compaired_samples
 
-    def predict(self, samples):
+    def predict(self, samples, samples_poses):
 
         # get similarity scores
         cluster_type = self.data_cluster.__class__.__name__
-        if cluster_type == 'MeanShiftCluster':
-            similarity_scores = self.decision_function(samples)
+        if cluster_type == 'MeanShiftPoseCluster':
+            similarity_scores, matching_confidence = self.decision_function(
+                samples, samples_poses, nr_compaired_samples=self.nr_compaired_samples
+            )
         else:
             log.severe("Prediction for cluster type '{}' is not implemented yet!".format(cluster_type))
             raise NotImplementedError("Implement threshold prediction for specific cluster type.")
 
         print "==== {}: ".format(self.metric), ["%0.3f" % i for i in similarity_scores]
         print "==== L2: ", ["%0.3f" % i for i in self.data_cluster.class_mean_dist(samples, metric='euclidean')]
+        print "==== Matching conf: ", ["%0.1f" % i for i in matching_confidence]
 
         if self.metric == 'ABOD':
             positive = similarity_scores > self.__thresh
         else:
             positive = similarity_scores < self.__thresh
 
-        return np.array([1 if v else -1 for v in positive])
+        return np.array([1 if v else -1 for v in positive]), np.array(matching_confidence)
 

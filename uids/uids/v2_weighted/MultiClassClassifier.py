@@ -1,13 +1,12 @@
 import numpy as np
 from uids.utils.Logger import Logger as log
-from MultiClassClassifierBase import MultiClassClassifierBase
-from set_metrics import ABOD
 
-from uids.v2.HardThreshold import SetSimilarityHardThreshold
-from uids.data_models.MeanShiftCluster import MeanShiftCluster
 from uids.v2.MultiClassClassifierBase import MultiClassClassifierBase
-from uids.v2.DataController import DataController
-from uids.v2.ClassifierController import IdentificationController, UpdateController
+
+# weighted v2
+from uids.v2_weighted.HardThreshold import SetSimilarityHardThreshold
+from uids.v2_weighted.DataController import DataController
+from uids.v2_weighted.ClassifierController import IdentificationController, UpdateController
 
 
 class MultiCl(MultiClassClassifierBase):
@@ -33,34 +32,11 @@ class MultiCl(MultiClassClassifierBase):
 
     # -------- standard methods
 
-    # TODO: untested
-    # def validate_class(self, samples, sample_weight, target_class_id):
-    #     """
-    #     first use "is_guaranteed_new_class"!
-    #     :param samples:
-    #     :param sample_weight:
-    #     :return: inconsistent, confidence
-    #     """
-    #
-    #     # individual classifier predictions (binary)
-    #     predictions = {}
-    #     for class_id, cls in self.classifiers.iteritems():
-    #         predictions[class_id] = cls.predict(samples)
-    #
-    #     is_consistent = self.check_multicl_predictions(predictions, target_class_id)
-    #
-    #     if not is_consistent:
-    #         return False, 1.0
-    #
-    #     # calculate confidence for target class
-    #     conf = self.calc_normalized_positive_confidence(predictions[target_class_id], sample_weight)
-    #     return True, conf
-
-    def predict_class(self, samples, sample_weight=None):
+    def predict_class(self, samples, sample_poses=None):
         """
         first use "is_guaranteed_new_class"!
         :param samples:
-        :param sample_weight:
+        :param sample_poses:
         :return: inconsistent, class, confidence
         """
 
@@ -77,28 +53,32 @@ class MultiCl(MultiClassClassifierBase):
         target_positive_classes = []
         true_positives_rates = []
         false_positives = []
+        pos_matching_confidence = []
+        neg_matching_confidence = []
 
         # select classes in range
         classes_in_range = self.data_controller.classes_in_range(samples=samples, metric='euclidean', thresh=1.1)
 
         if not classes_in_range:
             log.info('cl', "No classes in range...")
+            return True, -1, 1
 
         for class_id, cls in self.classifiers.iteritems():
             # only consider near classes
             if class_id in classes_in_range:
                 # binary prediction
-                predictions[class_id] = cls.predict(samples)
-
+                predictions[class_id], matching_confidences = cls.predict(samples, samples_poses=sample_poses)
                 true_positive_samples = np.count_nonzero(predictions[class_id] == 1)
 
                 # count certain detections
                 if true_positive_samples >= true_pos_thresh:
                     target_positive_classes.append(class_id)
                     true_positives_rates.append(true_positive_samples)
+                    pos_matching_confidence.append(matching_confidences)
                 elif true_positive_samples >= false_pos_thresh:
                     # not true class - check if too many false positives
                     false_positives.append(class_id)
+                    neg_matching_confidence.append(matching_confidences)
 
                 # else:
                 #     false_positive_samples = np.count_nonzero(predictions[class_id] == -1)
@@ -106,38 +86,46 @@ class MultiCl(MultiClassClassifierBase):
                 #     if false_positive_samples >= false_pos_thresh:
                 #         false_positives.append(class_id)
 
-
-
         is_consistent = True
         target_class = None
         safe_weight = 7
 
         print "... T_fp: {}, T_tp: {} |  fp: {}, tp: {}".format(false_pos_thresh, true_pos_thresh, false_positives, target_positive_classes)
 
+
+        confidence = 1.0
+        decision_weights = np.repeat(99., len(samples))
+
         # check for inconsistent predictions
         if len(false_positives) == 0:
             if len(target_positive_classes) == 0:
                 # new class!
                 target_class = -1
+                # TODO: confidence not implemented yet! Build additive score
             elif len(target_positive_classes) == 1:
                 # single target class
                 target_class = target_positive_classes[0]
+                decision_weights = pos_matching_confidence[0]
             else:
                 # multiple target classes
                 is_consistent = False   # not a valid result
                 best_index = np.argmax(true_positives_rates)
                 target_class = target_positive_classes[best_index]
+                decision_weights = pos_matching_confidence[best_index]
         else:
             is_consistent = False  # not a valid/safe result
             if len(target_positive_classes) == 0:
                 # new class!
                 target_class = -1
+                # TODO: confidence not implemented yet! Build additive score
             elif len(target_positive_classes) == 1:
                 # target class
                 target_class = target_positive_classes[0]
+                decision_weights = pos_matching_confidence[0]
             else:
                 best_index = np.argmax(true_positives_rates)
                 target_class = target_positive_classes[best_index]
+                decision_weights = pos_matching_confidence[best_index]
 
         # TODO: not active right now
         # if is_consistent and False:
@@ -158,19 +146,23 @@ class MultiCl(MultiClassClassifierBase):
         #                     break
 
         # calculate confidence
-        confidence = 0.
+
+        print "decision_weights: ", decision_weights
+        print "pos_matching_confidence: ", pos_matching_confidence
 
         if target_class == -1:
             # TODO: not implemented yet! Build additive score
             confidence = 1.0
         elif target_class > 0:
-            confidence = self.calc_normalized_positive_confidence(predictions[target_class], weights=sample_weight)
+            # combine confidence with binary decision (weighted average)
+            confidence = self.calc_normalized_positive_confidence(predictions[target_class], weights=decision_weights)
         else:
             confidence = 1.0
 
         print "---- Prediction: ", predictions
         print "---- Target class decision: {} / conf: {} / TP: {}, FP: {} / min. TP: {} max. FP: {}".format(target_class, confidence, len(target_positive_classes), len(false_positives), true_pos_thresh, false_pos_thresh)
 
+        # confidence: 1...100 (full conf)
         return is_consistent, target_class, confidence
 
     def predict_closed_set(self, target_classes, samples):
@@ -191,6 +183,7 @@ class MultiCl(MultiClassClassifierBase):
     # ----------- multicl meta recognition
 
     def check_multicl_predictions(self, predictions, target_class, weights=None, save_weight=7):
+        # TODO: add pose weights
 
         if self.CLASSIFIER == 'SetSimilarityHardThreshold':
             validity, fn, fp = self.__contradictive_binary_predictions(predictions, target_class,
@@ -231,14 +224,12 @@ class MultiCl(MultiClassClassifierBase):
 
         return validity, fn, fp
 
-
     def calc_abs_confidence(self, predictions, weights, max_weight):
         assert len(predictions) == len(weights)
         predictions = np.clip(predictions, 0, 1)
         norm_f = 1.0/max_weight
         confidence = np.dot(predictions, np.transpose(norm_f * weights))
         return confidence
-
 
     def calc_normalized_positive_confidence(self, predictions, weights=None):
         """
@@ -312,7 +303,7 @@ class MultiCl(MultiClassClassifierBase):
 
         return False
 
-    def init_new_class(self, class_id, class_samples):
+    def init_new_class(self, class_id, class_samples, sample_poses):
         """
         Initialise a One-Class-Classifier with sample data
         :param class_id: new class id
@@ -326,7 +317,7 @@ class MultiCl(MultiClassClassifierBase):
             return False
 
         # init new data model
-        self.data_controller.add_samples(user_id=class_id, new_samples=class_samples)
+        self.data_controller.add_samples(user_id=class_id, new_samples=class_samples, new_poses=sample_poses)
         cluster_ref = self.data_controller.get_class_cluster(class_id)
 
         # init new classifier
@@ -335,14 +326,11 @@ class MultiCl(MultiClassClassifierBase):
             self.classifiers[class_id] = SetSimilarityHardThreshold(
                 metric='ABOD',
                 threshold=0.3,
-                cluster=cluster_ref     # TODO: data model is connected - might also be separate?
+                nr_compaired_samples=40,    # select 40 best samples for comparison
+                cluster=cluster_ref         # linked data model
             )
-        elif self.CLASSIFIER == 'non-incremental':
-            # link to data controller: non-incremental learner
-            pass
-        elif self.CLASSIFIER == 'incremental':
-            # regular model. No need to pass data reference
-            pass
+        else:
+            raise NotImplementedError('This classifier is not implemented yet!')
 
         self.nr_classes += 1
         self.classifier_states[class_id] = 0

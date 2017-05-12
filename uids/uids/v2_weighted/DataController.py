@@ -32,7 +32,7 @@ class DataController:
 
     # --------- DATA MANAGEMENT (pose clusters)
 
-    def add_samples_with_pose(self, user_id, new_samples, new_poses):
+    def add_samples(self, user_id, new_samples, new_poses):
         """pose cluster update"""
         if user_id not in self.class_clusters:
             # initialize
@@ -43,16 +43,6 @@ class DataController:
             self.class_clusters[user_id].update(new_samples, new_poses)
 
     # --------- DATA MANAGEMENT (regular clusters)
-
-    def add_samples(self, user_id, new_samples):
-        """embeddings: array of embeddings"""
-        if user_id not in self.class_clusters:
-            # initialize
-            self.class_clusters[user_id] = MeanShiftCluster(max_size=60)
-            self.class_clusters[user_id].update(new_samples)
-        else:
-            # update
-            self.class_clusters[user_id].update(new_samples)
 
     def get_class_samples(self, class_id):
         if class_id in self.class_clusters:

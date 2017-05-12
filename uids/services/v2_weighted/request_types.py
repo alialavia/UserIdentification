@@ -83,14 +83,14 @@ class PartialImageIdentificationAligned:
                     user_id = server.user_db.create_new_user("a_user")
                     server.user_db.print_users()
                     # add classifier
-                    server.classifier.init_new_class(user_id, current_samples)
+                    server.classifier.init_new_class(user_id, current_samples, sample_poses=current_poses)
                     id_pred = user_id
                 else:
                     # for s in current_samples:
                     #     print "s: {:.2f}".format(s[0])
                     # add data for training and return identification
                     # add to data model
-                    server.classifier.data_controller.add_samples(user_id=id_pred, new_samples=current_samples)
+                    server.classifier.data_controller.add_samples(user_id=id_pred, new_samples=current_samples, new_poses=current_poses)
                     # add to classifier training queue
                     server.classifier.add_training_data(id_pred, current_samples)
 
@@ -140,8 +140,7 @@ class PartialUpdateAligned:
             sample_poses.append([pitch, yaw])
         sample_poses = np.array(sample_poses)
 
-        # TODO: calculate weights
-        weights = np.repeat(10, len(images))
+        print sample_poses
 
         # generate embedding
         embeddings = server.embedding_gen.get_embeddings(images, align=False)
@@ -150,8 +149,13 @@ class PartialUpdateAligned:
             r.Error(server, conn, "Could not generate face embeddings.")
             return
 
+        # TODO: calculate weights
+        weights = np.repeat(10, len(images))
+
         # accumulate samples - check for inconsistencies
-        verified_data, reset_user, id_pred, confidence = server.classifier.update_controller.accumulate_samples(user_id, embeddings, weights)
+        verified_data, verified_poses, reset_user, id_pred, confidence = server.classifier.update_controller.accumulate_samples(
+            user_id, embeddings, sample_weights=weights, sample_poses=sample_poses
+        )
 
         log.info('cl', "verified_data (len: {}), reset_user: {}: ID {}, conf {}".format(len(verified_data), reset_user, id_pred, confidence))
 
@@ -164,7 +168,7 @@ class PartialUpdateAligned:
             #     print "s: {:.5f}".format(s[0])
 
             # add to data model
-            server.classifier.data_controller.add_samples(user_id=user_id, new_samples=verified_data)
+            server.classifier.data_controller.add_samples(user_id=user_id, new_samples=verified_data, new_poses=verified_poses)
             # add to classifier training queue
             server.classifier.add_training_data(user_id, verified_data)
 
