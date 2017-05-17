@@ -58,7 +58,6 @@ class SetSimilarityThresholdBase:
                 if h in intersec_hashes:
                     similarity_scores.append(self.decision_fn_buffer[h])
                     matching_confidence.append(self.matching_conf_buffer[h])
-                    print "Using hashed values..."
                 else:
                     abod_scores, confidence_scores = self.data_cluster.sample_set_similarity_scores(
                         np.array([samples[i]]), samples_poses, self.metric, nr_ref_samples=nr_compaired_samples
@@ -86,8 +85,6 @@ class SetSimilarityThresholdBase:
 
         similarity_scores = np.array(similarity_scores).flatten()
         matching_confidence = np.array(matching_confidence).flatten()
-
-
 
         return similarity_scores, matching_confidence
 

@@ -199,7 +199,7 @@ class UpdateController(BaseMetaController):
             self.sample_queue.pop(user_id, None)
             self.sample_weight_queue.pop(user_id, None)
             self.sample_pose_queue.pop(user_id, None)
-            return np.array([]), True, -1, 1.
+            return np.array([]), np.array([]), True, -1, 1.
 
         # generate placeholder weights
         if sample_weights.size == 0:

@@ -88,8 +88,10 @@ class MeanShiftPoseCluster(ClusterBase):
         # delete X samples which are most distant
         indices_to_delete = indices_sorted[0:to_remove]
         log.info('cl', "Removing {} points".format(len(indices_to_delete)))
+
         # delete
         self.data = np.delete(self.data, indices_to_delete, axis=0)
+        self.poses = np.delete(self.poses, indices_to_delete, axis=0)
 
     def update(self, samples, poses=np.array([])):
         # add data

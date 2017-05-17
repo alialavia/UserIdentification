@@ -261,8 +261,12 @@ class WeightGenerator:
         # print "Distances: ", dist[sorted_indices[0:nr_ref_elems]]
         pose_distances = dist[sorted_indices]
 
+        # print "Pose deviations: ", ["%0.1f" % i for i in pose_distances]
+        # print "Pose dev. mean: {:.1f}".format(np.mean(pose_distances))
+
         # convert distance to confidence
         if get_pose_confidence:
+            # Todo: return only average matching confidence
             pose_distances = self.pose_dist_to_conf(pose_distances)
 
         return sorted_indices[0:nr_ref_elems], pose_distances

@@ -147,8 +147,10 @@ class MultiCl(MultiClassClassifierBase):
 
         # calculate confidence
 
-        print "decision_weights: ", decision_weights
-        print "pos_matching_confidence: ", pos_matching_confidence
+        # print "decision_weights: ", decision_weights
+        # print "pos_matching_confidence: ", pos_matching_confidence
+
+        print "==== decision_weights: ", ["%0.1f" % i for i in decision_weights]
 
         if target_class == -1:
             # TODO: not implemented yet! Build additive score

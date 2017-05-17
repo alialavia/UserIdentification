@@ -140,7 +140,7 @@ class PartialUpdateAligned:
             sample_poses.append([pitch, yaw])
         sample_poses = np.array(sample_poses)
 
-        print sample_poses
+        # print sample_poses
 
         # generate embedding
         embeddings = server.embedding_gen.get_embeddings(images, align=False)
