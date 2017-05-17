@@ -90,7 +90,7 @@ class MultiCl(MultiClassClassifierBase):
         target_class = None
         safe_weight = 7
 
-        print "... T_fp: {}, T_tp: {} |  fp: {}, tp: {}".format(false_pos_thresh, true_pos_thresh, false_positives, target_positive_classes)
+        print "... T_fp: {}, T_tp: {} |  fp ids: {}, tp ids: {}".format(false_pos_thresh, true_pos_thresh, false_positives, target_positive_classes)
 
 
         confidence = 1.0
@@ -329,7 +329,8 @@ class MultiCl(MultiClassClassifierBase):
                 metric='ABOD',
                 threshold=0.3,
                 nr_compaired_samples=40,    # select 40 best samples for comparison
-                cluster=cluster_ref         # linked data model
+                cluster=cluster_ref,         # linked data model
+                recheck_l2=True
             )
         else:
             raise NotImplementedError('This classifier is not implemented yet!')

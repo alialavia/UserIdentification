@@ -102,12 +102,14 @@ class SetSimilarityHardThreshold(SetSimilarityThresholdBase):
     __thresh = None
     metric = None
     nr_compaired_samples = 0
+    recheck_L2_distance = True
 
-    def __init__(self, threshold=0.3, cluster=None, metric='ABOD', nr_compaired_samples=40):
+    def __init__(self, threshold=0.3, cluster=None, metric='ABOD', nr_compaired_samples=40, recheck_l2=False):
         SetSimilarityThresholdBase.__init__(self, cluster=cluster)
         self.__thresh = threshold
         self.metric = metric
         self.nr_compaired_samples = nr_compaired_samples
+        self.recheck_L2_distance = recheck_l2
 
     def predict(self, samples, samples_poses):
 
@@ -122,13 +124,20 @@ class SetSimilarityHardThreshold(SetSimilarityThresholdBase):
             raise NotImplementedError("Implement threshold prediction for specific cluster type.")
 
         print "==== {}: ".format(self.metric), ["%0.3f" % i for i in similarity_scores]
-        print "==== L2: ", ["%0.3f" % i for i in self.data_cluster.class_mean_dist(samples, metric='euclidean')]
+        l2_dist = self.data_cluster.class_mean_dist(samples, metric='euclidean')
+        print "==== L2: ", ["%0.3f" % i for i in l2_dist]
         print "==== Matching conf: ", ["%0.1f" % i for i in matching_confidence]
 
         if self.metric == 'ABOD':
             positive = similarity_scores > self.__thresh
+
+            # only apply on 50% max of samples
+            if self.recheck_L2_distance and np.count_nonzero(positive) >= int(len(positive)/2.):
+                m1 = similarity_scores > 0.2
+                m2 = l2_dist < 0.6
+                print ".... Rechecking L2 distance, detections: ", m1 & m2
+                positive[m1 & m2] = True
         else:
             positive = similarity_scores < self.__thresh
-
         return np.array([1 if v else -1 for v in positive]), np.array(matching_confidence)
 

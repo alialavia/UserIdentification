@@ -344,7 +344,7 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 				// extract images
 				std::vector<cv::Mat*> face_patches;
 				std::vector<std::tuple<int, int>> sample_weights;
-				bool has_samples = target_user->pGrid->ExtractUnprocessedImageBatchWithTimeout(5, 6, face_patches, sample_weights);
+				bool has_samples = target_user->pGrid->ExtractUnprocessedImageBatchWithTimeout(2, 6, face_patches, sample_weights);
 
 				if (has_samples) {
 
@@ -446,7 +446,7 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 				}
 
 				// reset grid
-				if (target_user->pGrid->ResetIfFullOrStagnating(10, 7)) {
+				if (target_user->pGrid->ResetIfFullOrStagnating(10, 10)) {
 					std::cout << "--- Grid resetted!\n";
 				}
 			}
@@ -475,16 +475,16 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 						std::vector<cv::Mat*> face_patches;
 						std::vector<int> sample_weights;
 						target_user->pGrid->ExtractGrid(face_patches, sample_weights);
-						
 
 #ifdef _CLOSED_SET_REVALIDATION
 						// closed set re-validation
 						std::unordered_set<int> target_set = target_user->mClosedSetConfusionIDs;
+						// add current user id to closed set
+						target_set.insert(target_user->GetUserID());
 #else
 						// forces open set re-validation (validation against unknown -1)
 						std::unordered_set<int> target_set = {-1};
 #endif
-
 
 #ifdef _DLIB_PREALIGN
 						io::ImageIdentificationAlignedCS* new_request = new io::ImageIdentificationAlignedCS(

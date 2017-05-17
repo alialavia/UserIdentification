@@ -199,7 +199,7 @@ class ImageIdentificationPrealignedCS:
         # receive images
         images = server.receive_image_batch_squared_same_size(conn)
 
-        log.severe('ImageIdentificationPrealignedCS')
+        log.severe("ImageIdentificationPrealignedCS, possible IDs: ", target_users)
 
         # generate embedding
         embeddings = server.embedding_gen.get_embeddings(images, False)
