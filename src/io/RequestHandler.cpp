@@ -239,7 +239,7 @@ void NetworkRequestHandler::processRequests()
 			int response_identifier = socket->Receive32bit<int>();
 
 #ifdef _DEBUG_REQUESTHANDLER
-			std::cout << "--- Response id: " << response_identifier << " | Waiting for response data" << std::endl;
+			//std::cout << "--- Response id: " << response_identifier << " | Waiting for response data" << std::endl;
 #endif
 
 			NetworkResponse* response_ptr = nullptr;

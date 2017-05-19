@@ -8,6 +8,7 @@ SET(TARGET_H
     ${HEADER_PATH}/RequestHandler.h
     ${HEADER_PATH}/RequestTypes.h
     ${HEADER_PATH}/ResponseTypes.h
+    ${HEADER_PATH}/Logger.h
 )
 
 SET(TARGET_SRC
@@ -18,6 +19,7 @@ SET(TARGET_SRC
 	RequestHandler.cpp
 	RequestTypes.cpp
 	ResponseTypes.cpp
+	Logger.cpp
 )
 
 # --------------------------------------------

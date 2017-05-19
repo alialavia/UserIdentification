@@ -314,92 +314,81 @@ std::vector<std::pair<int, cv::Mat>> BaseUserManager::GetSceneProfilePictures() 
 
 std::vector<std::pair<int, cv::Mat>> BaseUserManager::GetAllProfilePictures() {
 	std::vector<std::pair<int, cv::Mat>> out;
+
 	// request images from server
-	io::GetProfilePictures req(pServerConn);
+	io::GetProfilePictures *req = new io::GetProfilePictures(pServerConn);
+
+#ifndef _KEEP_SERVER_CONNECTION
+	pServerConn->Connect();
+#endif
 
 	// submit priority request
-	pRequestHandler->addRequest(&req, true);
+	pRequestHandler->addRequest(req, true);
 
 	// wait for response (blocking)
 	io::NetworkRequest* request_lookup = nullptr;	// careful! the request corresponding to this pointer is already deleted!
 	user::IdentificationStatus id_status;
 
+	// loop till we get response
 	io::ProfilePictures response;
-
+	int count = 0;
 	while (!pRequestHandler->PopResponse(&response, request_lookup))
 	{
 		// breaks when response is received
+		Sleep(10); // wait 10ms
+		++count;
 	}
 
 	// load images
 	for (size_t i = 0; i < response.mUserIDs.size(); i++) {
-		std::cout << "here\n";
 		out.push_back(std::make_pair(response.mUserIDs[i], response.mImages[i]));
 	}
 
 	return out;
 }
 
-//std::vector<std::pair<int, cv::Mat>> BaseUserManager::GetAllProfilePictures() {
-//	std::vector<std::pair<int, cv::Mat>> out;
-//	// request images from server
-//	io::GetProfilePictures req(pServerConn);
-//#ifndef _KEEP_SERVER_CONNECTION
-//	pServerConn->Connect();
-//#endif
-//	req.SubmitRequest();
-//	// wait for reponse
-//	io::ProfilePictures resp(pServerConn);
-//	int response_code = 0;
-//	if (!resp.Load(&response_code)) {
-//		// error
-//	}
-//	else {
-//#ifdef _DEBUG_BaseUserManager
-//		if (resp.mUserIDs.size() != resp.mUserIDs.size()) {
-//			std::cout << "--- Error: size(user_ids) != size(user_profile_pictures)!\n";
-//		}
-//#endif
-//		// load images
-//		for (size_t i = 0; i < resp.mUserIDs.size(); i++) {
-//			out.push_back(std::make_pair(resp.mUserIDs[i], resp.mImages[i]));
-//		}
-//	}
-//#ifndef _KEEP_SERVER_CONNECTION
-//	pServerConn->Close();
-//#endif
-//	return out;
-//}
 
-void BaseUserManager::GetAllProfilePictures(std::vector<cv::Mat> &pictures, std::vector<int> &user_ids) {
+bool BaseUserManager::GetAllProfilePictures(std::vector<cv::Mat> &pictures, std::vector<int> &user_ids) {
 
 	// request images from server
-	io::GetProfilePictures req(pServerConn);
+	io::GetProfilePictures *req = new io::GetProfilePictures(pServerConn);
+
+#ifndef _KEEP_SERVER_CONNECTION
+	pServerConn->Connect();
+#endif
 
 	// submit priority request
-	pRequestHandler->addRequest(&req);
+	pRequestHandler->addRequest(req, true);
 
 	// wait for response (blocking)
 	io::NetworkRequest* request_lookup = nullptr;	// careful! the request corresponding to this pointer is already deleted!
 	user::IdentificationStatus id_status;
 
+	// loop till we get response
 	io::ProfilePictures response;
-
+	int count = 0;
 	while (!pRequestHandler->PopResponse(&response, request_lookup))
 	{
 		// breaks when response is received
-	}
-
-	std::cout << "test" << std::endl;
-	// load images
-	for (size_t i = 0; i < response.mUserIDs.size(); i++) {
-		std::cout << "here\n";
-		// load images
-		for (size_t i = 0; i < response.mUserIDs.size(); i++) {
-			user_ids.push_back(response.mUserIDs[i]);
-			pictures.push_back(response.mImages[i]);
+		Sleep(10); // wait 10ms
+		++count;
+		if (count > 200)
+		{
+			return false;
 		}
 	}
+
+#ifndef _KEEP_SERVER_CONNECTION
+	pServerConn->Close();
+#endif
+
+	// load images
+	for (size_t i = 0; i < response.mUserIDs.size(); i++) {
+		user_ids.push_back(response.mUserIDs[i]);
+		pictures.push_back(response.mImages[i]);
+	}
+
+	return true;
 
 }
 
@@ -442,7 +431,7 @@ void BaseUserManager::RenderGUI(cv::Mat &img)
 		cv::Mat profile_image;
 		if (target_user->GetProfilePicture(profile_image))
 		{
-			gui::safe_copyTo(img, profile_image, cv::Rect(bb.x, bb.y - 100, 100, 100));
+			gui::safe_copyTo(img, profile_image, cv::Rect(bb.x, bb.y - 108, 108, 108));
 			// render inside bb
 			if(false)
 			{
