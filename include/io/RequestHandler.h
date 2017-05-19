@@ -136,6 +136,60 @@ namespace io {
 			return status;
 		}
 
+		template<class T>
+		bool SubmitAndWaitForSpecificResponse(NetworkRequest* request_ptr, T *response_container) {
+			/*
+			Procedure:
+			- create request handling that blocks thread for a short time
+			- return false if input template does not comply with response (compare typeid with response type)
+			*/
+
+			mProcessingLock.lock();
+
+			// extract server connection
+			io::TCPClient* socket = request_ptr->GetServerConnection();
+
+#ifndef _KEEP_SERVER_CONNECTION
+			// connect to server
+			socket->Connect();
+#endif
+
+			// submit
+			request_ptr->SubmitRequest();
+
+			// wait for response from this socket - blocking
+			// response factory
+			int response_identifier = socket->Receive32bit<int>();
+
+			NetworkResponse* response_ptr = nullptr;
+			// allocate response
+			std::type_index response_type_id = ResponseFactory::AllocateAndLoad((io::NetworkResponseType)response_identifier, socket, response_ptr);
+
+			// check if response type does comply, else return false
+			if (response_container->cTypeID != response_identifier) {
+				return false;
+			}
+
+			//--------------------------
+
+			// 1. cast to container class
+			T* spec_resp = dynamic_cast<T*>(response_ptr);
+			// 2. copy by copy constructor
+			*response_container = T(*spec_resp);
+
+			// cleanup
+			delete(response_ptr);
+			delete(request_ptr);
+
+#ifndef _KEEP_SERVER_CONNECTION
+			// disconnect from server
+			socket->Close();
+#endif
+			mProcessingLock.unlock();
+
+			return true;
+		}
+
 		void processRequests();
 		void processAllPendingRequests();
 
@@ -189,6 +243,7 @@ namespace io {
 		std::mutex mMappingLock;
 		std::mutex mRequestsLock;
 		std::mutex mRespondsLock;
+		std::mutex mProcessingLock;
 	};
 
 };

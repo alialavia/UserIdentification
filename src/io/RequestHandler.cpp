@@ -201,6 +201,8 @@ void NetworkRequestHandler::processRequests()
 
 	while (mStatus == RequestHandlerStatus_Running)
 	{
+		mProcessingLock.lock();
+
 		// process priority requests first
 		if(!mPriorityRequests.empty())
 		{
@@ -273,8 +275,12 @@ void NetworkRequestHandler::processRequests()
 #endif
 
 #endif
-
 		}
+		else {
+			//Sleep(10); // wait 10ms
+		}
+
+		mProcessingLock.unlock();
 	}
 
 #ifdef _DEBUG_REQUESTHANDLER

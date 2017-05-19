@@ -394,27 +394,19 @@ bool BaseUserManager::GetAllProfilePictures(std::vector<cv::Mat> &pictures, std:
 
 bool BaseUserManager::GetUserID(const cv::Mat &face_capture, int &user_id) {
 	std::vector<cv::Mat> face_patches = { face_capture };
-	IDReq id_request(pServerConn, face_patches);
-#ifndef _KEEP_SERVER_CONNECTION
-	pServerConn->Connect();
-#endif
-	id_request.SubmitRequest();
-	user_id = -1;
-	bool succ = false;
-	// wait for reponse
+	IDReq *id_request = new IDReq(pServerConn, face_patches);
 	io::IdentificationResponse id_response(pServerConn);
-	int response_code = 0;
-	if (!id_response.Load(&response_code)) {
-		//std::cout << "--- An error occurred during update: ResponseType " << response_code << " | expected: " << id_response.cTypeID << std::endl;
-	}
-	else {
-		succ = true;
+
+	// receive response (blocking)
+	if (pRequestHandler->SubmitAndWaitForSpecificResponse(id_request, &id_response)) {
 		user_id = id_response.mUserID;
 	}
-#ifndef _KEEP_SERVER_CONNECTION
-	pServerConn->Close();
-#endif
-	return succ;
+	else {
+		std::cout << "An error occured..." << std::endl;
+		return false;
+	}
+
+	return true;
 }
 
 // ----------------- helper functions
