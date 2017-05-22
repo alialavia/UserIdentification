@@ -9,6 +9,7 @@ FOREACH( mylibfolder
 		features
 		recognition
 		gui
+		segmentation
     )
 	
     ADD_SUBDIRECTORY(${mylibfolder})
