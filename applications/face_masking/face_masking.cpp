@@ -98,7 +98,7 @@ int main(int argc, char** argv)
 
 			// get color image
 			k.GetImageCopyRGB(color_image);
-			k.GetImageCopyDepth(depth_image);
+			k.GetImageCopyDepth(depth_image);	// depth in mm
 
 
 			updateColor(color_image, color);
@@ -106,18 +106,12 @@ int main(int argc, char** argv)
 
 			Size window_size = cascade.getOriginalWindowSize();
 
-
-			//masker->Run(kMinDepth, kMinPixels, kOpenSize, kHeadWidth, kHeadHeight,
-			//	kHeadDepth, kFaceSize, kExtendedSize, window_size.width,
-			//	camera->width(DEPTH_SENSOR), camera->height(DEPTH_SENSOR),
-			//	(camera->fx(DEPTH_SENSOR) + camera->fy(DEPTH_SENSOR)) / 2.0f,
-			//	depth_image, color_image);
-
-
+			// Sensor intrinsics
 			// https://threeconstants.wordpress.com/2014/11/09/kinect-v2-depth-camera-calibration/
 			//Focal Length(x, y) : 391.096, 463.098
 			//Principle Point(x, y) : 243.892, 208.922
 
+			// TODO: debug why generateMask fails...
 			masker->Run(kMinDepth, kMinPixels, kOpenSize, kHeadWidth, kHeadHeight,
 				kHeadDepth, kFaceSize, kExtendedSize, window_size.width,
 				512, 424,

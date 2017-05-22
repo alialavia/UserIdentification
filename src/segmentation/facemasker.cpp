@@ -29,8 +29,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <segmentation/facemasker.h>
 
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2\opencv.hpp>
 
 using namespace cv;
+
+
+//#define MASK_DEBUG
 
 namespace dip {
 
@@ -242,7 +246,7 @@ Mat FaceMasker::generateMask(const Mat& src) {
     }
   }
 
-//#define MASK_DEBUG
+#define MASK_DEBUG
 #ifdef MASK_DEBUG
   Mat shifted_mask = Mat::zeros(src.size(), CV_8U);
 
@@ -268,7 +272,7 @@ Mat FaceMasker::generateMask(const Mat& src) {
 
   Mat output;
   addWeighted(src, 0.5, shifted_mask, 0.5, 0.0, output);
-  rectangle(output, Point(0, 0), Point(window_size_, window_size_),
+  cv::rectangle(output, Point(0, 0), Point(window_size_, window_size_),
             Scalar(255));
 
   imwrite(filename, output);
