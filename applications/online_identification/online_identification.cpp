@@ -177,7 +177,13 @@ int main(int argc, char** argv)
 				//::vector<std::pair<int, cv::Mat>> profile_pictures = um.GetAllProfilePictures();
 				std::vector<int> user_ids;
 				std::vector<cv::Mat> profile_pics;
-				um.GetAllProfilePictures(profile_pics, user_ids);
+
+				// get profile pictures
+				if (!um.GetAllProfilePictures(profile_pics, user_ids)) {
+					std::cout << "Could not acquire profile pictures...\n";
+					continue;
+				}
+
 				// write id on profile pictures
 				for(size_t i=0;i<profile_pics.size();i++)
 				{
