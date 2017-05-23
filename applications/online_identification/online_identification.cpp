@@ -187,7 +187,9 @@ int main(int argc, char** argv)
 				// write id on profile pictures
 				for(size_t i=0;i<profile_pics.size();i++)
 				{
-					cv::putText(profile_pics[i], "ID"+std::to_string(user_ids[i]), cv::Point(10, 10), cv::FONT_HERSHEY_SIMPLEX, 0.3, cv::Scalar(0,0,255), 1, 8);
+					cv::Rect bg_patch = cv::Rect(0, 0, 30, 20);
+					profile_pics[i](bg_patch) = um.GetUserColor(user_ids[i]);
+					cv::putText(profile_pics[i], "ID"+std::to_string(user_ids[i]), cv::Point(8, 12), cv::FONT_HERSHEY_SIMPLEX, 0.3, cv::Scalar(255,255,255), 1, 8);
 				}
 
 				if(profile_pics.size() > 0)

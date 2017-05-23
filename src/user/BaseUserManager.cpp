@@ -347,7 +347,6 @@ std::vector<std::pair<int, cv::Mat>> BaseUserManager::GetAllProfilePictures() {
 	return out;
 }
 
-
 bool BaseUserManager::GetAllProfilePictures(std::vector<cv::Mat> &pictures, std::vector<int> &user_ids) {
 
 	// request images from server
@@ -438,6 +437,18 @@ cv::Scalar BaseUserManager::GetUserColor(int user_id)
 	}else if (user_id == 7) {
 		// pink
 		return cv::Scalar(255, 51, 255);
+	}
+	else if (user_id == 8) {
+		// lachs
+		return cv::Scalar(255, 153, 153);
+	}
+	else if (user_id == 9) {
+		// lachs
+		return cv::Scalar(204, 255, 153);
+	}
+	else if (user_id == 10) {
+		// lachs
+		return cv::Scalar(0, 102, 51);
 	}
 	else{
 		// pink
