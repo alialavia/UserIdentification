@@ -133,7 +133,7 @@ class SetSimilarityHardThreshold(SetSimilarityThresholdBase):
 
             # only apply on 50% max of samples
             if self.recheck_L2_distance and np.count_nonzero(positive) >= int(len(positive)/2.):
-                m1 = similarity_scores > 0.2
+                m1 = similarity_scores >= 0.16
                 m2 = l2_dist < 0.6
                 print ".... Rechecking L2 distance, detections: ", m1 & m2
                 positive[m1 & m2] = True

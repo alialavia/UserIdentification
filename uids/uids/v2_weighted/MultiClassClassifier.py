@@ -28,7 +28,11 @@ class MultiCl(MultiClassClassifierBase):
 
         self.data_controller = DataController()
         self.update_controller = UpdateController(p_multicl=self)
-        self.id_controller = IdentificationController()
+        self.id_controller = IdentificationController(
+            save_sample_length=3,   # at least 5 samples for safe decision
+            save_weight_thresh=10,  # or if a sample has confidence >= 10,
+            min_sample_length=3,    # and at least 3 samples have been collected
+        )
 
     # -------- standard methods
 
@@ -57,10 +61,10 @@ class MultiCl(MultiClassClassifierBase):
         neg_matching_confidence = []
 
         # select classes in range
-        classes_in_range = self.data_controller.classes_in_range(samples=samples, metric='euclidean', thresh=1.1)
+        classes_in_range = self.data_controller.classes_in_range(samples=samples, metric='euclidean', thresh=1.25)
 
         if not classes_in_range:
-            log.info('cl', "No classes in range...")
+            log.info('db', "No classes in range...")
             return True, -1, 1
 
         for class_id, cls in self.classifiers.iteritems():
@@ -278,10 +282,10 @@ class MultiCl(MultiClassClassifierBase):
             return {}
 
         # select classes in range
-        classes_in_range = self.data_controller.classes_in_range(samples=samples, metric='cosine', thresh=0.7)
+        classes_in_range = self.data_controller.classes_in_range(samples=samples, metric='euclidean', thresh=1.3)
 
         if len(classes_in_range) == 0:
-            log.info('cls', "No class in range... (cosine < 0.7)")
+            log.info('cls', "No class in range... No class in range... (L2^2 < 1.3)")
             return {}
 
         # predict class values
@@ -297,10 +301,10 @@ class MultiCl(MultiClassClassifierBase):
             return True
 
         # select classes in range
-        classes_in_range = self.data_controller.classes_in_range(samples=samples, metric='euclidean', thresh=1.1)
+        classes_in_range = self.data_controller.classes_in_range(samples=samples, metric='euclidean', thresh=1.3)
 
         if len(classes_in_range) == 0:
-            log.info('cls', "No class in range... (cosine < 0.7)")
+            log.info('db', "Guaranteed new class - No class in range... (L2^2 < 1.3)")
             return True
 
         return False

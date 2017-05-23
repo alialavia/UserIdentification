@@ -150,8 +150,8 @@ class BaseDataQueue(BaseMetaController):
 
 class IdentificationController(BaseDataQueue):
 
-    def __init__(self):
-        BaseDataQueue.__init__(self, min_sample_length=3, save_sample_length=5, save_weight_thresh=6)
+    def __init__(self, min_sample_length=3, save_sample_length=5, save_weight_thresh=6):
+        BaseDataQueue.__init__(self, min_sample_length=min_sample_length, save_sample_length=save_sample_length, save_weight_thresh=save_weight_thresh)
 
 
 class UpdateController(BaseMetaController):
