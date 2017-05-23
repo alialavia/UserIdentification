@@ -127,6 +127,7 @@ namespace user
 
 		void IncrementFaceDetectionStatus();
 		std::string GetHumanStatusString();
+		std::string GetActionStatusString();
 		void IncrementBBMovementStatus();
 		bool IsTrackingObject();
 		bool IsHuman();
@@ -134,18 +135,17 @@ namespace user
 		// ids of possible confused users (for closed set identification)
 		std::unordered_set<int> mClosedSetConfusionIDs;
 
-
 		// temporal user prediction
 		int mUserIDPredicted = 0;
+		int mIDProgress = 0;
 		int mPredictionConfidence = 0;
-
 
 	private:
 		// user id and metadata
 		int mUserID;
 		std::string mUserNiceName;
 		int mTrackingID;
-		int mConfidence;
+		
 
 		// localization/tracking: must be set at all times
 		cv::Rect2f mFaceBoundingBox;

@@ -46,7 +46,7 @@ class Identification:
 
 class PredictionFeedback:
 
-    def __init__(self, server, conn, user_id, user_name, confidence=100):
+    def __init__(self, server, conn, user_id, user_name, confidence=100, progress=100):
 
         # send back response identifier
         resp_id = ROUTING['RESPONSE']['ID'][self.__class__.__name__]
@@ -58,8 +58,12 @@ class PredictionFeedback:
         # send back nice name
         server.send_string(conn, user_name)
 
+        # send back progress measure
+        server.send_uchar(conn, progress)
+
         # confidence value
         server.send_uchar(conn, confidence)
+
 
 class Reidentification:
 

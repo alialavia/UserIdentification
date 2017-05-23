@@ -50,10 +50,11 @@ class PartialImageIdentificationAligned:
         # predict class similarities
         new_class_guaranteed = server.classifier.is_guaranteed_new_class(current_samples)
 
+        # at least 3 samples needed to generate classifier
         if new_class_guaranteed and len(current_samples) > 2:
             id_pred = -1
             confidence = 100
-            is_consistent = True    # ??
+            is_consistent = True    # yes - inter-sample distance checked
             is_save_set = True
         else:
             # do meta recognition and predict the user id from the cls scores
@@ -115,8 +116,12 @@ class PartialImageIdentificationAligned:
         else:
             # UNSAVE SET - WAIT TILL SAVE SET IS ACCUMULATED
 
+            # identification progress in percent
+            id_progress = len(current_samples)/float(server.classifier.id_controller.save_sample_length)
+            id_progress = int(id_progress*100)
+
             # return prediction and confidence - but no identification
-            r.PredictionFeedback(server, conn, int(id_pred), user_name, confidence=confidence)
+            r.PredictionFeedback(server, conn, int(id_pred), user_name, confidence=confidence, progress=id_progress)
 
 
 # --------------- UPDATE

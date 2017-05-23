@@ -129,11 +129,13 @@ namespace io {
 			// nr classes
 			mUserID = pConn->Receive32bit<int>();
 			mUserNiceName = pConn->ReceiveStringWithVarLength();
+			mProgress = (int)pConn->Receive8bit<uint8_t>();
 			mConfidence = (int)pConn->Receive8bit<uint8_t>();
 		};
-		int mUserID;
+		int mUserID = -1;
 		std::string mUserNiceName = "";
-		int mConfidence;
+		int mProgress = 0;
+		int mConfidence = 0;
 	};
 
 

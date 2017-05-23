@@ -93,6 +93,7 @@ void User::ResetUserIdentity() {
 
 	mUserIDPredicted = 0;
 	mPredictionConfidence = 0;
+	mIDProgress = 0;
 
 	// release profile image
 	if (!mProfilePicture.empty())
@@ -122,6 +123,7 @@ void User::SetUserID(int id, std::string nice_name)
 	mUserID = id;
 	mUserNiceName = nice_name;
 	mIDStatus = IDStatus_Identified;
+	mIDProgress = 100;
 	mClosedSetConfusionIDs.clear();
 }
 
@@ -289,6 +291,31 @@ void User::IncrementFaceDetectionStatus() {
 
 std::string User::GetHumanStatusString() {
 	return " Face: " + std::to_string(mNrFramesNoFace) + " | Movement: " + std::to_string(mNrFramesNoMovement);
+}
+
+std::string User::GetActionStatusString()
+{
+	if(mActionStatus == ActionStatus_WaitForCertainTracking)
+	{
+		std::string text = "Recovering | Set IDs: ";
+
+		for (auto conf_id : mClosedSetConfusionIDs) {
+			text +=std::to_string(conf_id) + " ";
+		}
+
+		return text;
+	}else if(mActionStatus == ActionStatus_Waiting)
+	{
+		return "Pending response";
+	}
+	else if (mActionStatus == ActionStatus_DataCollection)
+	{
+		return "Sampling: " + std::to_string(pGrid->nr_images());
+	}
+	else
+	{
+		return "Idle";
+	}
 }
 
 void User::IncrementBBMovementStatus() {

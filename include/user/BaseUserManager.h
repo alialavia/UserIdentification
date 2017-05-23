@@ -74,6 +74,7 @@ namespace user
 		/// 	Helpers
 
 		void RenderGUI(cv::Mat &img);
+		cv::Scalar GetUserColor(int user_id);
 
 		void RemoveRequestUserLinking(io::NetworkRequest* req) {
 			// remove req->user mapping

@@ -409,6 +409,42 @@ bool BaseUserManager::GetUserID(const cv::Mat &face_capture, int &user_id) {
 	return true;
 }
 
+cv::Scalar BaseUserManager::GetUserColor(int user_id)
+{
+	// ID dependent background
+	if (user_id == 1) {
+		// red
+		return cv::Scalar(0, 0, 255);
+	}
+	else if (user_id == 2) {
+		// green
+		return cv::Scalar(50, 205, 50);
+	}
+	else if (user_id == 3) {
+		// blue
+		return cv::Scalar(255, 0, 0);
+	}
+	else if (user_id == 4) {
+		// orange
+		return cv::Scalar(0, 140, 255);
+	}
+	else if (user_id == 5) {
+		// light blue
+		return cv::Scalar(170, 178, 32);
+	}
+	else if (user_id == 6) {
+		// violett
+		return cv::Scalar(133, 21, 199);
+	}else if (user_id == 7) {
+		// pink
+		return cv::Scalar(255, 51, 255);
+	}
+	else{
+		// pink
+		return cv::Scalar(255, 255, 51);
+	}
+}
+
 // ----------------- helper functions
 
 void BaseUserManager::RenderGUI(cv::Mat &img)
@@ -416,10 +452,24 @@ void BaseUserManager::RenderGUI(cv::Mat &img)
 	for (auto it = mFrameIDToUser.begin(); it != mFrameIDToUser.end(); ++it)
 	{
 		user::User* target_user = it->second;
-		
-		cv::Rect bb = target_user->GetFaceBoundingBox();
 
-		// render user profile image
+		IdentificationStatus id_status;
+		ActionStatus action;
+		target_user->GetStatus(id_status, action);
+
+		// skip object tracking and non-target users
+		if (
+			id_status == IDStatus_IsObject
+			//|| id_status == IDStatus_NonTarget
+			)
+		{
+			continue;
+		}
+
+		// ============================================= //
+		// 1. Profile picture
+		// ============================================= //
+		cv::Rect bb = target_user->GetFaceBoundingBox();
 		cv::Mat profile_image;
 		if (target_user->GetProfilePicture(profile_image))
 		{
@@ -432,129 +482,158 @@ void BaseUserManager::RenderGUI(cv::Mat &img)
 			}
 		}
 
+		// ============================================= //
+		// 1.1 Face Bounding box
+		// ============================================= //
+
+		tracking::Face f;
+		if(target_user->GetFaceData(f))
+		{
+
+			cv::Rect2f box = f.boundingBox;
+			
+
+			// top left
+			cv::line(img, cv::Point(box.x, box.y), cv::Point(box.x, box.y+10), cv::Scalar(0, 0, 255), 2, 8);
+			cv::line(img, cv::Point(box.x, box.y), cv::Point(box.x + 10, box.y), cv::Scalar(0, 0, 255), 2, 8);
+			// top right
+			cv::line(img, cv::Point(box.x + box.width, box.y), cv::Point(box.x + box.width, box.y + 10), cv::Scalar(0, 0, 255), 2, 8);
+			cv::line(img, cv::Point(box.x + box.width, box.y), cv::Point(box.x + box.width - 10, box.y), cv::Scalar(0, 0, 255), 2, 8);
+			// bottom left
+			cv::line(img, cv::Point(box.x, box.y + box.height), cv::Point(box.x, box.y + box.height -10), cv::Scalar(0, 0, 255), 2, 8);
+			cv::line(img, cv::Point(box.x, box.y + box.height), cv::Point(box.x + 10, box.y + box.height), cv::Scalar(0, 0, 255), 2, 8);
+			// bottom right
+			cv::line(img, cv::Point(box.x + box.width, box.y + box.height), cv::Point(box.x + box.width, box.y + box.height - 10), cv::Scalar(0, 0, 255), 2, 8);
+			cv::line(img, cv::Point(box.x + box.width, box.y + box.height), cv::Point(box.x + box.width - 10, box.y + box.height), cv::Scalar(0, 0, 255), 2, 8);
+			
+		}
+
+
 		// draw identification status
 		float font_size = 0.5;
-		cv::Scalar color = cv::Scalar(0, 0, 0);
+		float font_size_small = 0.3;
+		cv::Scalar color = cv::Scalar(255, 255, 255);
 		cv::Scalar bg_color = cv::Scalar(0, 0, 0);
 		std::string text1, text2;
 
-		IdentificationStatus id_status;
-		ActionStatus action;
-		target_user->GetStatus(id_status, action);
+		// ============================================= //
+		// 2. Text 1 row - ID
+		// ============================================= //
 
 		if (id_status == IDStatus_Identified || id_status == IDStatus_Uncertain)
 		{
-			int user_id = 0;
-			std::string nice_name = "";
-			target_user->GetUserID(user_id, nice_name);
-			text1 = "Status: ID" + std::to_string(user_id);
-			//text1 = "Status: " + nice_name + " - ID" + std::to_string(user_id);
-			color = cv::Scalar(255, 255, 255);
+			int user_id = target_user->GetUserID();
+			text1 = "ID " + std::to_string(user_id);
 
-			// unsafe tracking
-			if (id_status == IDStatus_Uncertain) {
-
-				if (action == ActionStatus_WaitForCertainTracking) {
-					text1 += " | waiting for safe tracking";
-				}
-				else if (action == ActionStatus_Waiting) {
-					text1 += " | pending reidentification";
-				}
-				else if (action == ActionStatus_DataCollection) {
-					text1 += " | sampling (" + std::to_string(target_user->pGrid->nr_images()) + ")";
-				}
-
-				text1 += " | ID confusion : ";
-				for (auto conf_id : target_user->mClosedSetConfusionIDs) {
-					text1 += " " + std::to_string(conf_id);
-				}
+			// draw flat background
+			cv::Rect bg_patch = cv::Rect(bb.x, bb.y, 108, 30);
+			try {
+				img(bg_patch) = GetUserColor(user_id);
+			}
+			catch (...) {
+				// ...
 			}
 
-			// ID dependent background
-			if (user_id==1) {
-				// red
-				bg_color = cv::Scalar(0, 0, 255);
-			}
-			else if (user_id==2) {
-				// green
-				bg_color = cv::Scalar(50, 205, 50);
-			}
-			else if (user_id==3) {
-				// blue
-				bg_color = cv::Scalar(255, 0, 0);
-			}
-			else if (user_id==4) {
-				// orange
-				bg_color = cv::Scalar(0, 140, 255);
-			}
-			else if (user_id==5) {
-				// light blue
-				bg_color = cv::Scalar(170, 178, 32);
-			}
-			else if (user_id==6) {
-				// violett
-				bg_color = cv::Scalar(133, 21, 199);
-			} 
-
+			// user id
+			cv::putText(img, text1, cv::Point(bb.x + 10, bb.y + 20), cv::FONT_HERSHEY_SIMPLEX, font_size, color, 1.5, 8);
+			// prediction confidence
+			cv::putText(img, std::to_string(target_user->mPredictionConfidence) + "%", cv::Point(bb.x + 60, bb.y + 20), cv::FONT_HERSHEY_SIMPLEX, 0.4, color, 1, 8);
 		}
-		else if (id_status == IDStatus_IsObject) {
-			text1 = "OBJECT TRACKING";
-			color = cv::Scalar(0, 0, 0);
-			bg_color = cv::Scalar(0, 0, 255);
-			// dont draw objects
-			continue;
-		}
-		else if (id_status == IDStatus_NonTarget) {
-			continue;
-		}
-		else
+		else if(id_status == IDStatus_Unknown)
 		{
-			text1 = "Status: unknown";
-			if (action == ActionStatus_DataCollection) {
-				text2 = "Sampling ("+std::to_string(target_user->pGrid->nr_images())+")";
-			}
-			else if (action == ActionStatus_Waiting) {
-				text2 = "ID pending";
-			}
-			else if (action == ActionStatus_Idle) {
-				text2 = "Idle";
-			}
-			else if (action == ActionStatus_WaitForCertainTracking) {
-				text2 = "Wait for safe tracking";
-			}
+			// use blurred out background
+			cv::Rect bg_patch = cv::Rect(bb.x, bb.y, 108, 30);
 
-			text2 += " " + target_user->GetHumanStatusString();
+			if(target_user->mUserIDPredicted != 0)
+			{
+				try {
+					cv::Mat roi = img(bg_patch);
+					cv::Mat color(bg_patch.size(), CV_8UC3, GetUserColor(target_user->mUserIDPredicted));
+					double alpha = 0.5;
+					cv::addWeighted(color, alpha, roi, 1.0 - alpha, 0.0, roi);
+				}
+				catch (...) {
+					// ...
+				}
 
-			color = cv::Scalar(0, 0, 255);
+				// show current prediction
+				cv::putText(img, "ID " + std::to_string(target_user->mUserIDPredicted), cv::Point(bb.x + 10, bb.y + 20), cv::FONT_HERSHEY_SIMPLEX, font_size, color, 1.5, 8);
+				cv::putText(img, std::to_string(target_user->mPredictionConfidence) + "%", cv::Point(bb.x + 60, bb.y + 20), cv::FONT_HERSHEY_SIMPLEX, 0.4, color, 1, 8);
+
+			}else
+			{
+				try {
+					img(bg_patch) = cv::Scalar(0, 0, 0);
+				}
+				catch (...) {
+					// ...
+				}
+
+				cv::putText(img, "ID pending", cv::Point(bb.x + 10, bb.y + 20), cv::FONT_HERSHEY_SIMPLEX, font_size, cv::Scalar(255, 255, 255), 1.5, 8);
+			}
 		}
 
-		// show current prediction
-		cv::putText(img, "Prediction: " + std::to_string(target_user->mUserIDPredicted) + " || " + std::to_string(target_user->mPredictionConfidence) + "/100", cv::Point(bb.x + 10, bb.y + 70), cv::FONT_HERSHEY_SIMPLEX, font_size, color, 1, 8);
 
-		int baseline = 0;
-		cv::Size textSize = cv::getTextSize(text1, cv::FONT_HERSHEY_SIMPLEX, font_size, 1, &baseline);
-		cv::Rect bg_patch = cv::Rect(bb.x, bb.y, textSize.width + 20, textSize.height + 15);
+		// ============================================= //
+		// 3. Text 2 row - action status
+		// ============================================= //
 
-		user::TrackingConsistency tracking_status;
-		target_user->GetStatus(tracking_status);
-		if (tracking_status == user::TrackingConsistency_Uncertain) {
-			bg_color = cv::Scalar(0, 14, 88);
-		}
-
-		// draw flat background
+		// draw background
 		try {
-			img(bg_patch) = bg_color;
+			cv::Rect bg_patch = cv::Rect(bb.x, bb.y + 30, 108, 20);
+			cv::Mat roi = img(bg_patch);
+			cv::Mat color(bg_patch.size(), CV_8UC3, cv::Scalar(0, 0, 0));
+			double alpha = 0.5;
+			cv::addWeighted(color, alpha, roi, 1.0 - alpha, 0.0, roi);
 		}
 		catch (...) {
 			// ...
 		}
-		
-		cv::putText(img, text1, cv::Point(bb.x+10, bb.y+20), cv::FONT_HERSHEY_SIMPLEX, font_size, color, 1, 8);
-		cv::putText(img, text2, cv::Point(bb.x+10, bb.y+40), cv::FONT_HERSHEY_SIMPLEX, font_size, color, 1, 8);
 
-		// draw face bounding box
-		if (id_status == IDStatus_Uncertain) {
-			cv::rectangle(img, bb, cv::Scalar(0, 14, 88), 2, cv::LINE_4);
+		// print status
+		cv::putText(img, target_user->GetActionStatusString(), cv::Point(bb.x + 10, bb.y + 40 + 2), cv::FONT_HERSHEY_SIMPLEX, font_size_small, cv::Scalar(255, 255, 255), 1.5, 8);
+
+		// ============================================= //
+		// 4. Text 3 row - progress
+		// ============================================= //
+
+		if (id_status == IDStatus_Unknown)
+		{
+			int start_height = 50;
+
+			// render progress
+			float progress = target_user->mIDProgress / 100.;
+			int max_width = 108;
+			int bar_width = int(max_width*progress);
+			if(bar_width == 0)
+			{
+				bar_width = 2;
+			}
+
+			int bar_height = 10;
+			cv::Scalar bar_color(0, 0, 255);
+
+			try {
+				cv::Rect bg_patch = cv::Rect(bb.x, bb.y + start_height, 108, bar_height);
+				cv::Mat roi = img(bg_patch);
+				cv::Mat color(bg_patch.size(), CV_8UC3, cv::Scalar(0,0,0));
+				double alpha = 0.5;
+				cv::addWeighted(color, alpha, roi, 1.0 - alpha, 0.0, roi);
+
+				cv::Rect bar_patch = cv::Rect(bb.x, bb.y + start_height, bar_width, bar_height);
+				img(bar_patch) = cv::Scalar(0,0,255);
+
+			}
+			catch (...) {
+				// ...
+			}
+
 		}
+
+		//user::TrackingConsistency tracking_status;
+		//target_user->GetStatus(tracking_status);
+		//if (tracking_status == user::TrackingConsistency_Uncertain) {
+		//	bg_color = cv::Scalar(0, 14, 88);
+		//}
 	}
 }

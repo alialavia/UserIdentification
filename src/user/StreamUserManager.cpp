@@ -176,6 +176,7 @@ void StreamUserManager::ProcessResponses()
 			// update user prediction
 			target_user->mUserIDPredicted = pred_response.mUserID;
 			target_user->mPredictionConfidence = pred_response.mConfidence;
+			target_user->mIDProgress = pred_response.mProgress;
 			std::cout << "Prediction: ID" << pred_response.mUserID << " | conf: " << pred_response.mConfidence << std::endl;
 
 		}
@@ -278,6 +279,10 @@ void StreamUserManager::ProcessResponses()
 			if (req_type == io::NetworkRequest_ProfilePictureUpdate) {
 				// performed during other actions (updates)
 				target_user->SetPendingProfilePicture(false);
+			}
+			else if(req_type == io::NetworkRequest_PartialImageIdentificationAligned){
+				// collected samples are inconsistent - reset progress
+				target_user->mIDProgress = 0;
 			}else
 			{
 				// reset action status
