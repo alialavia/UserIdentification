@@ -66,15 +66,15 @@ class BaseDataQueue(BaseMetaController):
     sample_weight_queue = {}
     sample_pose_queue = {}
 
-    __min_sample_length = 3    # at least 3 samples to build classifier
-    __save_sample_length = 5   # at least 5 samples to be safe
-    __save_weight_thresh = 7
+    min_sample_length = 3    # at least 3 samples to build classifier
+    save_sample_length = 5   # at least 5 samples to be safe
+    save_weight_thresh = 7
 
     def __init__(self, min_sample_length=2, save_sample_length=5, save_weight_thresh=6):
         BaseMetaController.__init__(self)
-        self.__min_sample_length = min_sample_length
-        self.__save_sample_length = save_sample_length
-        self.__save_weight_thresh = save_weight_thresh
+        self.min_sample_length = min_sample_length
+        self.save_sample_length = save_sample_length
+        self.save_weight_thresh = save_weight_thresh
 
     def drop_samples(self, tracking_id):
         self.sample_queue.pop(tracking_id, None)
@@ -122,9 +122,9 @@ class BaseDataQueue(BaseMetaController):
         is_save_set = False
 
         # if set has save sample or is long enough
-        if len(self.sample_queue[tracking_id]) >= self.__min_sample_length:
-            if len(self.sample_queue[tracking_id]) >= self.__save_sample_length\
-                    or np.count_nonzero(self.sample_weight_queue[tracking_id] >= self.__save_weight_thresh):
+        if len(self.sample_queue[tracking_id]) >= self.min_sample_length:
+            if len(self.sample_queue[tracking_id]) >= self.save_sample_length\
+                    or np.count_nonzero(self.sample_weight_queue[tracking_id] >= self.save_weight_thresh):
 
                 # check set consistency
                 samples_ok = BaseMetaController.check_inter_sample_dist(self.sample_queue[tracking_id], metric='euclidean')
