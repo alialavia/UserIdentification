@@ -41,6 +41,7 @@ void StreamUserManager::ProcessResponses()
 
 			// remove request mapping
 			RemoveRequestUserLinking(target_request);
+			target_user->SetStatus(user::RequestStatus_Idle);
 
 			bool duplicate_user = false;
 			int duplicate_id = -1;
@@ -86,8 +87,7 @@ void StreamUserManager::ProcessResponses()
 				target_user->mUserIDPredicted = response.mUserID;
 
 				// remove all images form grid
-				target_user->pGrid->Clear();
-
+				//target_user->pGrid->Clear();
 
 				// profile picture
 				if (!response.mImage.empty())
@@ -132,6 +132,7 @@ void StreamUserManager::ProcessResponses()
 
 			// remove request mapping
 			RemoveRequestUserLinking(target_request);
+			target_user->SetStatus(user::RequestStatus_Idle);
 
 			// calcel all requests
 			CancelAndDropAllUserRequests(target_user);
@@ -164,14 +165,17 @@ void StreamUserManager::ProcessResponses()
 
 			// remove request mapping
 			RemoveRequestUserLinking(target_request);
-
-			// reset action status
-			target_user->SetStatus(ActionStatus_Idle);
+			target_user->SetStatus(user::RequestStatus_Idle);
 
 			// handle custom events
-			//if (req_type == io::NetworkRequest_EmbeddingCollectionByID) {
-			//
-			//}
+			if (req_type == io::NetworkRequest_PartialImageIdentificationAligned) {
+				// do not set to idle - otherwise face grid is resetted
+				target_user->SetStatus(ActionStatus_DataCollection);
+			}else
+			{
+				// reset action status
+				target_user->SetStatus(ActionStatus_Idle);
+			}
 
 			// update user prediction
 			target_user->mUserIDPredicted = pred_response.mUserID;
@@ -244,6 +248,7 @@ void StreamUserManager::ProcessResponses()
 
 			// remove request mapping
 			RemoveRequestUserLinking(target_request);
+			target_user->SetStatus(user::RequestStatus_Idle);
 
 			// reset action status
 			target_user->SetStatus(ActionStatus_Idle);
@@ -291,6 +296,7 @@ void StreamUserManager::ProcessResponses()
 
 			// remove request mapping
 			RemoveRequestUserLinking(target_request);
+			target_user->SetStatus(user::RequestStatus_Idle);
 
 
 		}
@@ -310,8 +316,10 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 	{
 		IdentificationStatus id_status;
 		ActionStatus action;
+		RequestStatus request_status;
 		user::User* target_user = it->second;
 		target_user->GetStatus(id_status, action);
+		target_user->GetStatus(request_status);
 
 		//std::cout << "--- id_Status: "<< id_status << " | action: "<< action << std::endl;
 		// request user identification
@@ -339,43 +347,47 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 			// collect images for identification
 			if (action == ActionStatus_DataCollection) {
 
+				// try to take snapshot
 				if (target_user->TryToRecordFaceSample(scene_rgb))
 				{
-
-					// if enough images, request identification
-					//if (target_user->pGrid->nr_images() > 9) {
 				}
 
 				// extract images
-				std::vector<cv::Mat*> face_patches;
-				std::vector<std::tuple<int, int>> sample_weights;
-				bool has_samples = target_user->pGrid->ExtractUnprocessedImageBatchWithTimeout(2, 6, face_patches, sample_weights);
+				if(request_status == user::RequestStatus_Idle)
+				{
+					std::vector<cv::Mat*> face_patches;
+					std::vector<std::tuple<int, int>> sample_weights;
+					bool has_samples = target_user->pGrid->ExtractUnprocessedImageBatchWithTimeout(2, 6, face_patches, sample_weights);
 
-				if (has_samples) {
+					if (has_samples) {
 
-					//cv::imshow("identification", imgproc::ImageProc::createOne(face_patches, 1, 10));
-					//cv::waitKey(0);
-					//cv::destroyAllWindows();
+						//cv::imshow("identification", imgproc::ImageProc::createOne(face_patches, 1, 10));
+						//cv::waitKey(0);
+						//cv::destroyAllWindows();
 
-					// make new identification request
-#ifdef _DLIB_PREALIGN
-					io::PartialImageIdentificationAligned* new_request = new io::PartialImageIdentificationAligned(pServerConn, face_patches, sample_weights, target_user->GetTrackingID());
-#else
-					IDReq* new_request = new IDReq(pServerConn, face_patches);
-#endif
-					pRequestHandler->addRequest(new_request, true);
+						// make new identification request
+	#ifdef _DLIB_PREALIGN
+						io::PartialImageIdentificationAligned* new_request = new io::PartialImageIdentificationAligned(pServerConn, face_patches, sample_weights, target_user->GetTrackingID());
+	#else
+						IDReq* new_request = new IDReq(pServerConn, face_patches);
+	#endif
+						pRequestHandler->addRequest(new_request, true);	// priority request
 
-					// update linking
-					mRequestToUser[new_request] = target_user;
-					mUserToRequests[target_user].insert(new_request);
+						// update linking
+						mRequestToUser[new_request] = target_user;
+						mUserToRequests[target_user].insert(new_request);
+						target_user->SetStatus(user::RequestStatus_Pending);
 
-					// set user action status
-					target_user->SetPendingProfilePicture(true);	// might get it from server
-					target_user->SetStatus(ActionStatus_Waiting);
+						// might get it from server
+						target_user->SetPendingProfilePicture(true);	
+
+						// continue to collect images
+						//target_user->SetStatus(ActionStatus_Waiting);
+					}
+
+					// reset grid - if full, images have already been extracted at this point
+					target_user->pGrid->ResetIfFullOrStagnating(6, 5);
 				}
-
-				// reset grid
-				target_user->pGrid->ResetIfFullOrStagnating(6, 5);
 
 			}
 		}
@@ -383,7 +395,6 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 		// 2. UPDATES
 		// ============================================= //
 		else if (id_status == IDStatus_Identified) {
-			
 
 			// if nothing to do: collect updates
 			if (action == ActionStatus_Idle) {
@@ -392,21 +403,40 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 			}
 
 			// Update/assign profile picture
-			if (target_user->NeedsProfilePicture() &&
-				target_user->IsViewedFromFront()
-				//&& target_user->LooksPhotogenic()
-				)
+			if (target_user->NeedsProfilePicture())
 			{
-				target_user->SetPendingProfilePicture(true);
-				cv::Mat profile_picture = scene_rgb(target_user->GetFaceBoundingBox());
-				// scale profile picture
-				cv::resize(profile_picture, profile_picture, cv::Size(120, 120));
-				// make request
-				io::ProfilePictureUpdate* new_request = new io::ProfilePictureUpdate(pServerConn, target_user->GetUserID(), profile_picture);
-				pRequestHandler->addRequest(new_request, true);
-				// update linking
-				mRequestToUser[new_request] = target_user;
-				mUserToRequests[target_user].insert(new_request);
+
+				// check if good picture already in grid
+				cv::Mat profile_picture;
+				bool captured_picture = false;
+
+				// else take picture
+				if(false && target_user->pGrid->GetFrontalImage(profile_picture))
+				{
+					captured_picture = true;
+
+				}else if(
+					target_user->IsViewedFromFront()
+					//&& target_user->LooksPhotogenic()
+					)
+				{
+					cv::Mat face = scene_rgb(target_user->GetFaceBoundingBox());
+					profile_picture = face.clone();
+					captured_picture = true;
+				}
+
+				// send picture to server
+				if(captured_picture)
+				{
+					cv::resize(profile_picture, profile_picture, cv::Size(120, 120));
+					target_user->SetPendingProfilePicture(true);
+					// make request
+					io::ProfilePictureUpdate* new_request = new io::ProfilePictureUpdate(pServerConn, target_user->GetUserID(), profile_picture);
+					pRequestHandler->addRequest(new_request, true);
+					// update linking
+					mRequestToUser[new_request] = target_user;
+					mUserToRequests[target_user].insert(new_request);
+				}
 			}
 
 
@@ -415,45 +445,48 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 
 				if (target_user->TryToRecordFaceSample(scene_rgb))
 				{
-
+					// took new sample
 				}
 
-				// extract images
-				std::vector<cv::Mat*> face_patches;
-				std::vector<std::tuple<int, int>> sample_weights;
-				bool has_samples = target_user->pGrid->ExtractUnprocessedImageBatchWithTimeout(5, 5, face_patches, sample_weights);
-
-				if (has_samples) {
+				if (request_status == user::RequestStatus_Idle)
+				{
 					// extract images
-					int user_id = target_user->GetUserID();
+					std::vector<cv::Mat*> face_patches;
+					std::vector<std::tuple<int, int>> sample_weights;
+					bool has_samples = target_user->pGrid->ExtractUnprocessedImageBatchWithTimeout(5, 5, face_patches, sample_weights);
+
+					if (has_samples) {
+						// extract images
+						int user_id = target_user->GetUserID();
 
 
-					//cv::imshow("update", imgproc::ImageProc::createOne(face_patches, 1, 10));
-					//cv::waitKey(0);
-					//cv::destroyAllWindows();
+						//cv::imshow("update", imgproc::ImageProc::createOne(face_patches, 1, 10));
+						//cv::waitKey(0);
+						//cv::destroyAllWindows();
 
 #ifdef _DLIB_PREALIGN
-					io::PartialUpdateAligned* new_request = new io::PartialUpdateAligned(pServerConn, face_patches, sample_weights, user_id);
+						io::PartialUpdateAligned* new_request = new io::PartialUpdateAligned(pServerConn, face_patches, sample_weights, user_id);
 #else
-					throw;
+						throw;
 #endif
-					// make update request
-					pRequestHandler->addRequest(new_request);
+						// make update request
+						pRequestHandler->addRequest(new_request);
 
-					// update linking
-					mRequestToUser[new_request] = target_user;
-					mUserToRequests[target_user].insert(new_request);
+						// update linking
+						mRequestToUser[new_request] = target_user;
+						mUserToRequests[target_user].insert(new_request);
+						target_user->SetStatus(user::RequestStatus_Pending);
 
-					// set user action status
-					target_user->SetStatus(ActionStatus_Waiting);
-					//target_user->pGrid->Clear();
+						// set user action status
+						target_user->SetStatus(ActionStatus_Waiting);
+					}
 
+					// reset grid
+					if (target_user->pGrid->ResetIfFullOrStagnating(10, 10)) {
+						std::cout << "--- Grid resetted!\n";
+					}
 				}
 
-				// reset grid
-				if (target_user->pGrid->ResetIfFullOrStagnating(10, 10)) {
-					std::cout << "--- Grid resetted!\n";
-				}
 			}
 		}
 		// ============================================= //
@@ -504,6 +537,7 @@ void StreamUserManager::GenerateRequests(cv::Mat scene_rgb)
 						// update linking
 						mRequestToUser[new_request] = target_user;
 						mUserToRequests[target_user].insert(new_request);
+						target_user->SetStatus(RequestStatus_Pending);
 
 						// set user action status
 						target_user->SetStatus(ActionStatus_Waiting);

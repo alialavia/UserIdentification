@@ -191,6 +191,47 @@ namespace tracking
 			return false;
 		}
 
+		bool GetFrontalImage(cv::Mat &dst)
+		{
+			for (auto const& item : mImageOrder) {
+				cv::Mat* mptr = std::get<0>(item); 
+
+				//if (!mProcessedImages.count(mptr)) 
+				{
+					cv::Vec3d angles = mAngles[mptr];
+					if (abs(angles[1]) < cPFrontal && abs(angles[2]) < cYFrontal) {
+						cv::Mat copy = mptr->clone();
+						dst = copy;
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+
+		// TODO: unfinished
+		void RemoveProcessedImages()
+		{
+			if (mProcessedImages.size() == 0) {
+				return;
+			}
+
+			size_t i = 0;
+			while (i < mImageOrder.size()) {
+
+				cv::Mat* ptr = std::get<0>(mImageOrder[i]);
+				if(mProcessedImages.count(ptr)>0)
+				{
+					mProcessedImages.erase(ptr);
+					mImageOrder.erase(mImageOrder.begin() + i);
+					mAngles.erase(ptr);
+
+					// TODO: delete image itself
+
+				}
+			}
+		}
+
 		bool ResetIfFullOrStagnating(int max_images, int timeout_sec = 7) {
 
 			if (nr_images() >= max_images) {

@@ -59,6 +59,9 @@ void User::SetStatus(IdentificationStatus status)
 		mClosedSetConfusionIDs.clear();
 	}
 }
+void User::SetStatus(RequestStatus status) {
+	mRequestStatus = status;
+}
 void User::SetStatus(TrackingConsistency status)
 {
 	mTrackingStatus = status;
@@ -79,6 +82,10 @@ void User::GetStatus(IdentificationStatus &s)
 void User::GetStatus(TrackingConsistency &s)
 {
 	s = mTrackingStatus;
+}
+void User::GetStatus(RequestStatus &s)
+{
+	s = mRequestStatus;
 }
 
 /////////////////////////////////////////////////
@@ -297,7 +304,7 @@ std::string User::GetActionStatusString()
 {
 	if(mActionStatus == ActionStatus_WaitForCertainTracking)
 	{
-		std::string text = "Recovering | Set IDs: ";
+		std::string text = "Re-ID | IDs: ";
 
 		for (auto conf_id : mClosedSetConfusionIDs) {
 			text +=std::to_string(conf_id) + " ";
@@ -306,11 +313,12 @@ std::string User::GetActionStatusString()
 		return text;
 	}else if(mActionStatus == ActionStatus_Waiting)
 	{
-		return "Pending response";
+		return "Waiting";
 	}
 	else if (mActionStatus == ActionStatus_DataCollection)
 	{
-		return "Sampling: " + std::to_string(pGrid->nr_images());
+		std::string pending = (mRequestStatus == RequestStatus_Pending? "P": "I");
+		return "Sampling: (" + std::to_string(pGrid->nr_images()) + ") " + pending;
 	}
 	else
 	{

@@ -24,10 +24,16 @@ namespace user
 
 	enum ActionStatus
 	{
-		ActionStatus_Idle = 0,			// ready for new requests
+		ActionStatus_Idle = 0,			// ready for new action
 		ActionStatus_Waiting = 1,		// do nothing, wait
 		ActionStatus_WaitForCertainTracking = 2,
-		ActionStatus_DataCollection = 3 //  for update/identification
+		ActionStatus_DataCollection = 3 //  sampling
+	};
+
+	enum RequestStatus
+	{
+		RequestStatus_Idle = 0,		// ready for new request
+		RequestStatus_Pending = 1	// pending request
 	};
 
 	// whether or not tracking instance is consistant/safe
@@ -49,6 +55,7 @@ namespace user
 		) : mUserID(-1), mTrackingID(tracking_id), mUserNiceName(""), 
 		// init user status
 		mIDStatus(id_Status), mActionStatus(ActionStatus_Idle),
+		mRequestStatus(RequestStatus_Idle),
 		mTrackingStatus(TrackingConsistency_OK), 
 		mFaceData(nullptr), mUpdatingProfilePicture(false), mNrFramesNoFace(0), mNrFramesNoMovement(0)
 #ifdef _DLIB_PREALIGN
@@ -80,9 +87,11 @@ namespace user
 
 		void SetStatus(ActionStatus status);
 		void SetStatus(IdentificationStatus status);
+		void SetStatus(RequestStatus status);
 		void SetStatus(TrackingConsistency status);
 		void GetStatus(IdentificationStatus &s1, ActionStatus &s2);
 		void GetStatus(ActionStatus &s);
+		void GetStatus(RequestStatus &s);
 		void GetStatus(IdentificationStatus &s);
 		void GetStatus(TrackingConsistency &s);
 
@@ -155,6 +164,7 @@ namespace user
 		// status
 		IdentificationStatus mIDStatus;
 		ActionStatus mActionStatus;
+		RequestStatus mRequestStatus;
 		TrackingConsistency mTrackingStatus;
 
 		// features: might be present or not

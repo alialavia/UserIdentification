@@ -411,7 +411,10 @@ bool BaseUserManager::GetUserID(const cv::Mat &face_capture, int &user_id) {
 cv::Scalar BaseUserManager::GetUserColor(int user_id)
 {
 	// ID dependent background
-	if (user_id == 1) {
+	if (user_id == -1) {
+		// gray
+		return cv::Scalar(128, 128, 128);
+	}else if (user_id == 1) {
 		// red
 		return cv::Scalar(0, 0, 255);
 	}
@@ -502,20 +505,25 @@ void BaseUserManager::RenderGUI(cv::Mat &img)
 		{
 
 			cv::Rect2f box = f.boundingBox;
-			
+			cv::Scalar bb_color = cv::Scalar(0, 0, 255);
+
+			if (id_status == IDStatus_Identified)
+			{
+				bb_color = cv::Scalar(0, 255, 0);
+			}
 
 			// top left
-			cv::line(img, cv::Point(box.x, box.y), cv::Point(box.x, box.y+10), cv::Scalar(0, 0, 255), 2, 8);
-			cv::line(img, cv::Point(box.x, box.y), cv::Point(box.x + 10, box.y), cv::Scalar(0, 0, 255), 2, 8);
+			cv::line(img, cv::Point(box.x, box.y), cv::Point(box.x, box.y+10), bb_color, 2, 8);
+			cv::line(img, cv::Point(box.x, box.y), cv::Point(box.x + 10, box.y), bb_color, 2, 8);
 			// top right
-			cv::line(img, cv::Point(box.x + box.width, box.y), cv::Point(box.x + box.width, box.y + 10), cv::Scalar(0, 0, 255), 2, 8);
-			cv::line(img, cv::Point(box.x + box.width, box.y), cv::Point(box.x + box.width - 10, box.y), cv::Scalar(0, 0, 255), 2, 8);
+			cv::line(img, cv::Point(box.x + box.width, box.y), cv::Point(box.x + box.width, box.y + 10), bb_color, 2, 8);
+			cv::line(img, cv::Point(box.x + box.width, box.y), cv::Point(box.x + box.width - 10, box.y), bb_color, 2, 8);
 			// bottom left
-			cv::line(img, cv::Point(box.x, box.y + box.height), cv::Point(box.x, box.y + box.height -10), cv::Scalar(0, 0, 255), 2, 8);
-			cv::line(img, cv::Point(box.x, box.y + box.height), cv::Point(box.x + 10, box.y + box.height), cv::Scalar(0, 0, 255), 2, 8);
+			cv::line(img, cv::Point(box.x, box.y + box.height), cv::Point(box.x, box.y + box.height -10), bb_color, 2, 8);
+			cv::line(img, cv::Point(box.x, box.y + box.height), cv::Point(box.x + 10, box.y + box.height), bb_color, 2, 8);
 			// bottom right
-			cv::line(img, cv::Point(box.x + box.width, box.y + box.height), cv::Point(box.x + box.width, box.y + box.height - 10), cv::Scalar(0, 0, 255), 2, 8);
-			cv::line(img, cv::Point(box.x + box.width, box.y + box.height), cv::Point(box.x + box.width - 10, box.y + box.height), cv::Scalar(0, 0, 255), 2, 8);
+			cv::line(img, cv::Point(box.x + box.width, box.y + box.height), cv::Point(box.x + box.width, box.y + box.height - 10), bb_color, 2, 8);
+			cv::line(img, cv::Point(box.x + box.width, box.y + box.height), cv::Point(box.x + box.width - 10, box.y + box.height), bb_color, 2, 8);
 			
 		}
 
