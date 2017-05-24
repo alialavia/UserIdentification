@@ -512,6 +512,7 @@ void BaseUserManager::RenderGUI(cv::Mat &img)
 				bb_color = cv::Scalar(0, 255, 0);
 			}
 
+			try {
 			// top left
 			cv::line(img, cv::Point(box.x, box.y), cv::Point(box.x, box.y+10), bb_color, 2, 8);
 			cv::line(img, cv::Point(box.x, box.y), cv::Point(box.x + 10, box.y), bb_color, 2, 8);
@@ -524,9 +525,11 @@ void BaseUserManager::RenderGUI(cv::Mat &img)
 			// bottom right
 			cv::line(img, cv::Point(box.x + box.width, box.y + box.height), cv::Point(box.x + box.width, box.y + box.height - 10), bb_color, 2, 8);
 			cv::line(img, cv::Point(box.x + box.width, box.y + box.height), cv::Point(box.x + box.width - 10, box.y + box.height), bb_color, 2, 8);
-			
+			}
+			catch (...) {
+				// ...
+			}
 		}
-
 
 		// draw identification status
 		float font_size = 0.5;
@@ -598,15 +601,21 @@ void BaseUserManager::RenderGUI(cv::Mat &img)
 		// ============================================= //
 
 		// draw background
-		try {
-			cv::Rect bg_patch = cv::Rect(bb.x, bb.y + 30, 108, 20);
-			cv::Mat roi = img(bg_patch);
-			cv::Mat color(bg_patch.size(), CV_8UC3, cv::Scalar(0, 0, 0));
-			double alpha = 0.5;
-			cv::addWeighted(color, alpha, roi, 1.0 - alpha, 0.0, roi);
-		}
-		catch (...) {
-			// ...
+		if (
+			id_status != IDStatus_NonTarget
+			&& id_status != IDStatus_Unknown
+			)
+		{
+			try {
+				cv::Rect bg_patch = cv::Rect(bb.x, bb.y + 30, 108, 20);
+				cv::Mat roi = img(bg_patch);
+				cv::Mat color(bg_patch.size(), CV_8UC3, cv::Scalar(0, 0, 0));
+				double alpha = 0.5;
+				cv::addWeighted(color, alpha, roi, 1.0 - alpha, 0.0, roi);
+			}
+			catch (...) {
+				// ...
+			}
 		}
 
 		// print status
