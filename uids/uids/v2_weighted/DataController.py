@@ -2,6 +2,7 @@ import numpy as np
 from uids.utils.Logger import Logger as log
 from uids.data_models.MeanShiftCluster import MeanShiftCluster, MeanShiftPoseCluster
 from uids.features.ConfidenceGen import WeightGenerator
+from sklearn.metrics.pairwise import *
 
 
 class DataController:
@@ -38,6 +39,24 @@ class DataController:
             # initialize
             self.class_clusters[user_id] = MeanShiftPoseCluster(self.weight_gen, max_size=300)
             self.class_clusters[user_id].update(new_samples, new_poses)
+            # display minimal class distances
+            means = []
+            ids = []
+            for id, c in self.class_clusters.iteritems():
+                means.append(c.data_mean[0])
+                ids.append(id)
+
+            means = np.array(means)
+            dist = pairwise_distances(means, means, metric='euclidean')
+            dist = np.square(dist)
+            dist = np.unique(dist)
+
+            if len(dist) > 5:
+                dist = dist[0:5]
+
+            # first one is zero
+            if len(dist) > 1:
+                log.info('db', "Min. inter-class distances: {}".format(dist[1:]))
         else:
             # update
             self.class_clusters[user_id].update(new_samples, new_poses)
