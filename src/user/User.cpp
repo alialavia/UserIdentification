@@ -104,6 +104,8 @@ void User::ResetUserIdentity() {
 
 	// debug information
 	mTimeForFirstPrediction = 0;
+	mTimeTrackingInit = 0;
+	mTimeForFirstID = 0;
 
 	// release profile image
 	if (!mProfilePicture.empty())

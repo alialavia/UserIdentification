@@ -4,6 +4,7 @@
 #include <tracking\FaceTracker.h>
 #include <opencv2/core.hpp>
 #include <unordered_set>
+#include <chrono>
 
 namespace features
 {
@@ -57,7 +58,8 @@ namespace user
 		mIDStatus(id_Status), mActionStatus(ActionStatus_Idle),
 		mRequestStatus(RequestStatus_Idle),
 		mTrackingStatus(TrackingConsistency_OK), 
-		mFaceData(nullptr), mUpdatingProfilePicture(false), mNrFramesNoFace(0), mNrFramesNoMovement(0)
+		mFaceData(nullptr), mUpdatingProfilePicture(false), mNrFramesNoFace(0), mNrFramesNoMovement(0),
+		mTimeTrackingInit(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
 #ifdef _DLIB_PREALIGN
 			,pFaceAligner(aligner)
 #endif
@@ -150,7 +152,9 @@ namespace user
 		int mPredictionConfidence = 0;
 
 		// debug information
-		__int64 mTimeForFirstPrediction = 0;
+		__int64 mTimeForFirstPrediction = 0;	// time for first prediction (classification time)
+		__int64 mTimeTrackingInit = 0;	// timestamp of tracking init
+		__int64 mTimeForFirstID = 0;	// time for first prediction since tracking init
 
 	private:
 		// user id and metadata

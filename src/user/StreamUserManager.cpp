@@ -90,6 +90,7 @@ void StreamUserManager::ProcessResponses()
 					target_user->mTimeForFirstPrediction == 0
 					) {
 					target_user->mTimeForFirstPrediction = response.mReceptionTime - target_request->mSubmitTime;
+					target_user->mTimeForFirstID = response.mReceptionTime - target_user->mTimeTrackingInit;
 				}
 
 				// remove all images form grid
@@ -197,8 +198,8 @@ void StreamUserManager::ProcessResponses()
 				&& target_user->mTimeForFirstPrediction == 0
 				) {
 				std::cout << "reception " << pred_response.mReceptionTime << std::endl;
-
 				target_user->mTimeForFirstPrediction = pred_response.mReceptionTime - target_request->mSubmitTime;
+				target_user->mTimeForFirstID = pred_response.mReceptionTime - target_user->mTimeTrackingInit;
 			}
 
 		}

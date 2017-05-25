@@ -671,8 +671,14 @@ void BaseUserManager::RenderGUI(cv::Mat &img)
 		if(mRenderDebug){
 			// time for first prediction
 			if (target_user->mTimeForFirstPrediction != 0) {
-				std::string text_id_speed = "First pred. in: " + std::to_string(target_user->mTimeForFirstPrediction) + "ms";
-				cv::putText(img, text_id_speed, cv::Point(bb.x + 108 + 10, bb.y - 108 + 10), cv::FONT_HERSHEY_SIMPLEX, 0.38, cv::Scalar(0, 0, 0), 1, 8);
+				std::string text_pred_speed = "First pred. in: " + std::to_string(target_user->mTimeForFirstPrediction) + "ms";
+				cv::putText(img, text_pred_speed, cv::Point(bb.x + 108 + 10, bb.y - 108 + 10), cv::FONT_HERSHEY_SIMPLEX, 0.38, cv::Scalar(0, 0, 0), 1, 8);
+			}
+
+			// time since tracking init
+			if (target_user->mTimeForFirstID != 0) {
+				std::string text_id_speed = "Since init: " + std::to_string(target_user->mTimeForFirstID) + "ms";
+				cv::putText(img, text_id_speed, cv::Point(bb.x + 108 + 10, bb.y - 108 + 30), cv::FONT_HERSHEY_SIMPLEX, 0.38, cv::Scalar(0, 0, 0), 1, 8);
 			}
 
 			// tracking consistency
@@ -687,7 +693,7 @@ void BaseUserManager::RenderGUI(cv::Mat &img)
 			else {
 				text_tracking += "Safe";
 			}
-			cv::putText(img, text_tracking, cv::Point(bb.x + 108 + 10, bb.y - 108 + 30), cv::FONT_HERSHEY_SIMPLEX, 0.38, tracking_clr, 1, 8);
+			cv::putText(img, text_tracking, cv::Point(bb.x + 108 + 10, bb.y - 108 + 50), cv::FONT_HERSHEY_SIMPLEX, 0.38, tracking_clr, 1, 8);
 
 			// pose
 			if (target_user->GetFaceData(f))
@@ -695,7 +701,7 @@ void BaseUserManager::RenderGUI(cv::Mat &img)
 				int roll, pitch, yaw;
 				f.GetEulerAngles(roll, pitch, yaw);
 				std::string pose_text = "R: " + std::to_string(roll) + " | P: " + std::to_string(pitch) + " | Y: " + std::to_string(yaw);
-				cv::putText(img, pose_text, cv::Point(bb.x + 108 + 10, bb.y - 108 + 50), cv::FONT_HERSHEY_SIMPLEX, 0.38, cv::Scalar(0, 0, 0), 1, 8);
+				cv::putText(img, pose_text, cv::Point(bb.x + 108 + 10, bb.y - 108 + 70), cv::FONT_HERSHEY_SIMPLEX, 0.38, cv::Scalar(0, 0, 0), 1, 8);
 			}
 
 			// blur status
