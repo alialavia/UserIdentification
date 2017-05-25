@@ -43,6 +43,7 @@ namespace user
 #ifdef _DLIB_PREALIGN
 			, mpDlibAligner(nullptr)
 #endif
+			, mRenderDebug(false)
 		{
 		}
 		~BaseUserManager() {
@@ -111,6 +112,9 @@ namespace user
 		std::vector<std::pair<int, cv::Mat>> GetAllProfilePictures();
 		bool GetAllProfilePictures(std::vector<cv::Mat> &pictures, std::vector<int> &user_ids);
 		bool GetUserID(const cv::Mat &face_capture, int &user_id);
+		void ToggleRenderDebug() {
+			mRenderDebug = !mRenderDebug;
+		}
 
 	protected:
 		io::TCPClient* pServerConn;
@@ -129,6 +133,9 @@ namespace user
 		// face aligner
 		features::DlibFaceAligner* mpDlibAligner;
 #endif
+		// GUI options
+		bool mRenderDebug;
+
 
 	};
 

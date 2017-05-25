@@ -18,6 +18,9 @@ NetworkRequest::NetworkRequest(io::TCPClient* server_conn, NetworkRequestType re
 
 bool NetworkRequest::SubmitRequest()
 {
+	// log time when request was submited
+	mSubmitTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
 	// send request id to server as uchar (0-255)
 	int bytecount;
 	bytecount = pServerConn->SendUChar(cRequestType);

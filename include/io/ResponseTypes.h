@@ -5,6 +5,7 @@
 #include <string>
 #include <opencv2\core.hpp>
 #include <io/Networking.h>
+#include <chrono>
 
 namespace io {
 	class NetworkResponse;
@@ -51,19 +52,26 @@ namespace io {
 	{
 	public:
 		NetworkResponse(io::TCPClient* conn, NetworkResponseType type): pConn(conn), cTypeID(type){}
+
+		// load response individually
 		bool Load(int* response_type = nullptr) {
+
 			int identifier = pConn->Receive32bit<int>();
 			bool succ = (identifier == cTypeID);
 			if (succ) {
 				GetPayload();	// load response data
-			}else
-			{
+			}
+			if (response_type != nullptr) {
 				*response_type = identifier;
 			}
+			// log reception time
+			mReceptionTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
 			return succ;
 		}
 		io::TCPClient* pConn;
 		NetworkResponseType cTypeID;
+		__int64 mReceptionTime = 0;
 	};
 
 
@@ -132,7 +140,7 @@ namespace io {
 			mProgress = (int)pConn->Receive8bit<uint8_t>();
 			mConfidence = (int)pConn->Receive8bit<uint8_t>();
 		};
-		int mUserID = -1;
+		int mUserID = 0;
 		std::string mUserNiceName = "";
 		int mProgress = 0;
 		int mConfidence = 0;

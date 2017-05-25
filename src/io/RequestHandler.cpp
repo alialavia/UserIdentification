@@ -160,6 +160,10 @@ void NetworkRequestHandler::processAllPendingRequests() {
 			NetworkResponse* response_ptr = nullptr;
 			// allocate response
 			std::type_index response_type_id = ResponseFactory::AllocateAndLoad((io::NetworkResponseType)response_identifier, socket, response_ptr);
+
+			// log reception time
+			response_ptr->mReceptionTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
 			// add linking
 			mMappingLock.lock();
 			mResponseToRequest[response_ptr] = request_ptr;
@@ -193,10 +197,8 @@ void NetworkRequestHandler::processAllPendingRequests() {
 
 void NetworkRequestHandler::processRequests()
 {
-
-#ifdef _DEBUG_REQUESTHANDLER
 	std::cout << "--- Starting NetworkRequestHandler::processRequests()" << std::endl;
-#endif
+
 	math::SequentialContainer<NetworkRequest*>* queue_ptr = nullptr;
 
 	while (mStatus == RequestHandlerStatus_Running)
@@ -247,6 +249,9 @@ void NetworkRequestHandler::processRequests()
 			NetworkResponse* response_ptr = nullptr;
 			// allocate response
 			std::type_index response_type_id = ResponseFactory::AllocateAndLoad((io::NetworkResponseType)response_identifier, socket, response_ptr);
+
+			// log reception time
+			response_ptr->mReceptionTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
 			// move to processed stack - sort by response type identifier
 			

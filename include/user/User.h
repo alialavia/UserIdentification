@@ -149,12 +149,14 @@ namespace user
 		int mIDProgress = 0;
 		int mPredictionConfidence = 0;
 
+		// debug information
+		__int64 mTimeForFirstPrediction = 0;
+
 	private:
 		// user id and metadata
 		int mUserID;
 		std::string mUserNiceName;
 		int mTrackingID;
-		
 
 		// localization/tracking: must be set at all times
 		cv::Rect2f mFaceBoundingBox;
@@ -180,6 +182,8 @@ namespace user
 		int mIsObjectFaceThresh = 300;
 		int mNrFramesNoFace;
 		int mNrFramesNoMovement;
+
+
 
 		// dlib face aligner
 #ifdef _DLIB_PREALIGN

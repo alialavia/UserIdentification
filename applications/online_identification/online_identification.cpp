@@ -83,6 +83,7 @@ int main(int argc, char** argv)
 				"          INSTRUCTIONS\n"
 				"=====================================\n"
 				"[1]: Show all profile pictures of the server\n"
+				"[d]: Render debug information\n"
 				"[q]: Disconnect client\n"
 				"--------------------------------------\n"
 				"\n\n";
@@ -201,6 +202,9 @@ int main(int argc, char** argv)
 				{
 					std::cout << "No profile pictures taken yet...\n";
 				}
+			}
+			else if(c == 'd') {
+				um.ToggleRenderDebug();
 			}else if(c == 'q')
 			{
 				// disconnect client

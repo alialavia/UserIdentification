@@ -86,6 +86,12 @@ void StreamUserManager::ProcessResponses()
 				target_user->mPredictionConfidence = response.mConfidence;
 				target_user->mUserIDPredicted = response.mUserID;
 
+				if (
+					target_user->mTimeForFirstPrediction == 0
+					) {
+					target_user->mTimeForFirstPrediction = response.mReceptionTime - target_request->mSubmitTime;
+				}
+
 				// remove all images form grid
 				//target_user->pGrid->Clear();
 
@@ -162,6 +168,7 @@ void StreamUserManager::ProcessResponses()
 			// extract user
 			User* target_user = it->second;
 			io::NetworkRequest* target_request = it->first;
+			target_user->GetStatus(id_status);
 
 			// remove request mapping
 			RemoveRequestUserLinking(target_request);
@@ -182,6 +189,17 @@ void StreamUserManager::ProcessResponses()
 			target_user->mPredictionConfidence = pred_response.mConfidence;
 			target_user->mIDProgress = pred_response.mProgress;
 			std::cout << "Prediction: ID" << pred_response.mUserID << " | conf: " << pred_response.mConfidence << std::endl;
+
+			// update debug information
+			// time for first prediction
+			if (
+				id_status == user::IDStatus_Unknown
+				&& target_user->mTimeForFirstPrediction == 0
+				) {
+				std::cout << "reception " << pred_response.mReceptionTime << std::endl;
+
+				target_user->mTimeForFirstPrediction = pred_response.mReceptionTime - target_request->mSubmitTime;
+			}
 
 		}
 		else {

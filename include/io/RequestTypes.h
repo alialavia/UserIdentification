@@ -5,6 +5,7 @@
 #include <io/Networking.h>
 #include <unordered_set>
 #include <tuple>
+#include <chrono>
 
 namespace io {
 	class TCPClient;
@@ -61,6 +62,7 @@ namespace io {
 		}
 
 		const NetworkRequestType cRequestType;
+		__int64 mSubmitTime = 0;
 	protected:
 		io::TCPClient* pServerConn;
 	protected:

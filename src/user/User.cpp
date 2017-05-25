@@ -102,6 +102,9 @@ void User::ResetUserIdentity() {
 	mPredictionConfidence = 0;
 	mIDProgress = 0;
 
+	// debug information
+	mTimeForFirstPrediction = 0;
+
 	// release profile image
 	if (!mProfilePicture.empty())
 	{

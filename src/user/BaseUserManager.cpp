@@ -663,5 +663,46 @@ void BaseUserManager::RenderGUI(cv::Mat &img)
 		//if (tracking_status == user::TrackingConsistency_Uncertain) {
 		//	bg_color = cv::Scalar(0, 14, 88);
 		//}
+		
+		// ============================================= //
+		// 5. DEBUG INFORMATION
+		// ============================================= //
+		
+		if(mRenderDebug){
+			// time for first prediction
+			if (target_user->mTimeForFirstPrediction != 0) {
+				std::string text_id_speed = "First pred. in: " + std::to_string(target_user->mTimeForFirstPrediction) + "ms";
+				cv::putText(img, text_id_speed, cv::Point(bb.x + 108 + 10, bb.y - 108 + 10), cv::FONT_HERSHEY_SIMPLEX, 0.38, cv::Scalar(0, 0, 0), 1, 8);
+			}
+
+			// tracking consistency
+			user::TrackingConsistency tracking_status;
+			target_user->GetStatus(tracking_status);
+			std::string text_tracking = "Tracking: ";
+			cv::Scalar tracking_clr(0, 0, 0);
+			if (tracking_status == user::TrackingConsistency_Uncertain) {
+				text_tracking += "Unsafe";
+				tracking_clr = cv::Scalar(0, 0, 255);
+			}
+			else {
+				text_tracking += "Safe";
+			}
+			cv::putText(img, text_tracking, cv::Point(bb.x + 108 + 10, bb.y - 108 + 30), cv::FONT_HERSHEY_SIMPLEX, 0.38, tracking_clr, 1, 8);
+
+			// pose
+			if (target_user->GetFaceData(f))
+			{
+				int roll, pitch, yaw;
+				f.GetEulerAngles(roll, pitch, yaw);
+				std::string pose_text = "R: " + std::to_string(roll) + " | P: " + std::to_string(pitch) + " | Y: " + std::to_string(yaw);
+				cv::putText(img, pose_text, cv::Point(bb.x + 108 + 10, bb.y - 108 + 50), cv::FONT_HERSHEY_SIMPLEX, 0.38, cv::Scalar(0, 0, 0), 1, 8);
+			}
+
+			// blur status
+
+			// human status
+			
+		}
+
 	}
 }
