@@ -7,6 +7,7 @@ import time
 from abc import abstractmethod
 from uids.utils.Logger import Logger as log
 import numpy as np
+import cv2
 
 
 class TCPServer:
@@ -127,7 +128,7 @@ class TCPServer:
 
     #  ----------- IMAGE HANDLERS
 
-    def receive_rgb_image(self, client_socket, width=None, height=None):
+    def receive_rgb_image(self, client_socket, width=None, height=None, switch_rgb_bgr=False):
         """receive 8 bit rgb image"""
 
         if height is None:
@@ -143,12 +144,14 @@ class TCPServer:
         string_data = self.receive_message(client_socket, width * height * 3)
         data = numpy.fromstring(string_data, dtype='uint8')
         reshaped = data.reshape((width, height, 3))
+        if switch_rgb_bgr:
+            reshaped = cv2.cvtColor(reshaped, cv2.COLOR_BGR2RGB)
         return reshaped
 
-    def receive_rgb_image_squared(self, client_socket, size=None):
+    def receive_rgb_image_squared(self, client_socket, size=None, switch_rgb_bgr=False):
         if size is None:
             size = self.receive_short(client_socket)
-        return self.receive_rgb_image(client_socket, size)
+        return self.receive_rgb_image(client_socket, size, switch_rgb_bgr=switch_rgb_bgr)
 
     def send_rgb_image(self, client_socket, img):
         """send 8 bit rgb image"""
@@ -199,7 +202,7 @@ class TCPServer:
 
         #  ----------- BINARY DATA HANDLERS
 
-    def receive_image_batch_squared_same_size(self, client_socket):
+    def receive_image_batch_squared_same_size(self, client_socket, switch_rgb_bgr=False):
 
         # receive batch size
         nr_images = self.receive_short(client_socket)
@@ -211,12 +214,12 @@ class TCPServer:
         images = []
         for x in range(0, nr_images):
             # receive image
-            new_img = self.receive_rgb_image(client_socket, img_dim, img_dim)
+            new_img = self.receive_rgb_image(client_socket, img_dim, img_dim, switch_rgb_bgr=switch_rgb_bgr)
             images.append(new_img)
 
         return images
 
-    def receive_image_batch_squared(self, client_socket):
+    def receive_image_batch_squared(self, client_socket, switch_rgb_bgr=False):
 
         # receive batch size
         nr_images = self.receive_short(client_socket)
@@ -227,12 +230,12 @@ class TCPServer:
             # receive image dimension
             img_dim = self.receive_short(client_socket)
             # receive image
-            new_img = self.receive_rgb_image(client_socket, img_dim, img_dim)
+            new_img = self.receive_rgb_image(client_socket, img_dim, img_dim, switch_rgb_bgr=switch_rgb_bgr)
             images.append(new_img)
 
         return images
 
-    def receive_image_batch_same_size(self, client_socket):
+    def receive_image_batch_same_size(self, client_socket, switch_rgb_bgr=False):
 
         # receive batch size
         nr_images = self.receive_short(client_socket)
@@ -245,12 +248,12 @@ class TCPServer:
         images = []
         for x in range(0, nr_images):
             # receive image
-            new_img = self.receive_rgb_image(client_socket, w, h)
+            new_img = self.receive_rgb_image(client_socket, w, h, switch_rgb_bgr=switch_rgb_bgr)
             images.append(new_img)
 
         return images
 
-    def receive_image_batch(self, client_socket):
+    def receive_image_batch(self, client_socket, switch_rgb_bgr=False):
 
         # receive batch size
         nr_images = self.receive_short(client_socket)
@@ -262,14 +265,14 @@ class TCPServer:
             w = self.receive_short(client_socket)
             h = self.receive_short(client_socket)
             # receive image
-            new_img = self.receive_rgb_image(client_socket, w, h)
+            new_img = self.receive_rgb_image(client_socket, w, h, switch_rgb_bgr=switch_rgb_bgr)
             images.append(new_img)
 
         return images
 
-    def receive_image_squared(self, client_socket):
+    def receive_image_squared(self, client_socket, switch_rgb_bgr=False):
         size = self.receive_short(client_socket)
-        img = self.receive_rgb_image(client_socket, size, size)
+        img = self.receive_rgb_image(client_socket, size, size, switch_rgb_bgr=switch_rgb_bgr)
         return img
 
     #  ----------- CUSTOM TYPES
