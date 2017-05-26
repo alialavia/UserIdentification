@@ -2,10 +2,15 @@
 import numpy as np
 import response_types as r
 from uids.utils.Logger import Logger as log
+import scipy.misc
+import time
+import cv2
 # config
 from config import ROUTING
 r.ROUTING = ROUTING
 
+current_milli_time = lambda: int(round(time.time() * 1000))
+DEBUG_IMAGES = False
 
 # --------------- IDENTIFICATION
 
@@ -17,7 +22,7 @@ class PartialImageIdentificationAligned:
         tracking_id = server.receive_uint(conn)
 
         # receive images
-        images = server.receive_image_batch_squared_same_size(conn)
+        images = server.receive_image_batch_squared_same_size(conn, switch_rgb_bgr=True)
 
         # get sample poses
         sample_poses = []
@@ -27,8 +32,8 @@ class PartialImageIdentificationAligned:
             sample_poses.append([pitch, yaw])
         sample_poses = np.array(sample_poses)
 
-        # generate embedding
-        embeddings = server.embedding_gen.get_embeddings(images, False)
+        # generate embedding (from rgb images)
+        embeddings = server.embedding_gen.get_embeddings(rgb_images=images, align=False)
 
         if not embeddings.any():
             r.Error(server, conn, "Could not generate face embeddings.")
@@ -70,6 +75,12 @@ class PartialImageIdentificationAligned:
 
         if user_name is None:
             user_name = "unnamed"
+
+        # save images
+        if DEBUG_IMAGES:
+            for i in images:
+                # save from RGB order
+                scipy.misc.imsave("identification_{}.png".format(current_milli_time()), i)
 
         if is_save_set:
             # SAVE SET - TAKE ACTION
@@ -135,7 +146,13 @@ class PartialUpdateAligned:
         log.info('server', 'User Update (Aligned, Robust) for ID {}'.format(user_id))
 
         # receive images
-        images = server.receive_image_batch_squared_same_size(conn)
+        images = server.receive_image_batch_squared_same_size(conn, switch_rgb_bgr=True)
+
+        # save images
+        if DEBUG_IMAGES:
+            for i in images:
+                # save from RGB order
+                scipy.misc.imsave("update_{}.png".format(current_milli_time()), i)
 
         # get sample poses
         sample_poses = []
@@ -145,10 +162,8 @@ class PartialUpdateAligned:
             sample_poses.append([pitch, yaw])
         sample_poses = np.array(sample_poses)
 
-        # print sample_poses
-
         # generate embedding
-        embeddings = server.embedding_gen.get_embeddings(images, align=False)
+        embeddings = server.embedding_gen.get_embeddings(rgb_images=images, align=False)
 
         if not embeddings.any():
             r.Error(server, conn, "Could not generate face embeddings.")
@@ -207,7 +222,7 @@ class ImageIdentificationPrealignedCS:
         log.severe("ImageIdentificationPrealignedCS, possible IDs: ", target_users)
 
         # generate embedding
-        embeddings = server.embedding_gen.get_embeddings(images, False)
+        embeddings = server.embedding_gen.get_embeddings(rgb_images=images, align=False)
 
         if not embeddings.any():
             r.Error(server, conn, "Could not generate face embeddings.")
@@ -269,7 +284,7 @@ class ImageAlignment:
         log.info('server', "Image alignment")
 
         # receive image
-        img = server.receive_rgb_image_squared(conn)
+        img = server.receive_rgb_image_squared(conn, switch_rgb_bgr=True)
 
         # align image
         # innerEyesAndBottomLip, outerEyesAndNose
@@ -278,6 +293,9 @@ class ImageAlignment:
         if aligned is None:
             r.Error(server, conn, "Could not align the image")
             return
+
+        # convert back to bgr
+        aligned = cv2.cvtColor(aligned, cv2.COLOR_RGB2BGR)
 
         # send aligned image back
         r.QuadraticImage(server, conn, aligned)
@@ -293,9 +311,10 @@ class ProfilePictureUpdate:
 
         # receive images
         image = server.receive_image_squared(conn)
+        rgb_img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         # generate embedding
-        embedding = server.embedding_gen.get_embeddings([image])
+        embedding = server.embedding_gen.get_embeddings([rgb_img])
 
         if not embedding.any():
             r.Error(server, conn, "Could not generate face embeddings.")
