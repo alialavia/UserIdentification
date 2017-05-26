@@ -36,6 +36,9 @@ class ABODEstimator(BaseEstimator):
         self.__tmp_data = X
         return self
 
+    def decision_function(self, X):
+        return ABOD.get_score(X, self.__tmp_data)
+
     def predict(self, X):
         """
         Parameters
@@ -48,7 +51,7 @@ class ABODEstimator(BaseEstimator):
         """
 
         # calc abod score
-        abod_score = ABOD.get_score(X, self.__tmp_data)
+        abod_score = self.decision_function(X)
 
         # threshold
         decision = np.array([1]*len(X))
@@ -88,6 +91,19 @@ class L2Estimator(BaseEstimator):
         self.__tmp_data = X
         return self
 
+    def decision_function(self, X):
+        if self.__tmp_data is None:
+            raise NotFittedError("Estimator not fitted, call `fit` before"
+                                 " `feature_importances_`.")
+
+        if self.comparison == 'mean_ref':
+            l2_score = pairwise_distances(np.average(self.__tmp_data, axis=0).reshape(1, -1), X,
+                                          metric='euclidean')[0]
+            l2_score = np.square(l2_score)
+            return l2_score
+        else:
+            raise ValueError("'{}' is not a valid comparison method".format(self.comparison))
+
     def predict(self, X):
         """
         Parameters
@@ -103,12 +119,7 @@ class L2Estimator(BaseEstimator):
             raise NotFittedError("Estimator not fitted, call `fit` before"
                                  " `feature_importances_`.")
 
-        if self.comparison == 'mean_ref':
-            l2_score = pairwise_distances(np.average(self.__tmp_data, axis=0).reshape(1, -1), X,
-                                          metric='euclidean')[0]
-            l2_score = np.square(l2_score)
-        else:
-            raise ValueError("'{}' is not a valid comparison method".format(self.comparison))
+        l2_score = self.decision_function(X)
 
         # threshold
         decision = np.array([1]*len(X))
@@ -148,6 +159,14 @@ class CosineDistEstimator(BaseEstimator):
         self.__tmp_data = X
         return self
 
+    def decision_function(self, X):
+        if self.comparison == 'mean_ref':
+            cosine_score = pairwise_distances(np.average(self.__tmp_data, axis=0).reshape(1, -1), X,
+                                          metric='cosine')[0]
+            return cosine_score
+        else:
+            raise ValueError("'{}' is not a valid comparison method".format(self.comparison))
+
     def predict(self, X):
         """
         Parameters
@@ -163,11 +182,7 @@ class CosineDistEstimator(BaseEstimator):
             raise NotFittedError("Estimator not fitted, call `fit` before"
                                  " `feature_importances_`.")
 
-        if self.comparison == 'mean_ref':
-            cosine_score = pairwise_distances(np.average(self.__tmp_data, axis=0).reshape(1, -1), X,
-                                          metric='cosine')[0]
-        else:
-            raise ValueError("'{}' is not a valid comparison method".format(self.comparison))
+        cosine_score = self.decision_function(X)
 
         # threshold
         decision = np.array([1]*len(X))

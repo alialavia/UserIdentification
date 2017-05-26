@@ -1,6 +1,6 @@
 import numpy as np
 from uids.utils.Logger import Logger as log
-
+import math
 from uids.v2.MultiClassClassifierBase import MultiClassClassifierBase
 
 # weighted v2
@@ -29,7 +29,7 @@ class MultiCl(MultiClassClassifierBase):
         self.data_controller = DataController()
         self.update_controller = UpdateController(p_multicl=self)
         self.id_controller = IdentificationController(
-            save_sample_length=3,   # at least 5 samples for safe decision
+            save_sample_length=5,   # at least 5 samples for safe decision
             save_weight_thresh=10,  # or if a sample has confidence >= 10,
             min_sample_length=3,    # and at least 3 samples have been collected
         )
@@ -50,9 +50,9 @@ class MultiCl(MultiClassClassifierBase):
         # individual classifier predictions (binary)
         predictions = {}
         true_pos_rate = 0.7
-        true_pos_thresh = int(true_pos_rate*len(samples))
+        true_pos_thresh = math.ceil(true_pos_rate*len(samples))
         false_pos_rate = 0.4
-        false_pos_thresh = int(false_pos_rate * len(samples))
+        false_pos_thresh = math.floor(false_pos_rate * len(samples))
 
         target_positive_classes = []
         true_positives_rates = []
