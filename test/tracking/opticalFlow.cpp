@@ -64,7 +64,7 @@ int main(int argc, char** argv)
 			Mat img_color;
 			Mat img_depth;
 			// get color image
-			k.GetImageCopyRGB(img_color);
+			k.GetImageCopyBGR(img_color);
 			k.GetImageCopyDepth8UThresholded(img_depth);
 			
 			//cv::cvtColor(img_depth, img_depth, CV_GRAY2RGB);
@@ -205,7 +205,7 @@ int main(int argc, char** argv)
 //			Mat original;
 //
 //			// get color image
-//			k.GetImageCopyRGB(img_color);
+//			k.GetImageCopyBGR(img_color);
 //
 //			resize(img_color, img_color, Size(640, 480));
 //

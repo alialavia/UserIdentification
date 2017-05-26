@@ -23,7 +23,7 @@ void sendTrainingBatch(io::TCPClient *c, const std::vector<cv::Mat> &image_batch
 
 	// -- send images
 	for (int i = 0; i < image_batch.size(); i++) {
-		std::cout << "sent " << c->SendRGBImage(image_batch[i]) << " bytes to server\n";
+		std::cout << "sent " << c->SendImage(image_batch[i]) << " bytes to server\n";
 	}
 
 	std::cout << "--- Image batch has been sent" << std::endl;
@@ -114,7 +114,7 @@ int main(int argc, char** argv)
 		if (SUCCEEDED(hr)) {
 
 			// get color image
-			k.GetImageCopyRGB(color_image);
+			k.GetImageCopyBGR(color_image);
 
 			// mode selection
 			if(MODE == Mode_none)
@@ -261,7 +261,7 @@ int main(int argc, char** argv)
 						// image size
 						c.SendUInt(face.size().width);
 						// send image
-						std::cout << "--- sent " << c.SendRGBImage(face) << " bytes to server\n";
+						std::cout << "--- sent " << c.SendImage(face) << " bytes to server\n";
 						cv::destroyWindow("Face");
 
 						// ----- receive
@@ -319,7 +319,7 @@ int main(int argc, char** argv)
 						// image size
 						c.SendUInt(face.size().width);
 						// send image
-						std::cout << "--- sent " << c.SendRGBImage(face) << " bytes to server\n";
+						std::cout << "--- sent " << c.SendImage(face) << " bytes to server\n";
 						cv::destroyWindow("Face");
 
 						// ----- receive

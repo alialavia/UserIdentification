@@ -74,8 +74,8 @@ namespace io
 		void SendImageBatchSameSize(const std::vector<cv::Mat> &images) const;
 		void SendImageBatchQuadratic(const std::vector<cv::Mat> &images) const;
 		void SendImageBatch(const std::vector<cv::Mat> &images) const;
-		int SendRGBImage(const cv::Mat &img) const;
-		int SendRGBImageQuadratic(const cv::Mat &img) const;
+		int SendImage(const cv::Mat &img) const;
+		int SendImageQuadratic(const cv::Mat &img) const;
 		int SendUCharArray(const std::vector<int> &arr) const;
 
 		// ------ receive
@@ -83,9 +83,9 @@ namespace io
 		std::string ReceiveStringWithVarLength();
 		int ReceiveMessage(SOCKET socket_id, char *buf, int *len);
 
-		int ReceiveRGBImageQuadratic(cv::Mat &output);
-		int ReceiveRGBImagesQuadraticSameSize(std::vector<cv::Mat> &output);
-		int ReceiveRGBImage(cv::Mat &output);
+		int ReceiveImageQuadratic(cv::Mat &output);
+		int ReceiveImagesQuadraticSameSize(std::vector<cv::Mat> &output);
+		int ReceiveImage(cv::Mat &output);
 
 		template<typename T>
 		T TCPClient::Receive8bit()

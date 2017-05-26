@@ -21,7 +21,6 @@ SET(TARGET_COMMON_LIBRARIES
 ADD_SUBDIRECTORY(face_captures)
 ADD_SUBDIRECTORY(auto_classifier_training)
 ADD_SUBDIRECTORY(embeddings_from_images)
-ADD_SUBDIRECTORY(offline_identification)
 ADD_SUBDIRECTORY(online_identification)
 ADD_SUBDIRECTORY(image_labeler)
 ADD_SUBDIRECTORY(online_emu)

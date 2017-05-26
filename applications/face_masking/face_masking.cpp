@@ -97,7 +97,7 @@ int main(int argc, char** argv)
 		if (SUCCEEDED(hr)) {
 
 			// get color image
-			k.GetImageCopyRGB(color_image);
+			k.GetImageCopyBGR(color_image);
 			k.GetImageCopyDepth(depth_image);	// depth in mm
 
 

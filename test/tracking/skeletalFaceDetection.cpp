@@ -50,7 +50,7 @@ int main(int argc, char** argv)
 		if (SUCCEEDED(hr)) {
 
 			// get color image
-			k.GetImageCopyRGB(color_image);
+			k.GetImageCopyBGR(color_image);
 
 			// extract skeleton data
 			IBody** bodies = k.GetBodyDataReference();

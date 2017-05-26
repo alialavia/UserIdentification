@@ -119,7 +119,7 @@ namespace io {
 			bool hasProfilePicture = pConn->Receive8bit<bool>();
 			if(hasProfilePicture)
 			{
-				pConn->ReceiveRGBImageQuadratic(mImage);
+				pConn->ReceiveImageQuadratic(mImage);
 			}
 		};
 		int mUserID = -1;
@@ -168,7 +168,7 @@ namespace io {
 	{
 	public:
 		ImageResponse(io::TCPClient* conn = nullptr) :NetworkResponse(conn, NetworkResponse_Image){}
-		void GetPayload() {pConn->ReceiveRGBImage(mImage);};
+		void GetPayload() {pConn->ReceiveImage(mImage);};
 		cv::Mat mImage;
 	};
 
@@ -177,7 +177,7 @@ namespace io {
 	public:
 		QuadraticImageResponse(io::TCPClient* conn = nullptr) :NetworkResponse(conn, NetworkResponse_ImageQuadratic) {}
 		QuadraticImageResponse(const QuadraticImageResponse& other) :NetworkResponse(other) { mImage = other.mImage.clone(); }
-		void GetPayload() { pConn->ReceiveRGBImageQuadratic(mImage); };
+		void GetPayload() { pConn->ReceiveImageQuadratic(mImage); };
 		cv::Mat mImage;
 	};
 
@@ -238,7 +238,7 @@ namespace io {
 					mUserIDs.push_back(pConn->Receive32bit<int>());
 				}
 				// receive profile pictures
-				pConn->ReceiveRGBImagesQuadraticSameSize(mImages);
+				pConn->ReceiveImagesQuadraticSameSize(mImages);
 			}
 		};
 		std::vector<int> mUserIDs;

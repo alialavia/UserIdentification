@@ -83,7 +83,7 @@ int main(int argc, char** argv)
 
 			// receive image
 			//cv::Mat server_img = cv::Mat::zeros(100, 100, CV_8UC3);
-			//c.ReceiveRGBImage(server_img, 100);
+			//c.ReceiveImage(server_img, 100);
 			//// display image
 			//cv::imshow("Received from server", server_img);
 			//cv::waitKey(0);

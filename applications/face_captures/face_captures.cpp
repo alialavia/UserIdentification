@@ -16,7 +16,7 @@ DEFINE_bool(subtract_bg, false, "Save a copy of the images with subtracted backg
 DEFINE_bool(skeleton_tracking, false, "Use skeleton tracking");
 DEFINE_int32(auto_save_interval, 10, "Safe images/log after X images have been taken");
 DEFINE_bool(frontal, false, "Take only frontal view pictures");
-DEFINE_bool(high_res, true, "High resolution on all axis");
+DEFINE_bool(high_res, false, "High resolution on all axis");
 
 
 tracking::RadialFaceGridLabeled* g_ptr;
@@ -127,10 +127,10 @@ int main(int argc, char** argv)
 		if (SUCCEEDED(hr)) {
 
 			// get color image
-			k.GetImageCopyRGB(color_image);
+			k.GetImageCopyBGR(color_image);
 			if (FLAGS_subtract_bg)
 			{
-				k.GetImageCopyRGBSubtracted(bg_subtracted);
+				k.GetImageCopyBGRSubtracted(bg_subtracted);
 			}
 
 

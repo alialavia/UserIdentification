@@ -64,14 +64,14 @@ namespace io
 		HRESULT AcquireFrame();
 
 		// get deep copy of data
-		void GetImageCopyRGBA(cv::Mat& dst) const;
-		void GetImageCopyRGB(cv::Mat& dst) const;
-		void GetImageCopyRGBSubtracted(cv::Mat& dst) const;
+		void GetImageCopyBGRA(cv::Mat& dst) const;
+		void GetImageCopyBGR(cv::Mat& dst) const;
+		void GetImageCopyBGRSubtracted(cv::Mat& dst) const;
 		void GetImageCopyDepth(cv::Mat& dst) const;
 		void GetImageCopyDepth8UThresholded(cv::Mat& dst) const;
 		void GetImageCopyBodyIndex(cv::Mat& dst) const;
 		void GetImageCopyBodyIndexColored(cv::Mat& dst) const;
-		void GetImageCopyRGBSkeleton(cv::Mat& dst) const;
+		void GetImageCopyBGRSkeleton(cv::Mat& dst) const;
 
 		// link to current data
 		void GetImageRGBA(cv::Mat& dst);

@@ -714,7 +714,7 @@ void KinectSensorMultiSource::GetImageCopyBodyIndexColored(cv::Mat& dst) const
 }
 
 // TODO: fix mask offset (probably comming from coordinate mapper)
-void KinectSensorMultiSource::GetImageCopyRGBSubtracted(cv::Mat& dst) const {
+void KinectSensorMultiSource::GetImageCopyBGRSubtracted(cv::Mat& dst) const {
 	mSensorMutex.lock();
 
 	// allocate buffers
@@ -769,8 +769,8 @@ void KinectSensorMultiSource::GetImageCopyRGBSubtracted(cv::Mat& dst) const {
 	// resize/copy
 	cv::resize(cv_img, resized, cv::Size(mColorWidth, mColorHeight));
 
-	// rgba to rgb
-	cv::cvtColor(resized, resized, CV_RGBA2RGB);
+	// change image format from BGRA to BGR
+	cv::cvtColor(resized, resized, CV_BGRA2BGR);
 	dst = resized;
 
 	// cleanup
@@ -778,7 +778,7 @@ void KinectSensorMultiSource::GetImageCopyRGBSubtracted(cv::Mat& dst) const {
 	mSensorMutex.unlock();
 }
 
-void KinectSensorMultiSource::GetImageCopyRGBA(cv::Mat& dst) const
+void KinectSensorMultiSource::GetImageCopyBGRA(cv::Mat& dst) const
 {
 	mSensorMutex.lock();
 
@@ -804,26 +804,26 @@ void KinectSensorMultiSource::GetImageCopyRGBA(cv::Mat& dst) const
 	mSensorMutex.unlock();
 }
 
-void KinectSensorMultiSource::GetImageCopyRGB(cv::Mat& dst) const
+void KinectSensorMultiSource::GetImageCopyBGR(cv::Mat& dst) const
 {
 	mSensorMutex.lock();
 	cv::Mat cv_img(ColorImageStreamHeight, ColorImageStreamWidth, CV_8UC4, reinterpret_cast<void*>(pColorImageBuffer));
 	cv::Mat resized;
 	cv::resize(cv_img, resized, cv::Size(mColorWidth, mColorHeight));
-	// rgba to rgb
-	cv::cvtColor(resized, resized, CV_RGBA2RGB);
+	// change image format from BGRA to BGR
+	cv::cvtColor(resized, resized, CV_BGRA2BGR);
 	dst = resized;
 	mSensorMutex.unlock();
 }
 
-void KinectSensorMultiSource::GetImageCopyRGBSkeleton(cv::Mat& dst) const
+void KinectSensorMultiSource::GetImageCopyBGRSkeleton(cv::Mat& dst) const
 {
 	mSensorMutex.lock();
 	cv::Mat cv_img(ColorImageStreamHeight, ColorImageStreamWidth, CV_8UC4, reinterpret_cast<void*>(pColorImageBuffer));
 	cv::Mat resized;
 	cv::resize(cv_img, resized, cv::Size(mColorWidth, mColorHeight));
-	// rgba to rgb
-	cv::cvtColor(resized, resized, CV_RGBA2RGB);
+	// change image format from BGRA to BGR
+	cv::cvtColor(resized, resized, CV_BGRA2BGR);
 	dst = resized;
 	mSensorMutex.unlock();
 }

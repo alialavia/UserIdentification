@@ -155,7 +155,7 @@ int TCPClient::ReceiveMessage(SOCKET socket, char *buf, int *len)
 }
 
 
-int TCPClient::ReceiveRGBImagesQuadraticSameSize(std::vector<cv::Mat> &output) {
+int TCPClient::ReceiveImagesQuadraticSameSize(std::vector<cv::Mat> &output) {
 	// number of images
 	short nr_images = Receive16bit<short>();
 	short img_dim = Receive16bit<short>();
@@ -177,7 +177,7 @@ int TCPClient::ReceiveRGBImagesQuadraticSameSize(std::vector<cv::Mat> &output) {
 }
 
 
-int TCPClient::ReceiveRGBImageQuadratic(cv::Mat &output)
+int TCPClient::ReceiveImageQuadratic(cv::Mat &output)
 {
 	short img_dim = Receive16bit<short>();
 	output = cv::Mat::zeros(img_dim, img_dim, CV_8UC3);
@@ -196,7 +196,7 @@ int TCPClient::ReceiveRGBImageQuadratic(cv::Mat &output)
 	return bytes_recv;
 }
 
-int TCPClient::ReceiveRGBImage(cv::Mat &output)
+int TCPClient::ReceiveImage(cv::Mat &output)
 {
 	// width
 	short width = Receive16bit<short>();
@@ -567,7 +567,7 @@ void TCPClient::SendImageBatch(const std::vector<cv::Mat> &images) const
 	}
 }
 
-int TCPClient::SendRGBImage(const cv::Mat &img) const {
+int TCPClient::SendImage(const cv::Mat &img) const {
 	int data_sent = 0;
 	// send image dimension
 	data_sent += SendShort(img.size().width);
@@ -576,7 +576,7 @@ int TCPClient::SendRGBImage(const cv::Mat &img) const {
 	return data_sent;
 }
 
-int TCPClient::SendRGBImageQuadratic(const cv::Mat &img) const {
+int TCPClient::SendImageQuadratic(const cv::Mat &img) const {
 #ifdef _DEBUG_NETWORKING
 	if (img.size().width != img.size().height) {
 		throw std::invalid_argument("Invalid image dimensions - Image must be quadratic!");

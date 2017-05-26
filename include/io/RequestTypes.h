@@ -176,7 +176,7 @@ namespace io {
 		// submit specific payload
 		void SubmitPayload() {
 			// send image
-			pServerConn->SendRGBImageQuadratic(mImage);
+			pServerConn->SendImageQuadratic(mImage);
 		}
 
 		// payload: quadratic(!) image
@@ -560,7 +560,7 @@ namespace io {
 
 		// submit specific payload
 		void SubmitPayload() {
-			pServerConn->SendRGBImageQuadratic(mImage);
+			pServerConn->SendImageQuadratic(mImage);
 		}
 
 		// payload: quadratic(!) image
@@ -583,7 +583,7 @@ namespace io {
 		// submit specific payload
 		void SubmitPayload() {
 			pServerConn->SendUInt(mUserID);	// user id
-			pServerConn->SendRGBImageQuadratic(mImage);
+			pServerConn->SendImageQuadratic(mImage);
 		}
 
 		// Todo: careful! Int sent as Uint
