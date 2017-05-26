@@ -35,6 +35,7 @@ def calc_embeddings_recursive(in_folder, gen, output, batch_size = 100, cleanup 
             if file.endswith(".jpg") or file.endswith(".png"):
 
                 #print "--- Processing file {}/{}".format(index + 1, tot_files)
+                # load image in RGB order
                 image = misc.imread(file)
                 embedding = gen.get_embedding(image, align=align)
                 if embedding is None:
@@ -110,7 +111,7 @@ def calc_embeddings(in_folder, gen, cleanup=False, align=True, log='', save_pose
                 if not os.path.exists(img_path):
                     print "--- File {} does not exists. Skipping...".format(row[0])
                     continue
-
+                # load image in RGB order
                 image = misc.imread(img_path)
                 embedding = gen.get_embedding(image, align=align)
 
@@ -134,6 +135,7 @@ def calc_embeddings(in_folder, gen, cleanup=False, align=True, log='', save_pose
         for index, file in enumerate(os.listdir(path_in)):
             if file.endswith(".jpg") or file.endswith(".png"):
                 print "--- Processing file {}/{}".format(index+1, tot_files)
+                # load image in RGB order
                 image = misc.imread(path_in+file)
                 print "file {}".format(file)
                 embedding = gen.get_embedding(image, align=align)

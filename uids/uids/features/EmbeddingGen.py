@@ -98,7 +98,7 @@ class EmbeddingGen:
         rep = self.neural_net.forward(normalized)
         return rep
 
-    def align_face(self, image, landmark, output_size, skip_multi=False):
+    def align_face(self, rgb_image, landmark, output_size, skip_multi=False):
 
         landmarkMap = {
             'outerEyesAndNose': openface.AlignDlib.OUTER_EYES_AND_NOSE,
@@ -109,11 +109,10 @@ class EmbeddingGen:
 
         landmarkIndices = landmarkMap[landmark]
 
-        # TODO: check if is really output size or input size
-        # align image
-        outRgb = self.dlib_aligner.align(output_size, image,
-                             landmarkIndices=landmarkIndices,
-                             skipMulti=skip_multi)
+        # align image (needs RGB image, not BGR)
+        outRgb = self.dlib_aligner.align(output_size, rgb_image,
+                                         landmarkIndices=landmarkIndices,
+                                         skipMulti=skip_multi)
 
         # out Rgb might be none
         return outRgb
