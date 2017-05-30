@@ -175,7 +175,7 @@ namespace features{
 		std::vector<cv::Point2f> GetRefFaceLandmarkPos(const dlib::rectangle& faceBB, int indices[], int nr_indices) const;
 		bool DrawFacePoints(int imgDim, const cv::Mat &src, cv::Mat &dst);
 		// aling image using facial landmarks
-		bool AlignImage(int imgDim, cv::Mat src, cv::Mat &dst);
+		bool AlignImage(int imgDim, cv::Mat src, cv::Mat &dst, bool estimateRigid = false);
 	};
 
 

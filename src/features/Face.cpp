@@ -455,7 +455,7 @@ bool DlibFaceAligner::DrawFacePoints(int imgDim, const cv::Mat &src, cv::Mat &ds
 }
 
 // aling image using facial landmarks
-bool DlibFaceAligner::AlignImage(int imgDim, cv::Mat src, cv::Mat &dst)
+bool DlibFaceAligner::AlignImage(int imgDim, cv::Mat src, cv::Mat &dst, bool estimateRigid)
 {
 
 	// standard min. face size: 80px
@@ -491,7 +491,7 @@ bool DlibFaceAligner::AlignImage(int imgDim, cv::Mat src, cv::Mat &dst)
 	}
 
 	cv::Mat warpedImg;
-	if (true)
+	if (!estimateRigid)
 	{
 		// calculate affine transform from three point mappings
 		int landmark_indices[3] = { 36, 45, 33 };
@@ -534,20 +534,21 @@ bool DlibFaceAligner::AlignImage(int imgDim, cv::Mat src, cv::Mat &dst)
 	{
 
 		// calculate affine transform from three point mappings
-		int landmark_indices[4] = { 36, 45, 33, 8 };
-		cv::Point2f src_points[4];
-		std::vector<cv::Point2f> dst_points = GetRefFaceLandmarkPos(face_bounding_box, landmark_indices, 4);
+		int landmark_indices[6] = { 36, 45, 33, 8 };
+		
+		std::vector<cv::Point2f> dst_points = GetRefFaceLandmarkPos(face_bounding_box, landmark_indices, 6);
 
-		// select and convert detected landmarks points
-		for (std::size_t i = 0; i < 4; i++)
+
+		std::vector<cv::Point2f> src_points;
+		for (std::size_t i = 0; i < 6; i++)
 		{
-			src_points[i].x = face_landmarks[landmark_indices[i]].x();
-			src_points[i].y = face_landmarks[landmark_indices[i]].y();
+			src_points.push_back(cv::Point2f(face_landmarks[landmark_indices[i]].x(), face_landmarks[landmark_indices[i]].y()));
 		}
 
-		cv::Mat H = cv::getPerspectiveTransform(src_points, &dst_points[0]);
+
+		cv::Mat H = cv::estimateRigidTransform(src_points, dst_points, true);
 		warpedImg = cv::Mat::zeros(src.rows, src.cols, src.type());
-		cv::warpPerspective(src, warpedImg, H, warpedImg.size());
+		cv::warpAffine(src, warpedImg, H, warpedImg.size());
 
 		// draw points
 		for (std::size_t i = 0; i < 4; i++)
