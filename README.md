@@ -1,6 +1,8 @@
 # User Identification
 
-- Automated Build of the identification node on DockerHub: https://hub.docker.com/r/matbloch/user_identification_node/
+## Introduction
+
+- Todo: Add description
 
 ## System Requirements
 
