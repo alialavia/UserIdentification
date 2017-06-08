@@ -1,17 +1,17 @@
 # User Identification
 
+
 ## Introduction
 
 - Todo: Add description
 
-
-1. [System Requirements](#system-requirements)  
-2. [Setup Guide](#setup-guide) 
+**Table of Contents**
+1. [System Requirements](#1-system-requirements)  
+2. [Setup Guide](#2-setup-guide) 
 	1. [Building the Library and Client](#21-building-the-library-and-client)
   	2. [Server Installation](#22-server-installation)
-3. [API](#api)
-4. [Troubleshooting](#troubleshooting)
-
+3. [API](#3-api)
+4. [Troubleshooting](#4-troubleshooting)
 
 
 ## 1. System Requirements
