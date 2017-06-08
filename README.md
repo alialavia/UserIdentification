@@ -4,30 +4,37 @@
 
 - Todo: Add description
 
-## System Requirements
+1. [System Requirements](#system-requirements)  
+2. [Setup Guide](#setup-guide) 
+2.1 [Building the Library and Client]()
+2.2 [Server Installation]()
+3. [API](#api)
+4. [Troubleshooting](#troubleshooting)  
+
+## 1. System Requirements
 
 - Windows 8/10 x64 (for Kinect SDK 2 support)
 - USB3 controller compatible with Kinect (see [Confirmed List of USB 3.0 Controllers for Kinect v2](https://social.msdn.microsoft.com/Forums/en-US/bb379e8b-4258-40d6-92e4-56dd95d7b0bb/confirmed-list-of-usb-30-pcie-cardslaptopsconfigurations-which-work-for-kinect-v2-during?forum=kinectv2sdk))
 
 
-## Setup Guide
+## 2. Setup Guide
 
-### 1. Building the Library and Client
+### 2.1 Building the Library and Client
 **Note**: This guide for Windows 8/10. Please install the components in the ++mentioned order++.
 
 #### Dependencies
 
-1.1 **Kinect for Windows SDK 2.x**
+2.1.1 **Kinect for Windows SDK 2.x**
 - Download and install Kinect for Windows SDK 2.0 (installer)
 - Add `C:\Program Files\Microsoft SDKs\Kinect\v2.0_1409\bin` to you Systems PATH variable
 - Restart
 
-1.2 **CMake**
+2.1.2 **CMake**
 - Download the latest Cmake installer tool from cmake.org
 - Choose add CMake to Path variable
 - Test in Console cmake --version
 
-1.3 **OpenCV 3.x**
+2.1.3 **OpenCV 3.x**
 - Go to [opencv.org](http://opencv.org) and download the precompiled binaries (Visual Studio V12/14 is supported, otherwise you have to build the libraries for VS yourself)
 - Set environmentvariable `OPENCV_DIR` (so CMake is able to find library)
 Example for installation path in: `C:\lib\OpenCV31\build`
@@ -44,14 +51,14 @@ set PATH=%PATH%;C:\lib\opencv31\build\x64\vc14\bin;
 
 #### Building from Source with Microsoft Visual Studio
 
-1.4 **Microsoft Visual Studio**
+2.1.4 **Microsoft Visual Studio**
 - Go to [visualstudio.com](https://www.visualstudio.com/), download and install MVS 12 or higher
 
-1.5 **Visual C++ Compiler**
+2.1.5 **Visual C++ Compiler**
 - Start Microsoft Visual Studio
 - Create new project > Visual C++ and select "Install Visual C++ 2015 Tools for Windows Desktop"
 
-1.6 **Build the project using CMAKE**
+2.1.6 **Build the project using CMAKE**
 1. Download and install CMake
 2. Generate Visual Studio project:
 Open command prompt and execute:
@@ -65,7 +72,7 @@ Visual Studio is the default generator under Windows but x64 version maybe needs
 4. Compile the project in MVS (e.g. by selecting components or using the predefined targets for a full installation `CMakePredefinedTargets > ALL_BUILD`)
 
 
-### 2. Server Installation
+### 2.2 Server Installation
 
 See manual in the subfolder `uids`.
 
@@ -80,11 +87,11 @@ See manual in the subfolder `uids`.
 4. Start the user identification client under `bin/app_online_id.exe --port=8080`
 
 
-### API
+## 3. API
 Please visit the API readme (`API.md`) for the detailed instructions on how to use the user identification interface.
 
 
-## Troubleshooting
+## 4. Troubleshooting
 
 - The Kinect camera has no connection:
 	- Make sure the camera is plugged in and your USB3 controller is supported.
