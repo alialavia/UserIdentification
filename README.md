@@ -4,12 +4,15 @@
 
 - Todo: Add description
 
+
 1. [System Requirements](#system-requirements)  
 2. [Setup Guide](#setup-guide) 
-2.1 [Building the Library and Client]()
-2.2 [Server Installation]()
+	1. [Building the Library and Client](#21-building-the-library-and-client)
+  	2. [Server Installation](#22-server-installation)
 3. [API](#api)
-4. [Troubleshooting](#troubleshooting)  
+4. [Troubleshooting](#troubleshooting)
+
+
 
 ## 1. System Requirements
 
