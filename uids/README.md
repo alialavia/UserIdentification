@@ -6,7 +6,7 @@
 2. **Enable Portmapping from Host system to Boot2Docker VM:**
 	- Open VirtualBox Manager, Go to Boot2Docker VM Settings > Networking
 	- For Adapter 1 (NAT) set port forwarding under advanced settings
-	- Protocoll: TCP, Host IP: -, Client IP: -, Port: 80 (Server Port)
+	- Protocoll: TCP, Host IP: -, Client IP: -, Port: 8080 (Server Port)
 	![Virtual Box Settings](doc/img/vm_settings.png)
 3. Start Boot2Docker: Head to Docker Toolbox installation directory and run `start.sh` with Git shell
 4. Pull server image:
@@ -14,9 +14,9 @@
 $ docker pull matbloch/user_identification_node
 ```
 	- Verify image: `$ docker list images`
-5. Start server with forwarded port 80:
+5. Start server with forwarded port 8080:
 ```bash
-$ winpty docker run -p 80:80 -ti matbloch/user_identification_node //bin/bash
+$ winpty docker run -p 8080:8080 -ti matbloch/uids //bin/bash
 ```
 	- Verify container (list active containers): `$ docker ps`
 
@@ -29,18 +29,18 @@ Allows you to quickly make adjustments to the server code on any host.
 	- Open VirtualBox Manager, Go to Boot2Docker VM Settings > Shared Folders
 	- Add target folder under the name "/User". "/User" and some other (predefineds) folders automatically mapped to the docker VM
 2. Start docker image and share "/Users" under a custom name using the parameter `-v`: 
-	- `winpty docker run -v //Users:/mycustomdir -ti matbloch/user_identification_node //bin/bash`
+	- `winpty docker run -v //Users:/mycustomdir -ti matbloch/uids //bin/bash`
 
 ![Virtual Box Settings](doc/img/vm_settings_shared_ressource.png)
 
 
 ### `test/tcp_connection` Test TCP Connection: Host > boot2docker > Container
 
-1. Start docker container and expose port 80
+1. Start docker container and expose port 8080
 ```bash
-winpty docker run -p 80:80 -ti matbloch/user_identification_node //bin/bash
+winpty docker run -p 8080:8080 -ti matbloch/uids //bin/bash
 ```
-2. Start server on container (running on port 80)
+2. Start server on container (running on port 8080)
 ```bash
 python ../test/tcp_connection/server.py
 ```
