@@ -1,6 +1,8 @@
-## Identification Server
+# Identification Server
 
-### Installation (Windows)
+An automated build of the identification server is available on DockerHub: https://hub.docker.com/r/matbloch/uids/
+
+### Installation (Windows, Docker)
 
 1. Download and install Docker Toolbox (Win/OSX need Boot2Docker VM to run docker): [**Download Link**](https://www.docker.com/products/docker-toolbox)
 2. **Enable Portmapping from Host system to Boot2Docker VM:**
