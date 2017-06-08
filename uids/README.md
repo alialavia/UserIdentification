@@ -11,14 +11,13 @@
 3. Start Boot2Docker: Head to Docker Toolbox installation directory and run `start.sh` with Git shell
 4. Pull server image:
 ```bash
-$ docker pull matbloch/user_identification_node
+$ docker pull matbloch/uids
 ```
-	- Verify image: `$ docker list images`
 5. Start server with forwarded port 8080:
 ```bash
 $ winpty docker run -p 8080:8080 -ti matbloch/uids //bin/bash
 ```
-	- Verify container (list active containers): `$ docker ps`
+
 
 ## Demos/Tests
 
