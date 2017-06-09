@@ -1,5 +1,6 @@
 # User Identification
 
+![System Overview](/doc/img/system_overview.png)
 
 ## Introduction
 
@@ -91,7 +92,7 @@ See manual in the subfolder `uids`.
 
 
 ## 3. API
-Please visit the API readme (`API.md`) for the detailed instructions on how to use the user identification interface.
+Please visit the API readme (`doc/API.md`) for the detailed instructions on how to use the user identification interface.
 
 
 ## 4. Troubleshooting
