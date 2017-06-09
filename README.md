@@ -1,10 +1,10 @@
-# User Identification
+# Real-Time Visual User Identification without Training
 
 ![System Overview](/doc/img/system_overview.png)
 
 ## Introduction
 
-- Todo: Add description
+Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.
 
 **Table of Contents**
 1. [System Requirements](#1-system-requirements)  
@@ -13,6 +13,11 @@
   	2. [Server Installation](#22-server-installation)
 3. [API](#3-api)
 4. [Troubleshooting](#4-troubleshooting)
+
+
+**Features**
+- A
+- B
 
 
 ## 1. System Requirements
