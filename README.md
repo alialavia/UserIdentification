@@ -90,7 +90,7 @@ See manual in the subfolder `uids`.
 1. Connect the Kinect Camera to your Computer through a USB3 Port
 2. Start the identification server using **With Boot2Docker:**
 	- Start the Docker Terminal (Boot2Docker)
-	- Start a container `$ winpty docker run -ti -p 8080:8080 -v //Users:/uids matbloch/uids //bin/bash`
+	- Start a container `$ winpty docker run -ti -p 8080:8080 matbloch/uids //bin/bash`
 	- Start the server with `$ python services/v2/online_server.py`
 3. Wait till the server is ready for incomming connections
 4. Start the user identification client under `bin/app_online_id.exe --port=8080`
