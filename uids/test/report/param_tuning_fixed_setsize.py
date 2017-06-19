@@ -407,7 +407,7 @@ def tune_classifier(clf, param_grid, avg_cycles=10, nr_training_samples=50, nr_t
                                  ])
 
             writer.writerow("")
-            writer.writerow(["Precision, Recall, Training-Time (s):"])
+            writer.writerow(["Precision, Recall, Training-Time (ms):"])
             writer.writerow(["%0.6f" % i for i in iter_precision])
             writer.writerow(["%0.6f" % i for i in iter_recall])
             writer.writerow(["%0.6f" % i for i in iter_training_time])
@@ -450,10 +450,11 @@ def tune_classifier(clf, param_grid, avg_cycles=10, nr_training_samples=50, nr_t
 
 if __name__ == '__main__':
 
-    if False:
+    if True:
         params_svm = {'nu': np.arange(0.001, 0.1, 0.001), 'kernel': ['rbf']}
         clf = svm.OneClassSVM()
-        tune_classifier(clf, params_svm, avg_cycles=3, nr_training_samples=20, nr_test_samples=120, combine_scenes=True)
+        tune_classifier(clf, params_svm, avg_cycles=100, nr_training_samples=160, nr_test_samples=640,
+                        combine_scenes=False, filename="OCSVM_rbf_single-scene_train160_test640.csv")
 
     if False:
         params = {'contamination': np.arange(0.005, 0.1, 0.005)}
@@ -505,7 +506,7 @@ if __name__ == '__main__':
             print e
 
     # eval L2Estimator
-    if True:
+    if False:
         params = {'T': np.arange(0.5, 1.3, 0.01)}
         clf = L2Estimator()
         tune_classifier(clf, params, avg_cycles=5, nr_training_samples=10, nr_test_samples=640, combine_scenes=False)
@@ -545,7 +546,7 @@ if __name__ == '__main__':
 
     # eval ABODEstimator
     if False:
-        params = {'T': np.arange(0.2, 0.5, 0.01)}
+        params = {'T': np.arange(0.2, 1.3, 0.1)}
         clf = ABODEstimator()
         tune_classifier(clf, params, avg_cycles=5, nr_training_samples=10, nr_test_samples=640, combine_scenes=False)
         eval = []

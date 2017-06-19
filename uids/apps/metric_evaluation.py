@@ -394,120 +394,6 @@ def run_evaluation_2():
     # plot_inter_class_separation(clear, blurred, 'cosine')
 
 
-def run_blur_evaluation():
-
-    # 0: no blur, 1: 1.5, 2: 3, 4: 4.5
-    emb1 = load_data("embedding_frontal_increasing_blur.pkl")
-    emb2 = load_data("embeddings_matthias_big.pkl")
-    # filter blurred images
-    l = load_labels('blur_labels_matthias_big.csv')
-    l = l[:,1]
-    blurred = emb2[l==1]
-    clear = emb2[l==0]
-
-    # 1: Draw Separation of a Frontal Face to Blurred Versions
-    if False:
-        sep = pairwise_distances(emb1[0,:], emb1[1:,:], metric='cosine')
-        blur_stages = [1.5, 3, 4.5]
-        plt.title('Separation of blurred (Gaussian) to unblurred Image')
-        plt.ylabel('Separation [cosine distance]')
-        plt.xlabel('Blur Radius [px]')
-        plt.plot(blur_stages,sep[0])
-        plt.show()
-
-    # 2: Draw Separation of Blurred Frontal View to General Dataset
-    blur_stages = [0, 1.5, 3, 4.5]
-    if False:
-        for i, blur in enumerate(blur_stages):
-            plot_inter_class_separation(emb1[i,:], emb2, 'cosine')
-
-    # 3: Calculate Distribution Statistics for Separation of Frontal View vs General Dataset
-    if True:
-        min = []
-        max = []
-        mean = []
-        median = []
-        for i, blur in enumerate(blur_stages):
-            sep = pairwise_distances(emb1[i,:], emb2, metric='cosine')
-            min.append(np.amin(sep))
-            max.append(np.amax(sep))
-            mean.append(np.mean(sep))
-            median.append(np.median(sep))
-
-        plt.title('Separation of Blurred Frontal View to Random Class Images')
-        plt.ylabel('Separation [cosine distance]')
-        plt.xlabel('Gaussian Blur Radius [px]')
-        plt.plot(blur_stages, min, label="Minimum")
-        plt.plot(blur_stages, max, label="Maximum")
-        plt.plot(blur_stages, mean, label="Mean")
-        plt.plot(blur_stages, median, label="Median")
-        plt.legend()
-        plt.show()
-
-
-def plot_facial_expression_dist():
-    emb = load_data("facial_expressions.pkl")
-    neutral = emb[0,:]
-    rest = emb[1:,:]
-    metric = 'cosine'
-
-    # best order
-    switched = np.array([emb[0,:], emb[2,:], emb[3,:], emb[1,:], emb[4,:]])
-
-
-
-    sep = pairwise_distances(emb, emb, metric=metric)
-    sep2 = pairwise_distances(switched, switched, metric=metric)
-
-    # remove autocorrelation
-    sep2[sep2==0] = sep2[sep2 !=0 ].min()
-
-    # plt.figure()
-    # plt.imshow(sep, cmap='GnBu', interpolation='nearest')
-    # plt.colorbar()
-    plt.figure()
-    plt.imshow(sep2, cmap='Blues_r', interpolation='nearest')
-    cbar = plt.colorbar()
-
-    cl = plt.getp(cbar.ax, 'ymajorticklabels')
-    plt.setp(cl, fontsize=16)
-
-    if metric == 'cosine':
-        cbar.set_ticks([0, 0.05, 0.1, 0.15, 0.2])
-    else:
-        cbar.set_ticks([0,0.2, 0.4, 0.6])
-
-    plt.show()
-    print sep
-
-
-def plot_shading_variance():
-    emb = load_data("shading.pkl")
-
-    metric = 'cosine'
-
-    # best order
-    # switched = np.array([emb[0,:], emb[2,:], emb[3,:], emb[1,:], emb[4,:]])
-    sep2 = pairwise_distances(emb, emb, metric=metric)
-
-    # remove autocorrelation
-    sep2[sep2==0] = sep2[sep2 !=0 ].min()
-
-    plt.figure()
-    plt.imshow(sep2, cmap='Blues_r', interpolation='nearest')
-    cbar = plt.colorbar()
-
-    cl = plt.getp(cbar.ax, 'ymajorticklabels')
-    plt.setp(cl, fontsize=16)
-
-    if metric == 'cosine':
-        cbar.set_ticks([0.7, 0.5, 0.3])
-
-    else:
-        cbar.set_ticks([0,0.2, 0.4, 0.6])
-
-    plt.show()
-
 
 def plot_pitch_yaw_comparison():
 
@@ -549,36 +435,6 @@ def plot_pitch_yaw_comparison():
     plt.show()
 
 
-def plot_background_influence():
-    emb = load_data("mat_bg.pkl")
-    neutral = emb[0,:]
-    rest = emb[1:,:]
-    metric = 'cosine'
-
-    # best order
-    # switched = np.array([emb[2,:], emb[0,:], emb[3,:], emb[1,:], emb[4,:]])
-
-    sep = pairwise_distances(emb, emb, metric=metric)
-
-    # plt.figure()
-    # plt.imshow(sep, cmap='GnBu', interpolation='nearest')
-    # plt.colorbar()
-    plt.figure()
-    plt.imshow(sep, cmap='Blues_r', interpolation='nearest')
-    cbar = plt.colorbar()
-
-    cl = plt.getp(cbar.ax, 'ymajorticklabels')
-    plt.setp(cl, fontsize=16)
-
-    if metric == 'cosine':
-        # cbar.set_ticks([0, 0.05, 0.1, 0.15, 0.2])
-        pass
-    else:
-        cbar.set_ticks([0,0.2, 0.4, 0.6])
-
-    plt.show()
-    print sep
-
 
 def plot_pitch_yaw_gain():
 
@@ -607,12 +463,7 @@ def plot_pitch_yaw_gain():
 
 def calc_embedding_corr():
 
-
-
-
     metric = 'euclidean'
-
-
 
     # select range
     # emb_yaw = emb_yaw[0:-2,:]
@@ -621,6 +472,7 @@ def calc_embedding_corr():
     sep = pairwise_distances(emb[0], emb[1:], metric='euclidean')
     sep = np.square(sep)
     print list(sep[0])
+
 
 def calc_nearest_pose():
 
