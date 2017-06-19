@@ -7,9 +7,9 @@
 
 
 **Features**
-- Real-time user identification and tracking without previous training
-- Detection and recovery from tracking failures
-- Network based implementation with API
+- Real-time user identification (facial recognition) without previous training
+- Automatic detection and recovery of tracking failures
+- Network based implementation for cross-scene learning
 
 **Table of Contents**
 1. [System Requirements](#1-system-requirements)  
@@ -20,10 +20,10 @@
 4. [Troubleshooting](#4-troubleshooting)
 
 
-## Introduction
+## Technical Introduction
 
 We address the underdeveloped issue of open set classification by effectively modeling it as a clustering problem using an angle based set similarity metric.
-Evaluations on the dataset [LFW](http://vis-www.cs.umass.edu/lfw/index.html) yield a F1 score of over 99.5\% which outperforms conventional comparison metrics and off-the-shelf classifiers.
+With deep face embeddings from [OpenFace](https://github.com/cmusatyalab/openface) we reach an F1 score over 99.5\% on [LFW](http://vis-www.cs.umass.edu/lfw/index.html) which outperforms conventional comparison metrics and off-the-shelf classifiers.
 Further, we introduce a generally applicable pose based confidence measure that allows to assess the validity of classifier predictions and increases performance and accuracy of the classification process.
 The identification system has a scalable network based architecture and features
 extensions that among other things, address tracking problems and failure prediction to successfully tackle the broad and complex problem of unrestricted person identification.
@@ -91,7 +91,7 @@ Visual Studio is the default generator under Windows but x64 version maybe needs
 
 ### 2.2 Server Installation
 
-See manual in the subfolder `uids`.
+See manual in the subfolder [uids](uids).
 
 ## Running the User Identification System
 
@@ -105,7 +105,7 @@ See manual in the subfolder `uids`.
 
 
 ## 3. API
-Please visit the API readme (`doc/API.md`) for the detailed instructions on how to use the user identification interface.
+Please visit the API readme [doc/API.md](doc/api.md) for the detailed instructions on how to use the user identification interface.
 
 
 ## 4. Troubleshooting
