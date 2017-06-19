@@ -77,7 +77,6 @@ def eval_unrestr_perf(clf, avg_cycles=10, nr_test_samples=160, filename=""):
     :return:
     """
 
-
     save_csv = True
     randomize = True
     nr_iters = avg_cycles
@@ -112,13 +111,13 @@ def eval_unrestr_perf(clf, avg_cycles=10, nr_test_samples=160, filename=""):
     avg_training_time = []
     avg_prediction_time = []
     avg_youden_indices = []
+    avg_auc = []
 
     test_samples = np.concatenate((class_ds2, outlier_ds_unrestricted))
     prng = RandomState()
 
     # iterate over training set sizes
     for nr_training_samples in training_sizes:
-
 
         # allocate storage
         iter_precision = []
@@ -127,6 +126,7 @@ def eval_unrestr_perf(clf, avg_cycles=10, nr_test_samples=160, filename=""):
         iter_youden_indices = []
         iter_training_time = []
         iter_prediction_time = []
+        iter_auc = []
 
         sys.stdout.write("Training with size {} ".format(nr_training_samples))
         start = time.time()
@@ -155,12 +155,24 @@ def eval_unrestr_perf(clf, avg_cycles=10, nr_test_samples=160, filename=""):
 
             # predict
             start = current_milli_time()
-            labels_predicted = clf.predict(test_samples)
+            # scores which are thresholded
+            scores = clf.decision_function(test_samples)
             iter_prediction_time.append(current_milli_time() - start)
+
+            labels_predicted = clf.threshold(scores)
+
+            if clf_name == 'L2Estimator':
+                # invert probability
+                scores = 3 - scores
 
             # calculate metrics
             true_nr_positives = nr_test_samples / 2
             true_nr_negatives = nr_test_samples / 2
+            true_labels = np.concatenate((np.repeat(1, true_nr_positives), np.repeat(-1, true_nr_positives)))
+
+            fpr, tpr, thresholds = metrics.roc_curve(true_labels, scores, pos_label=1)
+            auc_val = auc(fpr, tpr)
+
             tp = np.count_nonzero(labels_predicted[0:true_nr_positives] == 1)
             fn = true_nr_positives - tp
             fp = np.count_nonzero(labels_predicted[true_nr_positives:] == 1)
@@ -168,6 +180,7 @@ def eval_unrestr_perf(clf, avg_cycles=10, nr_test_samples=160, filename=""):
             fpr = float(fp) / float(fp + tn)
 
             recall = float(tp) / float(tp + fn)
+            youden_indices = tp/(tp+fn) + tn/(tn+fp) - 1
             try:
                 precision = float(tp) / float(tp + fp)
                 f1_score = 2 * float(precision * recall) / float(precision + recall)
@@ -178,7 +191,8 @@ def eval_unrestr_perf(clf, avg_cycles=10, nr_test_samples=160, filename=""):
             iter_precision.append(precision)
             iter_recall.append(recall)
             iter_f1_scores.append(f1_score)
-            iter_youden_indices.append(precision+recall-1)
+            iter_youden_indices.append(youden_indices)
+            iter_auc.append(auc_val)
 
         print "\n"
 
@@ -188,6 +202,7 @@ def eval_unrestr_perf(clf, avg_cycles=10, nr_test_samples=160, filename=""):
         avg_training_time.append(np.mean(iter_training_time))
         avg_prediction_time.append(np.mean(iter_prediction_time))
         avg_youden_indices.append(np.mean(iter_youden_indices))
+        avg_auc.append(np.mean(iter_auc))
 
 
     if True:
@@ -206,6 +221,7 @@ def eval_unrestr_perf(clf, avg_cycles=10, nr_test_samples=160, filename=""):
             writer.writerow(["Recall"] + ["%0.6f" % i for i in avg_recall])
             writer.writerow(["F1"] + ["%0.6f" % i for i in avg_f1_scores])
             writer.writerow(["Youden-Index"] + ["%0.6f" % i for i in avg_youden_indices])
+            writer.writerow(["AUC"] + ["%0.6f" % i for i in avg_auc])
             writer.writerow("")
             writer.writerow(["Training-Time (s)"] + ["%0.6f" % i for i in avg_training_time])
             writer.writerow(["Predicition-Time (ms)"] + ["%0.6f" % i for i in avg_prediction_time])
@@ -214,7 +230,6 @@ def eval_unrestr_perf(clf, avg_cycles=10, nr_test_samples=160, filename=""):
             # writer.writerow(["%0.6f" % i for i in iter_precision])
             # writer.writerow(["%0.6f" % i for i in iter_recall])
             # writer.writerow(["%0.6f" % i for i in iter_training_time])
-
 
 
 # ================================= #
@@ -228,4 +243,8 @@ if __name__ == '__main__':
 
     if True:
         clf = ABODEstimator(T=0.3)
+        eval_unrestr_perf(clf, avg_cycles=20, nr_test_samples=800, filename="")
+
+    if True:
+        clf = ApproxABODEstimator(T=0.12)
         eval_unrestr_perf(clf, avg_cycles=20, nr_test_samples=800, filename="")

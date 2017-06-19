@@ -67,7 +67,7 @@ def get_all_param_variants(pgrid):
 
 def eval_unrestr_perf(clf, persons=[]):
 
-    if clf.__class__.__name__ in ["L2Estimator", "ABODEstimator"]:
+    if clf.__class__.__name__ in ["L2Estimator", "ABODEstimator", "ApproxABODEstimator"]:
         filename = clf.__class__.__name__ + "_T_" + str(clf.T) + '_multipeople_benchmark.csv'
     else:
         filename = clf.__class__.__name__ + '_multipeople_benchmark.csv'
@@ -194,7 +194,7 @@ def eval_unrestr_perf(clf, persons=[]):
                 writer.writerow(["Recall"] + ["%0.6f" % i for i in recall_values])
                 writer.writerow(["F1"] + ["%0.6f" % i for i in f1_scores])
                 writer.writerow(["Youden-Index"] + ["%0.6f" % i for i in youden_indices])
-                writer.writerow(["AUC"] + ["%0.3f" % i for i in area_under_curves])
+                writer.writerow(["AUC"] + ["%0.5f" % i for i in area_under_curves])
                 writer.writerow("")
 
 # ================================= #
@@ -225,8 +225,14 @@ if __name__ == '__main__':
         clf = L2Estimator(T=0.99)
         eval_unrestr_perf(clf, persons=persons)
 
-    if True:
+    if False:
         print "-----------------------------"
         print "         ABOD\n\n"
-        clf = ABODEstimator(T=2)
+        clf = ABODEstimator(T=0.3)
+        eval_unrestr_perf(clf, persons=persons)
+
+    if True:
+        print "-----------------------------"
+        print "         ApproxABOD\n\n"
+        clf = ApproxABODEstimator(T=0.12)
         eval_unrestr_perf(clf, persons=persons)

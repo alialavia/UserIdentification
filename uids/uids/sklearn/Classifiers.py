@@ -7,6 +7,62 @@ from uids.v2.set_metrics import *
 from sklearn.exceptions import NotFittedError
 
 
+class ApproxABODEstimator(BaseEstimator):
+    """
+     Parameters
+     ----------
+     T : float, optional
+     """
+
+    # reference data
+    __tmp_data = None
+    # classification threshold
+    T = 0
+
+    def __init__(self, T=0.3):
+        self.T = T
+
+    def fit(self, X, y=None):
+        """
+        Parameters
+        ----------
+        X : array-like or sparse matrix of shape = [n_samples, n_features]
+            The training input samples.
+        Returns
+        -------
+        self : object
+            Returns self.
+        """
+        self.__tmp_data = X
+        return self
+
+    def decision_function(self, X):
+        return ApproxABOD.get_score(X, self.__tmp_data)
+
+    def threshold(self, decision_fn):
+        # threshold
+        decision = np.array([1]*len(decision_fn))
+        decision[decision_fn < self.T] = -1
+        return decision
+
+    def predict(self, X):
+        """
+        Parameters
+        ----------
+        X : array-like of shape = [n_samples, n_features]
+            The input samples.
+        Returns
+        -------
+        y : array of shape = [n_samples]
+        """
+
+        # calc abod score
+        abod_score = self.decision_function(X)
+
+        # threshold
+        return self.threshold(abod_score)
+
+
 class ABODEstimator(BaseEstimator):
     """
     Parameters
@@ -39,6 +95,12 @@ class ABODEstimator(BaseEstimator):
     def decision_function(self, X):
         return ABOD.get_score(X, self.__tmp_data)
 
+    def threshold(self, decision_fn):
+        # threshold
+        decision = np.array([1]*len(decision_fn))
+        decision[decision_fn < self.T] = -1
+        return decision
+
     def predict(self, X):
         """
         Parameters
@@ -52,11 +114,7 @@ class ABODEstimator(BaseEstimator):
 
         # calc abod score
         abod_score = self.decision_function(X)
-
-        # threshold
-        decision = np.array([1]*len(X))
-        decision[abod_score < self.T] = -1
-        return decision
+        return self.threshold(abod_score)
 
 
 class L2Estimator(BaseEstimator):
@@ -104,6 +162,12 @@ class L2Estimator(BaseEstimator):
         else:
             raise ValueError("'{}' is not a valid comparison method".format(self.comparison))
 
+    def threshold(self, decision_fn):
+        # threshold
+        decision = np.array([1]*len(decision_fn))
+        decision[decision_fn > self.T] = -1
+        return decision
+
     def predict(self, X):
         """
         Parameters
@@ -120,11 +184,7 @@ class L2Estimator(BaseEstimator):
                                  " `feature_importances_`.")
 
         l2_score = self.decision_function(X)
-
-        # threshold
-        decision = np.array([1]*len(X))
-        decision[l2_score > self.T] = -1
-        return decision
+        return self.threshold(l2_score)
 
 
 class CosineDistEstimator(BaseEstimator):

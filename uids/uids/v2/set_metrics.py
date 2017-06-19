@@ -26,6 +26,71 @@ class SetMeanDistL2Quared:
         return np.square(pairwise_distances(class_mean.reshape(1, -1), test_samples, metric='euclidean')[0])
 
 
+class ApproxABOD:
+    """
+    Approximate ABOD using cosine similarity instead of angle between vectors
+    """
+
+    @staticmethod
+    def get_score(test_samples, reference_set):
+
+        assert test_samples.ndim == 2
+        assert reference_set.ndim == 2
+
+        dist_lookup = pairwise_distances(test_samples, reference_set, metric='euclidean')
+
+        # print np.shape(dist_lookup[0])
+        factors = []
+
+        # if only one sample: cannot calculate abof
+        if len(reference_set) < 3:
+            log.severe('Cannot calculate ABOF with {} reference samples (variance calculation needs at least 3 reference points)'.format(len(reference_set)))
+            raise Exception
+
+        for i_sample, A in enumerate(test_samples):
+            factor_list = []
+            for i in range(len(reference_set)):
+                # select first point in reference set
+                B = reference_set[i]
+                # distance
+                AB = dist_lookup[i_sample][i]
+
+                for j in range(i + 1):
+                    if j == i:  # ensure B != C
+                        continue
+                    # select second point in reference set
+                    C = reference_set[j]
+                    # distance
+                    AC = dist_lookup[i_sample][j]
+
+                    if np.array_equal(B, C):
+                        print "Bi/Cj: {}/{}".format(i, j)
+                        log.error("Points are equal: B == C! Assuming classification of training point")
+                        sys.exit("Points are equal: B == C! Reference Set contains two times the same samples")
+                        factor_list.append(1000)
+                        # sys.exit('ERROR\tangleBAC\tmath domain ERROR, |cos<AB, AC>| <= 1')
+                        continue
+
+                    # angle_BAC = ABOD.angleBAC(A, B, C, AB, AC)
+                    # angle_BAC = ABOD.angleFast(A-B, A-C)
+
+                    vector_AB = B - A
+                    vector_AC = C - A
+
+                    # compute each element of variance list
+                    try:
+                        cos_similarity = np.dot(vector_AB, vector_AC) / (AB * AC)
+                        # apply weighting
+                        tmp = cos_similarity / float(math.pow(AB * AC, 2))
+                    except ZeroDivisionError:
+                        log.severe("ERROR\tABOF\tfloat division by zero! Trying to predict training point?'")
+                        tmp = 500
+                        # sys.exit('ERROR\tABOF\tfloat division by zero! Trying to predict training point?')
+                    factor_list.append(tmp)
+            factors.append(np.var(factor_list))
+        return np.array(factors)
+
+
 class ABOD:
 
     @staticmethod
@@ -150,6 +215,7 @@ class ABOD:
     def angleBAC(A, B, C, AB, AC):				# AB AC mold
         """
         calculate: <AB, AC> = |AB||AC|*cos(AB,AC)
+		then divide by length and take cos-1
         """
         vector_AB = B - A						# vector_AB = (x1, x2, ..., xn)
         vector_AC = C - A
