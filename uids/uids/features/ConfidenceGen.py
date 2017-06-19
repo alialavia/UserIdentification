@@ -14,7 +14,7 @@ import sys
 
 # path managing
 fileDir = os.path.dirname(os.path.realpath(__file__))
-modelDir = os.path.join(fileDir, '../..', 'models', 'confidence_weights') # path to the model directory
+modelDir = os.path.join(fileDir, '../..', 'models', 'confidence') # path to the model directory
 
 
 def load_data(filename):
@@ -41,16 +41,9 @@ class WeightGenerator:
     d_p = None
     d_y = None
 
-    def __init__(self, embedding_file="pose_matthias2.pkl", pose_file="pose_matthias2_poses.pkl"):
-
+    def __init__(self, filename='conf_map.v_m3'):
         log.info('db', "Initializing weight generator...")
-        # initialize grid
-        embeddings = load_data(embedding_file)
-        if embeddings is None:
-            log.severe("Could not load file {} in dir uids/models/confience_weights/ for weight generator...".format(embeddings))
-            sys.exit(0)
-        poses = load_data(pose_file)
-        self.generate(embeddings, poses)
+        self.load_map(filename)
 
     def generate(self, embeddings, poses):
 
@@ -113,6 +106,43 @@ class WeightGenerator:
         self.variance_map = np.array(variance)
         self.grid = np.array(grid)
         self.grid_size = self.grid.shape[0]
+
+    def init_from_files(self, embedding_file="pose_matthias2.pkl", pose_file="pose_matthias2_poses.pkl"):
+
+        log.info('db', "Initializing weight generator...")
+        # initialize grid
+        embeddings = load_data(embedding_file)
+        poses = load_data(pose_file)
+        if embeddings is None or poses is None:
+            log.severe("Could not load file {} in dir uids/models/confience_weights/ for weight generator...".format(embeddings))
+            sys.exit(0)
+
+        self.generate(embeddings, poses)
+
+    def save_map(self, filename):
+        print("--- saving grid to '{}'".format(filename))
+        filename = "{}/{}".format(modelDir, filename)
+        with open(filename, 'wb') as f:
+            pickle.dump((
+                self.grid,
+                self.variance_map,
+                self.count_map,
+                self.grid_size
+            ), f)
+            f.close()
+
+    def load_map(self, filename='conf_map.v_m3'):
+
+        filename = "{}/{}".format(modelDir, filename)
+        if os.path.isfile(filename):
+            with open(filename, 'r') as f:
+                (
+                    self.grid,
+                    self.variance_map,
+                    self.count_map,
+                    self.grid_size
+                ) = pickle.load(f)
+                f.close()
 
     def calc_index(self, pitch, yaw):
         d_p = d_y = self.d_p
