@@ -721,13 +721,15 @@ namespace tracking
 			double y = Rotation[1];
 			double z = Rotation[2];
 			double w = Rotation[3];
-			// convert face rotation quaternion to Euler angles in degrees		
+
 			double dPitch, dYaw, dRoll;
+			// convert quaternion to euler angles
+			dRoll = atan2(2 * (x * y + w * z), w * w + x * x - y * y - z * z) / M_PI * 180.0;
 			dPitch = atan2(2 * (y * z + w * x), w * w - x * x - y * y + z * z) / M_PI * 180.0;
 			dYaw = asin(2 * (w * y - x * z)) / M_PI * 180.0;
-			dRoll = atan2(2 * (x * y + w * z), w * w + x * x - y * y - z * z) / M_PI * 180.0;
+
 			const double c_FaceRotationIncrementInDegrees = 1.0f;
-			// clamp rotation values in degrees to a specified range of values to control the refresh rate
+			// discretize values
 			double increment = c_FaceRotationIncrementInDegrees;
 			pitch = static_cast<int>(floor((dPitch + increment / 2.0 * (dPitch > 0 ? 1.0 : -1.0)) / increment) * increment);
 			yaw = static_cast<int>(floor((dYaw + increment / 2.0 * (dYaw > 0 ? 1.0 : -1.0)) / increment) * increment);

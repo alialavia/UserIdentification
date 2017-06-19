@@ -140,13 +140,7 @@ void RadialFaceGrid::GetFaceGridPitchYaw(cv::Mat &dst, size_t canvas_height){
 			for (int r = 0; r < image_grid.Size(0); r++) {
 				if (!image_grid.IsFree(r, p, y)) {
 
-
-
 					cv::Mat extr = image_grid(r, p, y);
-					bool test = image_grid.IsFree(r, p, y);
-
-					size_t pos = image_grid.GetPos(r, p, y);
-					// 75 = 0+ 1*3 + 4* 3*6
 
 					try
 					{
