@@ -1,10 +1,15 @@
-# Real-Time Visual User Identification without Training
+# Real-Time Open Set User Identification
+> Training-free real-time tracking and identification system for the use in smart environments.
+
 
 ![System Overview](/doc/img/system_overview.png)
 
-## Introduction
 
-Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.
+
+**Features**
+- Real-time user identification and tracking without previous training
+- Detection and recovery from tracking failures
+- Network based implementation with API
 
 **Table of Contents**
 1. [System Requirements](#1-system-requirements)  
@@ -15,10 +20,13 @@ Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod 
 4. [Troubleshooting](#4-troubleshooting)
 
 
-**Features**
-- A
-- B
+## Introduction
 
+We address the underdeveloped issue of open set classification by effectively modeling it as a clustering problem using an angle based set similarity metric.
+Evaluations on the dataset [LFW](http://vis-www.cs.umass.edu/lfw/index.html) yield a F1 score of over 99.5\% which outperforms conventional comparison metrics and off-the-shelf classifiers.
+Further, we introduce a generally applicable pose based confidence measure that allows to assess the validity of classifier predictions and increases performance and accuracy of the classification process.
+The identification system has a scalable network based architecture and features
+extensions that among other things, address tracking problems and failure prediction to successfully tackle the broad and complex problem of unrestricted person identification.
 
 ## 1. System Requirements
 
