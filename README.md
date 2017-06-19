@@ -37,7 +37,7 @@ extensions that among other things, address tracking problems and failure predic
 ## 2. Setup Guide
 
 ### 2.1 Building the Library and Client
-**Note**: This guide for Windows 8/10. Please install the components in the ++mentioned order++.
+**Note**: This guide is for Windows 8/10. Please install the components in the mentioned order.
 
 #### Dependencies
 
