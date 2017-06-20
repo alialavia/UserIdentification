@@ -1,15 +1,49 @@
-# base image: bamos/openface
-FROM bamos/openface
+# base image
+FROM matbloch/dlib-torch
 
 # File Author / Maintainer
 MAINTAINER Matthias Bloch
 
+# TODO: Should be added to opencv-dlib-torch image.
+RUN ln -s /root/torch/install/bin/* /usr/local/bin
+
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    graphicsmagick \
+    libssl-dev \
+    libffi-dev \
+    python-dev \
+    python-pip \
+    python-numpy \
+    python-nose \
+    python-scipy \
+    python-pandas \
+    python-protobuf \
+    python-openssl \
+    wget \
+    zip \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
 ############################################################
-# Dockerfile to build Identification Node Container
+# Install OpenFace
+############################################################
+	
+RUN git clone https://github.com/cmusatyalab/openface.git /root/openface --recursive
+	
+RUN python -m pip install --upgrade --force pip
+	
+RUN cd /root/openface && \
+    ./models/get-models.sh && \
+    pip2 install -r requirements.txt && \
+    python2 setup.py install && \
+    pip2 install --user --ignore-installed -r demos/web/requirements.txt && \
+    pip2 install -r training/requirements.txt
+
+############################################################
+# Build Identification Node Container
 ############################################################
 
-# sudo add-apt-repository python-opencv
-	
 # Copy the application folder inside the container
 ADD . /uids
 
@@ -21,7 +55,7 @@ RUN cd /uids && \
 	pip2 install -r requirements.txt
 	
 # inform about port listening (use -p when you start the container)
-EXPOSE 8080
+EXPOSE 8080 8080
 
 # download detection models
 CMD /bin/bash -l -c '/uids/models/get-models.sh'
@@ -30,4 +64,4 @@ CMD /bin/bash -l -c '/uids/models/get-models.sh'
 WORKDIR /uids
 
 # Start server with custom port listening
-# CMD ["python", "start_detector.py", "-p 8080"]
+# CMD ["python", "server.py", "-p 8080"]
