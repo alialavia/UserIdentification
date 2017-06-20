@@ -8,6 +8,7 @@ from abc import abstractmethod
 from uids.utils.Logger import Logger as log
 import numpy as np
 import cv2
+import threading
 
 
 class TCPServer:
@@ -483,3 +484,50 @@ class TCPServerBlocking(TCPServer):
                 # close connection - allow new socket connections
                 conn.close()
 
+
+class TCPServerThreaded(TCPServer):
+    """Threaded TCP Server - parallel connection to multiple clients"""
+    def __init__(self, host, port):
+        TCPServer.__init__(self, host, port)
+
+    def server_loop(self):
+
+        while self.SERVER_STATUS != -1:
+            # accept new connection
+            conn, addr = self.SERVER_SOCKET.accept()
+            # conn.settimeout(60)
+            threading.Thread(target=self.listen_to_client, args=(conn, addr)).start()
+
+    def listen_to_client(self, conn, addr):
+        log.info('server',
+                 "--- Parallel connection to {}:{} ---".format(addr[0], addr[1]))
+
+        if self.ONE_REQ_PER_CONN:
+            # handle single request
+            succ = self.handle_request(conn, addr)
+
+            # check status - eventually shutdown server
+            if self.SERVER_STATUS == -1:
+                conn.close()    # close connection
+                return
+
+            # block till client has disconnected
+            while 1:
+                data = conn.recv(1024)
+                if not data:
+                    # close connection - allow new socket connections
+                    conn.close()
+                    return
+        else:
+            # handle request
+            # while connection open
+            while self.handle_request(conn, addr):
+
+                # check status - eventually shutdown server
+                if self.SERVER_STATUS == -1:
+                    conn.close()  # close connection
+                    return
+
+            # client has disconnected
+            # close connection - allow new socket connections
+            conn.close()
