@@ -85,7 +85,7 @@ FIND_PACKAGE(OpenCV 3.0 REQUIRED)
 #include_directories(${OpenCV_INCLUDE_DIRS}) # Not needed for CMake >= 2.8.11
 
 # include this source when dlib is used
-find_package(dlib REQUIRED)
+#find_package(dlib REQUIRED)
 
 # Alternative:
 # Include only headers and add source.cpp to source of target
