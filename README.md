@@ -79,12 +79,12 @@ set PATH=%PATH%;C:\lib\opencv31\build\x64\vc14\bin;
 1. Download and install CMake
 2. Generate Visual Studio project:
 Open command prompt and execute:
-```bash
-mkdir build
-cd build
-cmake .. -G "Visual Studio 14 2015 Win64"
-```
-Visual Studio is the default generator under Windows but x64 version maybe needs to be specified.
+	```bash
+	mkdir build
+	cd build
+	cmake .. -G "Visual Studio 14 2015 Win64"
+	```
+	Visual Studio is the default generator under Windows but x64 version maybe needs to be specified.
 3. Open the generated project in the `build` folder using MVS
 4. Compile the project in MVS (e.g. by selecting components or using the predefined targets for a full installation `CMakePredefinedTargets > ALL_BUILD`)
 
