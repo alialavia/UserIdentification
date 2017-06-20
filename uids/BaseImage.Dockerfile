@@ -35,6 +35,8 @@ RUN cd ~/torch && ./install.sh && \
     ./luarocks install csvigo && \
     ./luarocks install torchx && \
     ./luarocks install tds
+	
+RUN ln -s /root/torch/install/bin/* /usr/local/bin
 
 RUN cd ~ && \
     mkdir -p ocv-tmp && \

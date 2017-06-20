@@ -4,9 +4,6 @@ FROM matbloch/dlib-torch
 # File Author / Maintainer
 MAINTAINER Matthias Bloch
 
-# TODO: Should be added to opencv-dlib-torch image.
-RUN ln -s /root/torch/install/bin/* /usr/local/bin
-
 RUN apt-get update && apt-get install -y \
     curl \
     git \
