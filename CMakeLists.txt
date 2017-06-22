@@ -60,7 +60,7 @@ INCLUDE_DIRECTORIES(
 OPTION(BUILD_USER_IDENTIFICATION_APPLICATIONS "Enable to build Applications" ON)
 
 # Examples
-OPTION(BUILD_USER_IDENTIFICATION_EXAMPLES "Enable to build Examples" OFF)
+OPTION(BUILD_USER_IDENTIFICATION_DEMOS "Enable to build Demos" ON)
 
 # Tests
 OPTION(BUILD_USER_IDENTIFICATION_TESTS "Enable to build Tests" ON)
@@ -110,7 +110,7 @@ INCLUDE(ProjectMacros)
 #-------------------------------------------------
 
 # optional example related dependencies
-IF   (BUILD_USER_IDENTIFICATION_EXAMPLES)
+IF   (BUILD_USER_IDENTIFICATION_DEMOS)
 	# use find_package() here
 ENDIF()
 
@@ -242,8 +242,8 @@ IF   (BUILD_USER_IDENTIFICATION_APPLICATIONS)
 ENDIF()
 
 # Examples
-IF   (BUILD_USER_IDENTIFICATION_EXAMPLES)
-    ADD_SUBDIRECTORY(examples)
+IF   (BUILD_USER_IDENTIFICATION_DEMOS)
+    ADD_SUBDIRECTORY(demos)
 ENDIF()
 
 # Tests
