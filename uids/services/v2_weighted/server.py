@@ -4,7 +4,7 @@ import importlib            # msg routing imports
 from config import *    # server configuration
 from uids.UserDB import UserDB   # user database
 from uids.features.EmbeddingGen import EmbeddingGen   # CNN embedding generator
-from uids.networking.TCPServer import TCPServerBlocking # tcp networking
+from uids.networking.TCPServer import TCPServerBlocking, TCPServerThreaded # tcp networking
 from uids.utils.Logger import Logger as log
 from uids.v2_weighted.MultiClassClassifier import MultiCl as MultiClWeighted
 
@@ -13,7 +13,7 @@ from uids.v2_weighted.MultiClassClassifier import MultiCl as MultiClWeighted
 M_REQUESTS = importlib.import_module("request_types")
 
 
-class IdentificationServer(TCPServerBlocking):
+class IdentificationServer(TCPServerThreaded):
 
     classifier = None
     user_db = None
@@ -22,7 +22,7 @@ class IdentificationServer(TCPServerBlocking):
     req_lookup = ROUTING['REQUEST']['NAME']
 
     def __init__(self, host, port):
-        TCPServerBlocking.__init__(self, host, port)
+        TCPServerThreaded.__init__(self, host, port)
 
         # CNN generator
         self.embedding_gen = EmbeddingGen()

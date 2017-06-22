@@ -38,8 +38,7 @@ class WeightGenerator:
     count_map = None
 
     grid_size = 0
-    d_p = None
-    d_y = None
+    angle_increment = None
 
     def __init__(self, filename='conf_map.v_m3'):
         log.info('db', "Initializing weight generator...")
@@ -47,10 +46,10 @@ class WeightGenerator:
 
     def generate(self, embeddings, poses):
 
-        self.d_p = self.d_y = 8
+        self.angle_increment = 8
 
-        d_p = self.d_p
-        d_y = self.d_y
+        d_p = self.angle_increment
+        d_y = self.angle_increment
 
         if d_p == 8:
             # -36 .. 36
@@ -127,7 +126,8 @@ class WeightGenerator:
                 self.grid,
                 self.variance_map,
                 self.count_map,
-                self.grid_size
+                self.grid_size,
+                self.angle_increment
             ), f)
             f.close()
 
@@ -140,13 +140,15 @@ class WeightGenerator:
                     self.grid,
                     self.variance_map,
                     self.count_map,
-                    self.grid_size
+                    self.grid_size,
+                    self.angle_increment
                 ) = pickle.load(f)
                 f.close()
 
     def calc_index(self, pitch, yaw):
-        d_p = d_y = self.d_p
+        d_p = d_y = self.angle_increment
         center = (self.grid_size-1)/2
+
         if pitch > 0:
             i = center + math.ceil((pitch - d_p / 2.) / d_p)
         elif pitch < 0:
