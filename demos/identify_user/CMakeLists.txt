@@ -1,5 +1,5 @@
 SET(TARGET_SRC
-    client.cpp 
+    identify_user.cpp 
 )
 SET(TARGET_H
     # header.h
@@ -11,4 +11,4 @@ SET(TARGET_EXTERNAL_LIBRARIES
 	ImgProc
 )
 
-SETUP_APPLICATION(client Demos)
+SETUP_APPLICATION(identify_user Demos)

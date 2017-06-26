@@ -230,8 +230,8 @@ class ImageIdentificationPrealignedCS:
 
         if -1 in target_users:
             # open set user id prediction
-            current_weights = np.repeat(1, len(embeddings))
-            is_consistent, user_id, confidence = server.classifier.predict_class(embeddings, current_weights)
+            # current_weights = np.repeat(1, len(embeddings))
+            is_consistent, user_id, confidence = server.classifier.predict_class(embeddings, sample_poses=None)
         else:
             # closed set user id prediction
             user_id = server.classifier.predict_closed_set(target_users, embeddings)
@@ -253,6 +253,42 @@ class ImageIdentificationPrealignedCS:
                          profile_picture=profile_picture)
 
 # --------------- MISC
+
+
+class ImageIdentification:
+
+    def __init__(self, server, conn, handle):
+
+        # receive images
+        images = server.receive_image_batch_squared_same_size(conn, switch_rgb_bgr=True)
+
+        # generate embedding
+        embeddings = server.embedding_gen.get_embeddings(rgb_images=images, align=True)
+
+        if not embeddings.any():
+            r.Error(server, conn, "Could not generate face embeddings.")
+            return
+
+        # unified weights
+        sample_poses = None
+
+        # open set user id prediction
+        is_consistent, user_id, confidence = server.classifier.predict_class(embeddings, sample_poses)
+
+        if is_consistent:
+            # get user nice name
+            user_name = server.user_db.get_name_from_id(user_id)
+
+            if user_name is None:
+                user_name = "unnamed"
+
+            # get profile picture
+            profile_picture = server.user_db.get_profile_picture(user_id)
+            log.info('server', "User identification complete: {} [ID], {} [Username]".format(user_id, user_name))
+            r.Identification(server, conn, int(user_id), user_name, confidence=confidence,
+                             profile_picture=profile_picture)
+        else:
+            r.Error(server, conn, "Result is inconsistent.")
 
 
 class CancelIdentification:

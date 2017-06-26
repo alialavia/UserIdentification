@@ -18,4 +18,5 @@ SET(TARGET_COMMON_LIBRARIES
 	GUI
 )
 
-ADD_SUBDIRECTORY(client)
+ADD_SUBDIRECTORY(get_profile_pictures)
+ADD_SUBDIRECTORY(identify_user)

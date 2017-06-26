@@ -56,13 +56,11 @@ namespace imgproc {
 
 		static cv::Mat createOne(const std::vector<cv::Mat> & images, int cols, int min_gap_size)
 		{
-			// let's first find out the maximum dimensions
+			// find max dimension
 			int max_width = 0;
 			int max_height = 0;
 			for (int i = 0; i < images.size(); i++) {
 				// check if type is correct 
-				// you could actually remove that check and convert the image 
-				// in question to a specific type
 				if (i > 0 && images[i].type() != images[i - 1].type()) {
 					std::cerr << "WARNING:createOne failed, different types of images";
 					return cv::Mat();
@@ -73,7 +71,7 @@ namespace imgproc {
 			// number of images in y direction
 			int rows = std::ceil((float)images.size() / cols);
 
-			// create our result-matrix
+			// result matrix
 			cv::Mat result = cv::Mat::zeros(rows*max_height + (rows - 1)*min_gap_size,
 				cols*max_width + (cols - 1)*min_gap_size, images[0].type());
 			size_t i = 0;
@@ -81,7 +79,7 @@ namespace imgproc {
 			int current_width = 0;
 			for (int y = 0; y < rows; y++) {
 				for (int x = 0; x < cols; x++) {
-					if (i >= images.size()) // shouldn't happen, but let's be safe
+					if (i >= images.size())
 						return result;
 					// get the ROI in our result-image
 					cv::Mat to(result,

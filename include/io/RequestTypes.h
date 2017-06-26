@@ -117,7 +117,7 @@ namespace io {
 			pServerConn->SendImageBatchQuadraticSameSize(mImages);
 		}
 
-		// payload: quadratic(!) images of same size
+		// payload: quadratic(!) images of same size (face ROI)
 		std::vector<cv::Mat> mImages;
 
 	};
